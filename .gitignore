@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+out/
+# customer/company models stay out of git
+samples/*.mdl
