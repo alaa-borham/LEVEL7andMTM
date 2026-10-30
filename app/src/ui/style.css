@@ -116,7 +116,7 @@ input.bad {
 
 .layout {
   display: grid;
-  grid-template-columns: 190px 1fr 360px;
+  grid-template-columns: 190px 1fr 420px;
   height: calc(100% - 48px);
 }
 
@@ -251,7 +251,9 @@ input.bad {
   flex: 1;
   border: none;
   border-radius: 0;
-  padding: 10px 6px;
+  padding: 10px 2px;
+  white-space: nowrap;
+  font-size: 13px;
   border-bottom: 2px solid transparent;
 }
 .tabs button.active {
@@ -447,4 +449,73 @@ table.grid td.val.bad {
   background: none;
   padding: 0 4px;
   color: var(--danger);
+}
+
+.size-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.size-pick select {
+  min-width: 90px;
+  font-weight: 600;
+}
+.size-table {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.size-table table.grid th.size-col {
+  min-width: 82px;
+  vertical-align: top;
+}
+.size-table th.size-col input {
+  width: 100%;
+  font-weight: 600;
+}
+.size-table .step {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  font-weight: 400;
+}
+.size-table .step input {
+  width: 46px;
+}
+.size-table th.size-col button {
+  margin-top: 3px;
+  padding: 0 6px;
+}
+.size-table td input {
+  width: 70px;
+}
+.size-table td.mname {
+  font-size: 12px;
+  min-width: 90px;
+}
+.size-table td.base {
+  direction: ltr;
+  text-align: left;
+  color: var(--muted);
+  padding-top: 7px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.legend i {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+input[type="number"] {
+  direction: ltr;
 }

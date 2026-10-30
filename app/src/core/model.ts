@@ -59,9 +59,19 @@ export interface Model {
   variables: Variable[];
   steps: Step[];
   pieces?: Piece[];
-  size?: string; // size or customer the measurements belong to (written into exports)
+  size?: string; // name of the base size (the values in measurements)
+  sizes?: Size[]; // further sizes or customers
+  grading?: Record<number, number>; // grading step per X id, used to fill the size table
+  activeSize?: number; // index in sizes, or -1 / undefined for the base size
   nextId: number;
   names: Record<number, string>; // object display names (P1, L3, ...)
+}
+
+/** A size (or a customer for made-to-measure): values that replace the base measurements. */
+export interface Size {
+  name: string;
+  step: number; // grading steps from the base size (-2, -1, 1, 2 ...)
+  values: Record<number, number>; // X id -> value; missing = base value
 }
 
 export interface GObj {
@@ -79,6 +89,27 @@ export interface EvalResult {
   pieceErrors: Map<number, string>;
   z: Map<number, number>;
   zErrors: Map<number, string>;
+}
+
+/** The model with the measurements of size i (-1 = base). */
+export function withSize(model: Model, i = model.activeSize ?? -1): Model {
+  const sz = model.sizes?.[i];
+  if (!sz) return model;
+  return { ...model, measurements: model.measurements.map((m) => ({ ...m, value: sz.values[m.id] ?? m.value })) };
+}
+
+export function sizeName(model: Model, i: number): string {
+  return i < 0 ? model.size || "الأساسي" : model.sizes?.[i]?.name ?? "";
+}
+
+/** Fill every size column from the grading steps: base + step × grading. */
+export function fillGrading(model: Model): void {
+  for (const sz of model.sizes ?? []) {
+    for (const m of model.measurements) {
+      const g = model.grading?.[m.id];
+      if (g) sz.values[m.id] = Math.round((m.value + sz.step * g) * 100) / 100;
+    }
+  }
 }
 
 export function emptyModel(name = "باترون جديد"): Model {

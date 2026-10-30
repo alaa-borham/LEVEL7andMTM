@@ -3,29 +3,58 @@
 
 import type { Pt } from "./geometry";
 import type { Piece, PieceGeo } from "./piece";
+import { evaluateModel, sizeName, withSize, type Model } from "./model";
+
+/** Pieces of every size (base first), each re-evaluated with that size's measurements. */
+export function allSizeItems(model: Model): { items: ExportItem[]; errors: string[] } {
+  const items: ExportItem[] = [];
+  const errors: string[] = [];
+  for (let i = -1; i < (model.sizes?.length ?? 0); i++) {
+    const r = evaluateModel(withSize(model, i));
+    const size = sizeName(model, i);
+    for (const piece of model.pieces ?? []) {
+      const geo = r.pieces.get(piece.id);
+      if (geo) items.push({ piece, geo, size });
+      else errors.push(`${piece.name} (${size}): ${r.pieceErrors.get(piece.id) ?? "خطأ"}`);
+    }
+  }
+  return { items, errors };
+}
 
 /** AAMA layer numbers used here. */
 export const AAMA = { boundary: 1, turn: 2, notch: 4, grain: 7, sew: 14 } as const;
 
 const GAP = 50; // mm between pieces laid out side by side
 
-interface Placed {
+export interface ExportItem {
   piece: Piece;
   geo: PieceGeo;
-  dx: number; // shift applied so the piece starts at x = offset, y = 0
+  size?: string; // set when several sizes are exported together
+}
+
+interface Placed extends ExportItem {
+  dx: number; // shift applied to the piece geometry
   dy: number;
 }
 
-/** Lay the pieces side by side along x, each moved to y >= 0. */
-export function layout(items: { piece: Piece; geo: PieceGeo }[]): Placed[] {
-  let x = 0;
-  return items.map(({ piece, geo }) => {
-    const xs = geo.cut.map((p) => p[0]);
-    const ys = geo.cut.map((p) => p[1]);
-    const placed = { piece, geo, dx: x - Math.min(...xs), dy: -Math.min(...ys) };
-    x += Math.max(...xs) - Math.min(...xs) + GAP;
-    return placed;
-  });
+/** Lay the pieces side by side along x; each size gets its own row. */
+export function layout(items: ExportItem[]): Placed[] {
+  const rows = [...new Set(items.map((it) => it.size ?? ""))];
+  const out: Placed[] = [];
+  let y = 0;
+  for (const row of rows) {
+    let x = 0;
+    let h = 0;
+    for (const it of items.filter((i) => (i.size ?? "") === row)) {
+      const xs = it.geo.cut.map((p) => p[0]);
+      const ys = it.geo.cut.map((p) => p[1]);
+      out.push({ ...it, dx: x - Math.min(...xs), dy: y - Math.min(...ys) });
+      x += Math.max(...xs) - Math.min(...xs) + GAP;
+      h = Math.max(h, Math.max(...ys) - Math.min(...ys));
+    }
+    y += h + GAP;
+  }
+  return out;
 }
 
 /** Non-ASCII text as \U+XXXX, which DXF readers understand regardless of code page. */
@@ -33,9 +62,11 @@ function dxfText(s: string): string {
   return [...s].map((c) => (c.charCodeAt(0) < 128 ? c : `\\U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`)).join("");
 }
 
-const blockName = (p: Piece, i: number) => `P${i + 1}_${p.name.replace(/[^A-Za-z0-9_-]/g, "") || "PIECE"}`.slice(0, 31);
+const ascii = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, "");
+const blockName = (it: ExportItem, i: number) =>
+  `P${i + 1}_${ascii(it.piece.name) || "PIECE"}${it.size !== undefined ? `_S${ascii(it.size) || i + 1}` : ""}`.slice(0, 31);
 
-export function toAamaDxf(items: { piece: Piece; geo: PieceGeo }[], meta: { style: string; size: string; date?: Date }): string {
+export function toAamaDxf(items: ExportItem[], meta: { style: string; size: string; date?: Date }): string {
   const out: string[] = [];
   const g = (code: number, v: string | number) => out.push(String(code), typeof v === "number" ? v.toFixed(3) : v);
   const placed = layout(items);
@@ -50,7 +81,8 @@ export function toAamaDxf(items: { piece: Piece; geo: PieceGeo }[], meta: { styl
 
   g(0, "SECTION");
   g(2, "BLOCKS");
-  placed.forEach(({ piece, geo, dx, dy }, i) => {
+  placed.forEach((it, i) => {
+    const { piece, geo, dx, dy } = it;
     const T = (p: Pt): [number, number] => [p[0] + dx, p[1] + dy];
     const poly = (layer: number, pts: Pt[]) => {
       g(0, "POLYLINE");
@@ -93,7 +125,7 @@ export function toAamaDxf(items: { piece: Piece; geo: PieceGeo }[], meta: { styl
       g(40, 8);
       g(1, dxfText(s));
     };
-    const name = blockName(piece, i);
+    const name = blockName(it, i);
     g(0, "BLOCK");
     g(8, "0");
     g(2, name);
@@ -117,7 +149,7 @@ export function toAamaDxf(items: { piece: Piece; geo: PieceGeo }[], meta: { styl
     text(`Piece Name: ${piece.name}`, 0);
     text(`Quantity: ${piece.quantity}`, 1);
     text(`Material: ${piece.fabric}`, 2);
-    text(`Size: ${meta.size}`, 3);
+    text(`Size: ${it.size ?? meta.size}`, 3);
     g(0, "ENDBLK");
   });
   g(0, "ENDSEC");
@@ -141,10 +173,10 @@ export function toAamaDxf(items: { piece: Piece; geo: PieceGeo }[], meta: { styl
     g(40, 8);
     g(1, dxfText(s));
   });
-  placed.forEach(({ piece }, i) => {
+  placed.forEach((it, i) => {
     g(0, "INSERT");
     g(8, "1");
-    g(2, blockName(piece, i));
+    g(2, blockName(it, i));
     g(10, 0);
     g(20, 0);
     g(30, 0);
@@ -172,7 +204,7 @@ export function turnPoints(p: Pt[]): Pt[] {
 }
 
 /** HPGL for plotters: pen 1 cutting line and notches, pen 2 sewing line, grain line and labels. */
-export function toPlt(items: { piece: Piece; geo: PieceGeo }[], meta: { size: string }): string {
+export function toPlt(items: ExportItem[], meta: { size: string }): string {
   const U = 40; // plotter units per mm (1 unit = 0.025 mm)
   const placed = layout(items);
   const cmds: string[] = ["IN", "DT\x03"];
@@ -182,7 +214,7 @@ export function toPlt(items: { piece: Piece; geo: PieceGeo }[], meta: { size: st
     cmds.push(`PD${pts.slice(1).map((p) => pt(p, dx, dy)).join(",")}`);
     cmds.push("PU");
   };
-  for (const { piece, geo, dx, dy } of placed) {
+  for (const { piece, geo, dx, dy, size } of placed) {
     cmds.push("SP1");
     path([...geo.cut, geo.cut[0]], dx, dy);
     for (const n of geo.notches) path([n.at, n.to], dx, dy);
@@ -190,7 +222,7 @@ export function toPlt(items: { piece: Piece; geo: PieceGeo }[], meta: { size: st
     path([...geo.sew, geo.sew[0]], dx, dy);
     path(geo.grain, dx, dy);
     // plotters only print ASCII; Arabic names are left out of the label
-    const label = [piece.name, `x${piece.quantity}`, meta.size].map((s) => s.replace(/[^\x20-\x7E]/g, "").trim()).filter(Boolean).join(" ");
+    const label = [piece.name, `x${piece.quantity}`, size ?? meta.size].map((s) => s.replace(/[^\x20-\x7E]/g, "").trim()).filter(Boolean).join(" ");
     if (label) {
       cmds.push(`PU${pt([geo.centre[0], geo.centre[1] - 20], dx, dy)}`);
       cmds.push(`SI0.3,0.45`);

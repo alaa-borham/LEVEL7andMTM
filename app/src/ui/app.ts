@@ -1,8 +1,11 @@
-import { toAamaDxf, toPlt } from "../core/export";
+import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { closestOnPolyline, dist, type Pt } from "../core/geometry";
 import {
   createdIds,
   emptyModel,
+  fillGrading,
+  sizeName,
+  withSize,
   usedIds,
   evaluateModel,
   Vars,
@@ -22,6 +25,7 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
 
 const PICK_PX = 10;
+const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
 type Hover = Pick | null;
 
@@ -68,7 +72,22 @@ export class App {
 
   // ------------------------------------------------------------ model state
   private evaluate(): void {
-    this.res = evaluateModel(this.model);
+    const n = this.model.sizes?.length ?? 0;
+    if ((this.model.activeSize ?? -1) >= n) this.model.activeSize = -1;
+    this.res = evaluateModel(withSize(this.model));
+    this.nest = this.showNest ? this.nestResults() : [];
+  }
+
+  // ------------------------------------------------------------ sizes
+  private showNest = false;
+  private nest: { name: string; color: string; res: EvalResult }[] = [];
+
+  private nestResults() {
+    const out: { name: string; color: string; res: EvalResult }[] = [];
+    for (let i = -1; i < (this.model.sizes?.length ?? 0); i++) {
+      out.push({ name: sizeName(this.model, i), color: NEST_COLORS[(i + 1) % NEST_COLORS.length], res: evaluateModel(withSize(this.model, i)) });
+    }
+    return out;
   }
 
   /** Call before every change so it can be undone. */
@@ -152,6 +171,7 @@ export class App {
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
 
+    if (this.showNest) parts.push(this.nestSvg());
     if (this.showPieces) parts.push(this.piecesSvg());
     for (const o of this.res.objects.values()) {
       if (o.kind !== "line") continue;
@@ -480,7 +500,7 @@ export class App {
         .join("") +
       `<p class="hint">تقبل الحقول أرقاماً أو معادلات مثل Z6 أو X3/2+10</p>` +
       `<div class="buttons"><button class="primary" data-ok>موافق</button><button data-cancel>إلغاء</button></div>`;
-    const vars = new Vars(this.model, undefined, this.res.z);
+    const vars = new Vars(withSize(this.model), undefined, this.res.z);
     const optional = new Set(f.fields.filter((x) => x.optional).map((x) => x.key));
     const preview = (inp: HTMLInputElement) => {
       const out = box.querySelector(`[data-preview="${inp.dataset.key}"]`) as HTMLElement;
@@ -681,7 +701,7 @@ export class App {
             this.toast("لا توجد قطع للتصدير. أنشئ قطعة بأداة «قطعة من الحدود»");
             return;
           }
-          const size = this.model.size || "BASE";
+          const size = sizeName(this.model, this.model.activeSize ?? -1);
           const base = `${safeFileName(this.model.name)}_${safeFileName(size)}`;
           if (b?.dataset.action === "aama") download(`${base}.dxf`, toAamaDxf(items, { style: this.model.name, size }), "application/dxf");
           else download(`${base}.plt`, toPlt(items, { size }), "application/vnd.hp-hpgl");
@@ -738,7 +758,7 @@ export class App {
       const b = (e.target as HTMLElement).closest("button[data-tab]") as HTMLElement | null;
       if (!b) return;
       document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
-      for (const id of ["steps", "x", "z", "pieces"]) $(`#tab-${id}`).hidden = id !== b.dataset.tab;
+      for (const id of ["steps", "x", "z", "pieces", "sizes"]) $(`#tab-${id}`).hidden = id !== b.dataset.tab;
     });
   }
 
@@ -748,6 +768,7 @@ export class App {
     this.renderX();
     this.renderZ();
     this.renderPieces();
+    this.renderSizes();
   }
 
   private renderSteps(): void {
@@ -815,7 +836,7 @@ export class App {
     const box = $("#tab-pieces");
     const pieces = this.model.pieces ?? [];
     const head = `<div class="piece-top">
-        <label class="field-inline">المقاس / الزبون <input data-size value="${esc(this.model.size ?? "")}" placeholder="مثل 52 أو اسم الزبون"/></label>
+        <label class="field-inline">اسم المقاس الأساسي <input data-size value="${esc(this.model.size ?? "")}" placeholder="مثل 52"/></label>
         <label class="field-inline"><input type="checkbox" data-show ${this.showPieces ? "checked" : ""}/> إظهار القطع على الرسم</label>
       </div>`;
     if (!pieces.length) {
@@ -894,6 +915,155 @@ export class App {
         }),
       );
     });
+  }
+
+  private nestSvg(): string {
+    const out: string[] = [];
+    const pts = (p: Pt[]) => p.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ");
+    for (const n of this.nest) {
+      if (n.res.pieces.size) {
+        for (const g of n.res.pieces.values()) out.push(`<polygon points="${pts(g.cut)}" fill="none" stroke="${n.color}" stroke-width="1.2" opacity="0.9"/>`);
+      } else {
+        for (const o of n.res.objects.values())
+          if (o.kind === "line") out.push(`<polyline points="${pts(o.pts)}" fill="none" stroke="${n.color}" stroke-width="1" opacity="0.8"/>`);
+      }
+    }
+    return out.join("");
+  }
+
+  private renderSizeSelect(): void {
+    const sel = $<HTMLSelectElement>("#size-select");
+    const active = this.model.activeSize ?? -1;
+    const opts = [-1, ...(this.model.sizes ?? []).map((_, i) => i)];
+    sel.innerHTML = opts.map((i) => `<option value="${i}"${i === active ? " selected" : ""}>${esc(sizeName(this.model, i))}</option>`).join("");
+    sel.onchange = () => {
+      this.model.activeSize = Number(sel.value);
+      this.changed();
+    };
+  }
+
+  private renderSizes(): void {
+    this.renderSizeSelect();
+    const box = $("#tab-sizes");
+    const sizes = this.model.sizes ?? [];
+    const g = this.model.grading ?? {};
+    const head = sizes
+      .map(
+        (sz, i) => `<th class="size-col">
+          <input data-sname="${i}" value="${esc(sz.name)}" title="اسم المقاس أو الزبون"/>
+          <div class="step">درجة <input type="number" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>
+          <button class="danger" data-sdel="${i}" title="حذف المقاس">×</button></th>`,
+      )
+      .join("");
+    const rows = this.model.measurements
+      .map(
+        (m) => `<tr>
+          <td class="id">X${m.id}</td><td class="mname">${esc(m.name)}</td>
+          <td class="base">${m.value}</td>
+          <td><input class="expr" type="number" step="any" data-grade="${m.id}" value="${g[m.id] ?? ""}" placeholder="0"/></td>
+          ${sizes.map((sz, i) => `<td><input class="expr" type="number" step="any" data-sv="${i}:${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${m.value}"/></td>`).join("")}
+        </tr>`,
+      )
+      .join("");
+    box.innerHTML = `
+      <p class="empty">كل عمود مقاس أو زبون. الخانة الفارغة تأخذ القيمة الأساسية. اختر المقاس المعروض من أعلى الشاشة، والباترون يُعاد بناؤه بقياساته.</p>
+      <div class="table-actions">
+        <button data-sadd>إضافة مقاس / زبون</button>
+        <button data-sfill title="قيمة كل مقاس = الأساسي + الدرجة × التدرج">تعبئة بالتدرج</button>
+      </div>
+      <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات فوق بعض</label>
+      ${this.showNest ? `<div class="legend">${this.nest.map((n) => `<span><i style="background:${n.color}"></i>${esc(n.name)}</span>`).join("")}</div>` : ""}
+      <div class="size-table"><table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>${esc(sizeName(this.model, -1))}</th><th>التدرج</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="table-actions">
+        <button data-xall="aama">تصدير AAMA لكل المقاسات</button>
+        <button data-xall="plt">تصدير PLT لكل المقاسات</button>
+      </div>`;
+
+    let snapped = false;
+    const edit = (fn: () => void, panels = false) => {
+      if (!snapped) {
+        this.snapshot();
+        snapped = true;
+      }
+      fn();
+      this.changed(panels);
+      if (!panels) this.renderSizeSelect();
+    };
+    const num = (v: string) => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
+    box.querySelectorAll<HTMLInputElement>("input").forEach((inp) => inp.addEventListener("change", () => (snapped = false)));
+    box.querySelectorAll<HTMLInputElement>("[data-sname]").forEach((inp) =>
+      inp.addEventListener("input", () => edit(() => (sizes[Number(inp.dataset.sname)].name = inp.value))),
+    );
+    box.querySelectorAll<HTMLInputElement>("[data-sstep]").forEach((inp) =>
+      inp.addEventListener("input", () => edit(() => (sizes[Number(inp.dataset.sstep)].step = num(inp.value) ?? 0))),
+    );
+    box.querySelectorAll<HTMLInputElement>("[data-grade]").forEach((inp) =>
+      inp.addEventListener("input", () =>
+        edit(() => {
+          this.model.grading ??= {};
+          const v = num(inp.value);
+          if (v === undefined) delete this.model.grading[Number(inp.dataset.grade)];
+          else this.model.grading[Number(inp.dataset.grade)] = v;
+        }),
+      ),
+    );
+    box.querySelectorAll<HTMLInputElement>("[data-sv]").forEach((inp) =>
+      inp.addEventListener("input", () =>
+        edit(() => {
+          const [i, id] = (inp.dataset.sv as string).split(":").map(Number);
+          const v = num(inp.value);
+          if (v === undefined) delete sizes[i].values[id];
+          else sizes[i].values[id] = v;
+        }),
+      ),
+    );
+    box.querySelectorAll<HTMLElement>("[data-sdel]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const i = Number(b.dataset.sdel);
+        if (!confirm(`حذف المقاس «${sizes[i].name}»؟`)) return;
+        this.snapshot();
+        sizes.splice(i, 1);
+        this.model.activeSize = -1;
+        this.changed();
+      }),
+    );
+    box.querySelector("[data-sadd]")?.addEventListener("click", () => {
+      this.snapshot();
+      this.model.sizes ??= [];
+      const step = this.model.sizes.reduce((a, s) => Math.max(a, s.step), 0) + 1;
+      this.model.sizes.push({ name: `مقاس ${this.model.sizes.length + 2}`, step, values: {} });
+      fillGrading({ ...this.model, sizes: [this.model.sizes[this.model.sizes.length - 1]] });
+      this.changed();
+    });
+    box.querySelector("[data-sfill]")?.addEventListener("click", () => {
+      if (!Object.keys(this.model.grading ?? {}).length) {
+        this.toast("أدخل قيم التدرج أولاً في عمود «التدرج»");
+        return;
+      }
+      if (!confirm("تعبئة قيم المقاسات من التدرج؟ القيم المكتوبة للقياسات المتدرجة ستُستبدل.")) return;
+      this.snapshot();
+      fillGrading(this.model);
+      this.changed();
+    });
+    box.querySelector<HTMLInputElement>("[data-nest]")?.addEventListener("change", (e) => {
+      this.showNest = (e.target as HTMLInputElement).checked;
+      this.evaluate();
+      this.renderSizes();
+      this.render();
+    });
+    box.querySelectorAll<HTMLElement>("[data-xall]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const { items, errors } = allSizeItems(this.model);
+        if (!items.length) {
+          this.toast("لا توجد قطع للتصدير");
+          return;
+        }
+        const base = `${safeFileName(this.model.name)}_all-sizes`;
+        if (b.dataset.xall === "aama") download(`${base}.dxf`, toAamaDxf(items, { style: this.model.name, size: "" }), "application/dxf");
+        else download(`${base}.plt`, toPlt(items, { size: "" }), "application/vnd.hp-hpgl");
+        if (errors.length) this.toast(`لم تُصدَّر ${errors.length} قطعة بسبب أخطاء: ${errors[0]}`);
+      }),
+    );
   }
 
   private renderX(): void {
