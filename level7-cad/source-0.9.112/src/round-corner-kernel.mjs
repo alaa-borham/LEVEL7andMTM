@@ -29,13 +29,17 @@ export function solveSmallCorner({start,end,corner,angles,auxiliaries}){
 }
 export function replayRoundCorner(args){
  const plan=readRoundCornerPlan(args),{radii,directions,auxiliaries,corner,trimPoints}=plan;
- need(radii.every(r=>r>=10&&r<=30)&&Math.abs(radii[0]-radii[1])<.0001,'Corner radius outside verified equal-trim range');
+ need(radii.every(r=>r>=10&&r<=40)&&Math.abs(radii[0]-radii[1])<.0001,'Corner radius outside verified equal-trim range');
  const turn=((directions[1]-directions[0])%360+360)%360;need(turn>=20&&turn<=160,'Corner turn outside bounded left-turn range');
  need(plan.directionAdjustments.every(a=>Number.isFinite(a)&&Math.abs(a)<=15)&&auxiliaries.every((a,i)=>(i?Math.abs(a.percent-[50,25,75][i])<.0001:a.percent>=40&&a.percent<=60)&&Number.isFinite(a.heightMm)&&(i?a.heightMm===0:a.heightMm>=0&&a.heightMm<=radii[0]/5)),'Unsupported corner shape options');
  need([0,1,2].every(i=>!args.objects.some(o=>o.id===plan.resultPointId+i)),'Corner output ID already exists');
  const solved=solveSmallCorner({start:trimPoints[0],end:trimPoints[1],corner,angles:directions.map((a,i)=>(a+plan.directionAdjustments[i])*Math.PI/180),auxiliaries}),points=solved.points;
- const ray=trimPoints[0].map((x,k)=>x+trimPoints[1][k]-2*corner[k]),cross=(a,b)=>a[0]*b[1]-a[1]*b[0],hits=[];
- for(let i=1;i<points.length;i++){const p=points[i-1],d=points[i].map((x,k)=>x-p[k]),a=p.map((x,k)=>x-corner[k]),den=cross(d,ray);if(Math.abs(den)<1e-12)continue;const t=-cross(a,ray)/den;if(t>=0&&t<=1){const hit=p.map((x,k)=>Math.fround(x+t*d[k]));if(!hits.some(h=>norm(h.point,hit)<.0001))hits.push({point:hit,i});}}
+ // 0.9.112: GRAFIS splits the rounded curve on the ray from the intersection of the
+ // source tangents at the trim points towards the trim-point midpoint. For straight
+ // sources that intersection is the corner itself (unchanged); for curved sources it
+ // reduced the ALAA2026 part 65 split error from 0.57 to 0.13 mm.
+ const cross=(a,b)=>a[0]*b[1]-a[1]*b[0],tangent=directions.map(a=>unit(a*Math.PI/180)),den=cross(tangent[0],tangent[1]),offset=trimPoints[1].map((x,k)=>x-trimPoints[0][k]),along=Math.abs(den)>1e-9?cross(offset,tangent[1])/den:NaN,apex=Number.isFinite(along)&&Math.abs(along)<=4*radii[0]?trimPoints[0].map((x,k)=>x+along*tangent[0][k]):corner,ray=trimPoints[0].map((x,k)=>x+trimPoints[1][k]-2*apex[k]),hits=[];
+ for(let i=1;i<points.length;i++){const p=points[i-1],d=points[i].map((x,k)=>x-p[k]),a=p.map((x,k)=>x-apex[k]),den=cross(d,ray);if(Math.abs(den)<1e-12)continue;const t=-cross(a,ray)/den;if(t>=0&&t<=1){const hit=p.map((x,k)=>Math.fround(x+t*d[k]));if(!hits.some(h=>norm(h.point,hit)<.0001))hits.push({point:hit,i});}}
  need(hits.length===1,'Ambiguous corner bisector');const hit=hits[0],halves=[[...points.slice(0,hit.i),hit.point],[hit.point,...points.slice(hit.i)]],changed=[];
  const clean=p=>p.filter((x,i)=>!i||norm(x,p[i-1])>1e-7);
  for(let i=0;i<2;i++){

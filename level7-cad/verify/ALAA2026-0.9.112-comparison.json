@@ -529,13 +529,13 @@
  },
  {
   "pid": 65,
-  "full": false,
+  "full": true,
   "cachedInputs": false,
-  "computed": 8,
+  "computed": 14,
   "cached": 14,
-  "compared": 8,
-  "matching": 3,
-  "worst": 27.709,
+  "compared": 14,
+  "matching": 10,
+  "worst": 0.133,
   "notInCache": 0
  },
  {

@@ -8,6 +8,7 @@ Copy these files over the 0.9.111 application folder, keeping their paths:
   src/native-app.js                                    Redo, option titles, window title
   src/ux-0112.css                                      compact X window, single Apply, Redo icon
   src/part-history-engine.mjs                          tapered curve allowance direction (part 7 fix)
+  src/round-corner-kernel.mjs                          round corners up to 40 mm, split on curved sources (part 65 fix)
   README.md                                            release notes
 
 Make a backup copy of the application folder first. User data (LOCALAPPDATA\LEVEL7 CAD)
