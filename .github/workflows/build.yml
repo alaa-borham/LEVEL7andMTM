@@ -43,3 +43,15 @@ jobs:
             desktop/dist/*.exe
             desktop/dist/*.zip
           retention-days: 30
+
+  level7-and-mtm-windows:
+    # LEVEL7 and MTM (native MDL editor) packaged for Windows from level7-cad/source-0.9.112
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash level7-cad/build-windows.sh 0.9.112 dist-level7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LEVEL7-and-MTM-0.9.112-windows
+          path: dist-level7/LEVEL7-and-MTM-0.9.112-win32-x64.zip
+          retention-days: 30

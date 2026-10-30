@@ -1,0 +1,68 @@
+/* Familiar CAD parameter lists with retained native editing controls. */
+/* Numeric values are typed directly; keep native validation without steppers. */
+input[type="number"]{appearance:textfield;-moz-appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#x-values-dialog{width:1060px}
+#x-values-dialog .dialog-body{padding:12px 16px}
+#x-values-dialog .x-scope-toolbar{display:grid;grid-template-columns:250px minmax(180px,1fr) 150px;align-items:center;background:#f0f3f5;border-radius:3px}
+#x-values-dialog .x-scope-toolbar fieldset{display:flex;flex-direction:column;gap:6px}
+#x-values-dialog .x-scope-toolbar label{font-size:12px}
+#x-values-dialog .x-view-options{border-left:1px solid #c0ccd4;padding-left:15px}
+.x-list-controls{display:flex;align-items:center;gap:18px;margin:8px 0;font-size:12px}
+.x-list-controls label{display:flex;gap:7px;align-items:center}
+#x-current-index{min-width:42px;padding:5px 9px;background:#fff;border:1px solid #afc0cc;text-align:center;font:600 13px Consolas,monospace}
+#x-edit-entry{margin-left:auto;min-width:150px}
+.x-list-layout{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;min-height:0}
+#x-values-dialog .x-grouped-scroll{height:clamp(220px,46vh,540px);max-height:none;background:white}
+.x-size-panel{display:flex;flex-direction:column;gap:7px;font-size:12px}
+.x-size-panel label{font-weight:600}.x-size-panel select{flex:1;width:100%;min-height:130px;border-radius:2px;background:#fff}
+.x-size-panel option{padding:6px}.x-size-panel p{font-size:10px;color:#607382;line-height:1.6;margin:0}
+.x-grouped-scroll thead{position:absolute;clip-path:inset(100%);height:1px;overflow:hidden}
+#x-values-body .x-value-entry{display:grid;grid-template-columns:175px 135px minmax(125px,1fr);outline-offset:-2px}
+#x-values-body .x-value-entry td{border:0;background:#fff;padding:2px 8px;min-height:24px;line-height:20px;font:12px/20px Consolas,monospace;white-space:normal}
+#x-values-body .x-value-entry td:nth-child(1),#x-values-body .x-value-entry td:nth-child(5),#x-values-body .x-value-entry:not(.x-group-start) td:nth-child(2){display:none}
+#x-values-body .x-value-entry td:nth-child(2){grid-column:1/-1;font-weight:600;color:#22465c;padding-top:5px;min-height:26px}
+#x-values-body .x-value-entry td:nth-child(3){padding-left:28px;color:#536d7c}
+#x-values-body .x-value-entry td:nth-child(4){display:flex;align-items:center;gap:8px}
+#x-values-body .x-value-entry td:nth-child(4)::before{content:'=';color:#75838b}
+#x-values-body .x-value-entry input{width:100%;height:26px;min-height:26px;border:1px solid transparent;background:transparent;border-radius:2px;padding:2px 5px;font:12px Consolas,monospace;color:#294c65;text-align:right}
+#x-values-body .x-value-entry td:nth-child(6){display:flex;gap:4px;align-items:center}
+#x-values-body .x-value-entry:not(.x-selected):not(:focus-within) td:nth-child(6) button{visibility:hidden}
+#x-values-body .x-value-entry.x-selected td{background:#e5f1fb}
+#x-values-body .x-value-entry.x-selected td:nth-child(2){background:#096ea8;color:white}
+#x-values-body .x-selected input,#x-values-body input:focus{border-color:#5a9ebf;background:white}
+#x-values-dialog[data-list-view="short"] #x-values-body .x-value-entry td:nth-child(6){display:none}
+#x-values-dialog[data-list-view="short"] #x-values-body .x-value-entry{grid-template-columns:175px minmax(135px,1fr)}
+#x-values-dialog[data-list-view="short"] #x-values-body .x-value-entry input{pointer-events:none}
+#x-values-dialog #x-values-warnings{font-size:10px;line-height:1.5;margin-top:8px;max-height:45px;overflow:auto}
+#x-values-dialog #x-calculation-progress,#z-values-dialog #z-calculation-progress{font-size:10px;line-height:1.5;margin:5px 16px;max-height:42px;overflow:auto}
+.compact-z-mode{width:1080px}.compact-z-mode .z-inspector-table-scroll{height:clamp(220px,43vh,490px)}
+.z-inspector-table .z-formula-column{width:41%}.z-inspector-table .z-comment-column{width:auto}.z-inspector-table .z-bound-column{width:44px}
+.z-inspector-table th{background:#d3e3bd;border-color:#b4c4a3;color:#293f2a;font-size:12px;padding:5px 7px}
+.z-inspector-table td,.z-inspector-table tr:nth-child(even) td{background:#edf3e4;border-right:1px solid #d1dac7;border-bottom:1px solid #d1dac7;font-size:12px;padding:3px 7px;line-height:21px}
+.z-inspector-table tr:nth-child(even) td{background:#e6efdb}.z-inspector-table tr.selected td{background:#ffe09a;border-color:#e0c282}
+.z-inspector-table td:nth-child(3){font-family:Segoe UI,Tahoma,sans-serif}.z-inspector-table td:nth-child(n+5){text-align:center;color:#87928a}
+.z-inspector-selection-heading{gap:8px}.z-inspector-selection-heading strong{margin-right:auto}.z-inspector-selection{background:#f7f9f5}
+.z-inspector-formula{min-height:28px;background:white;border:1px solid #c3cfbf;padding:8px}
+.formula-assistant{width:850px}.formula-assistant form{display:contents}.formula-assistant fieldset{border:1px solid #b7c6cf;padding:12px;margin:0 0 14px;border-radius:3px}.formula-assistant legend{font-weight:600;font-size:13px;color:#2b4d63;padding:0 6px}
+.formula-instruction{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px}.formula-entry{display:flex;flex-direction:column;gap:9px}.formula-entry label{font:600 14px Consolas,monospace}.formula-entry textarea{width:100%;resize:vertical;min-height:85px;font:14px/1.6 Consolas,monospace;direction:ltr;padding:8px;background:#fffdf4;border:1px solid #b8c6cf;border-radius:3px}.formula-entry button{align-self:flex-start}
+.formula-geometry{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.formula-geometry button{font:600 16px Consolas,monospace;min-height:38px}.formula-elements{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;align-items:center}.formula-elements select{width:100%}
+#formula-elements-list{grid-column:1/-1;min-height:180px;max-height:220px;overflow:auto;border:1px solid #bccbd5;background:white;padding:4px}
+#formula-elements-list button{display:flex;align-items:center;justify-content:flex-start;gap:20px;width:100%;border:0;border-radius:0;background:white;text-align:left;min-height:31px;padding:5px 10px}#formula-elements-list code{min-width:100px;color:#1d6385}#formula-elements-list button:not(:disabled):hover{background:#e7f3fb}#formula-elements-list button:disabled code{color:#8b969e}.formula-help{font-size:11px;line-height:1.6;color:#607583;margin:0}
+@media(max-width:760px){#x-values-dialog .x-scope-toolbar{grid-template-columns:1fr 1fr}.x-scope-part{grid-column:1/-1;grid-row:2}.x-list-layout{grid-template-columns:1fr}.x-size-panel{flex-direction:row;align-items:center}.x-size-panel select{min-height:32px;height:32px;flex:1}.x-size-panel p{display:none}.x-list-controls{flex-wrap:wrap;gap:8px}.formula-instruction{grid-template-columns:1fr}.formula-geometry{grid-template-columns:repeat(5,1fr)}.z-inspector-table{min-width:720px}.formula-elements{grid-template-columns:1fr}}
+
+#x-values-body .x-value-entry td:nth-child(6) button{min-height:24px;height:24px;padding:2px 8px;font-size:11px}
+.formula-modes{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:8px}.formula-modes label{display:flex;gap:6px;align-items:center;font:13px Segoe UI,Tahoma,sans-serif}
+.formula-instruction.has-cases{grid-template-columns:1fr}.formula-case-branch,.formula-case-fallback{display:grid;grid-template-columns:180px minmax(0,1fr);gap:7px 12px;align-items:center;margin:0 0 12px}.formula-case-branch label,.formula-case-fallback label{font:13px Segoe UI,Tahoma,sans-serif}.formula-case-branch input:not([type=checkbox]),.formula-case-fallback input{min-width:0;width:100%;height:32px;direction:ltr;font:14px Consolas,monospace;background:#fffdf4}.formula-case-branch input:disabled{background:#edf0f3}
+.formula-element-panels{grid-column:1/-1;display:flex;gap:12px;min-width:0}.formula-element-panels #formula-elements-list{flex:1;min-width:0;min-height:120px;max-height:180px}#formula-logical-panel{width:240px;flex-shrink:0;font-size:12px}#formula-logical-list{border:1px solid #bccbd5;background:#fff;margin-top:8px}#formula-logical-list button{display:block;width:100%;border:0;background:#fff;text-align:left;min-height:26px;font:12px Consolas,monospace}#formula-logical-list button:hover{background:#e7f3fb}
+#case-preview{display:block;direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 Consolas,monospace;border:1px solid #bfccd4;background:#fff;padding:8px;margin:5px 0 12px}#case-preview-label{font-size:12px}.formula-assistant .dialog-body{overflow-y:auto;min-height:0}
+#x-current-index{width:65px;min-width:65px;direction:ltr}#x-report-actions{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}#x-list-action-status{font-size:11px;color:#3c5c71;margin:4px 0;min-height:16px}
+@media(max-width:760px){.formula-case-branch,.formula-case-fallback{grid-template-columns:130px minmax(0,1fr)}.formula-element-panels{flex-direction:column}#formula-logical-panel{width:auto}#formula-logical-list{display:grid;grid-template-columns:1fr 1fr}.formula-assistant .dialog-actions{flex-wrap:wrap}}
+
+#x-table-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin:10px 0}#x-table-actions button{min-width:155px}
+
+#x-interpolation-panel{max-height:52vh;overflow:auto;background:white;border:1px solid #a7bed0;padding:10px}#x-interpolation-panel[hidden],.x-list-layout[hidden]{display:none!important}#x-interpolation-panel th{position:sticky;top:0;background:#dfebf2}#x-interpolation-panel td{padding:7px 12px}
+#x-values-dialog #x-interpolation-panel th:first-child{display:table-cell}
+
+/* Fit the list to its useful columns rather than a wide blank canvas. */
+#x-values-dialog{width:760px;max-width:calc(100vw - 24px)}#x-values-dialog .x-scope-toolbar{grid-template-columns:180px minmax(140px,1fr) 140px;gap:10px}#x-values-dialog .dialog-body{padding:10px 12px}#x-values-dialog .x-list-layout{grid-template-columns:minmax(0,1fr) 130px;gap:10px}#x-values-dialog .x-list-controls{gap:10px;flex-wrap:wrap}#x-values-dialog #x-edit-entry{min-width:115px}#x-values-dialog .dialog-actions{flex-wrap:wrap;gap:6px}#x-values-dialog .dialog-actions button{font-size:11px;padding:6px 9px}@media(max-width:650px){#x-values-dialog .x-scope-toolbar{grid-template-columns:1fr 1fr}#x-values-dialog .x-scope-part{grid-column:1/-1}#x-values-dialog .x-view-options{border:0;padding:0}#x-values-dialog .x-list-layout{grid-template-columns:minmax(0,1fr) 110px}}

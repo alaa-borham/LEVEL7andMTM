@@ -1,0 +1,13 @@
+{
+  "name": "level7-cad",
+  "version": "0.9.112",
+  "description": "Native MDL editor and temporary pattern measurement tools",
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "private": true,
+  "author": "LEVEL7",
+  "scripts": {
+    "start": "electron ."
+  },
+  "productName": "LEVEL7 and MTM"
+}

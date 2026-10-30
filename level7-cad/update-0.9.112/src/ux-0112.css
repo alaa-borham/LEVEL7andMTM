@@ -1,0 +1,17 @@
+/* 0.9.112 layout adjustments (loaded last). */
+
+/* Compact X window: the list grows with its rows instead of reserving a tall
+   empty area; it scrolls only when there are many values. */
+#x-values-dialog{width:min(760px,96vw)}
+#x-values-dialog .x-grouped-scroll{height:auto;min-height:64px;max-height:clamp(180px,46vh,540px)}
+#x-values-dialog .x-list-layout{grid-template-columns:minmax(0,1fr) 130px;align-items:start}
+#x-values-dialog .x-size-panel select{min-height:0;flex:none}
+#x-values-dialog .x-scope-toolbar{grid-template-columns:200px minmax(160px,1fr) 140px}
+
+/* Curve editing: Apply/Cancel exist once, in the double-click editor header;
+   the palette copies called the same handlers. */
+#curve-construction-apply,#curve-construction-cancel{display:none}
+
+/* Redo uses the Undo arrow mirrored. */
+.redo-command svg{transform:scaleX(-1)}
+.command-row:has(#redo-button){grid-template-columns:repeat(4,minmax(0,1fr))}

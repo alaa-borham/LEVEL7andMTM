@@ -1,0 +1,195 @@
+{
+ "source": "0111-development-tool-inventory.json (recorded by the 0.9.111 test run on an opened drawing)",
+ "groups": [
+  {
+   "id": "organisation",
+   "title": "Part organisation · تنظيم البارتات",
+   "options": 3,
+   "enabledInRecordedState": 3,
+   "disabledInRecordedState": 0,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "library",
+   "title": "Call basic blocks · مكتبة القوالب",
+   "options": 2,
+   "enabledInRecordedState": 0,
+   "disabledInRecordedState": 2,
+   "explicitlyNotImplemented": 2
+  },
+  {
+   "id": "insert",
+   "title": "Insert · إدراج",
+   "options": 12,
+   "enabledInRecordedState": 0,
+   "disabledInRecordedState": 12,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "assistant",
+   "title": "Part assistant · مساعد البارت",
+   "options": 5,
+   "enabledInRecordedState": 0,
+   "disabledInRecordedState": 5,
+   "explicitlyNotImplemented": 2
+  },
+  {
+   "id": "parallel",
+   "title": "Parallel · التوازي والإزاحة",
+   "options": 2,
+   "enabledInRecordedState": 2,
+   "disabledInRecordedState": 0,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "corners",
+   "title": "Corners · الزوايا",
+   "options": 9,
+   "enabledInRecordedState": 3,
+   "disabledInRecordedState": 6,
+   "explicitlyNotImplemented": 3
+  },
+  {
+   "id": "length",
+   "title": "Lengthen / shorten · إطالة وتقصير",
+   "options": 3,
+   "enabledInRecordedState": 2,
+   "disabledInRecordedState": 1,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "link",
+   "title": "Link · ضم الخطوط",
+   "options": 8,
+   "enabledInRecordedState": 2,
+   "disabledInRecordedState": 6,
+   "explicitlyNotImplemented": 3
+  },
+  {
+   "id": "split",
+   "title": "Separate · فصل وقص",
+   "options": 6,
+   "enabledInRecordedState": 3,
+   "disabledInRecordedState": 3,
+   "explicitlyNotImplemented": 2
+  },
+  {
+   "id": "raster",
+   "title": "Raster · نقاط المسار",
+   "options": 6,
+   "enabledInRecordedState": 4,
+   "disabledInRecordedState": 2,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "points",
+   "title": "Points and lines · نقاط وخطوط",
+   "options": 13,
+   "enabledInRecordedState": 12,
+   "disabledInRecordedState": 1,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "shapes",
+   "title": "Circles and rectangles · دوائر ومستطيلات",
+   "options": 4,
+   "enabledInRecordedState": 4,
+   "disabledInRecordedState": 0,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "curves",
+   "title": "Curves · المنحنيات",
+   "options": 4,
+   "enabledInRecordedState": 2,
+   "disabledInRecordedState": 2,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "transformations",
+   "title": "Transformations · التحويلات",
+   "options": 9,
+   "enabledInRecordedState": 5,
+   "disabledInRecordedState": 4,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "spread",
+   "title": "Spread · التوسيع",
+   "options": 2,
+   "enabledInRecordedState": 0,
+   "disabledInRecordedState": 2,
+   "explicitlyNotImplemented": 2
+  },
+  {
+   "id": "darts",
+   "title": "Darts · البنسات",
+   "options": 6,
+   "enabledInRecordedState": 1,
+   "disabledInRecordedState": 5,
+   "explicitlyNotImplemented": 4
+  },
+  {
+   "id": "symbols",
+   "title": "Symbols · العلامات",
+   "options": 10,
+   "enabledInRecordedState": 3,
+   "disabledInRecordedState": 7,
+   "explicitlyNotImplemented": 1
+  },
+  {
+   "id": "attributes",
+   "title": "Attributes · الخصائص",
+   "options": 19,
+   "enabledInRecordedState": 18,
+   "disabledInRecordedState": 1,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "manufacturing",
+   "title": "Manufacturing symbols · رموز الإنتاج",
+   "options": 16,
+   "enabledInRecordedState": 11,
+   "disabledInRecordedState": 5,
+   "explicitlyNotImplemented": 3
+  },
+  {
+   "id": "delete",
+   "title": "Delete · الحذف",
+   "options": 8,
+   "enabledInRecordedState": 5,
+   "disabledInRecordedState": 3,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "align",
+   "title": "Align part · محاذاة البارت",
+   "options": 2,
+   "enabledInRecordedState": 0,
+   "disabledInRecordedState": 2,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "texts",
+   "title": "Texts · النصوص",
+   "options": 3,
+   "enabledInRecordedState": 2,
+   "disabledInRecordedState": 1,
+   "explicitlyNotImplemented": 0
+  },
+  {
+   "id": "dimension",
+   "title": "Dimension · القياس",
+   "options": 16,
+   "enabledInRecordedState": 16,
+   "disabledInRecordedState": 0,
+   "explicitlyNotImplemented": 0
+  }
+ ],
+ "totals": {
+  "options": 168,
+  "enabled": 98,
+  "disabled": 70,
+  "explicitlyNotImplemented": 22
+ }
+}

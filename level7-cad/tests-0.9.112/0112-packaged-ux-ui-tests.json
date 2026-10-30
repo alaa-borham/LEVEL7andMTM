@@ -1,0 +1,16 @@
+{
+  "version": "0.9.112",
+  "passed": true,
+  "checks": [
+    "The program is named LEVEL7 and MTM in the window, title bar and application, with its own icon",
+    "With no drawing open, Save, Save As, Close and Redo are disabled from the first frame",
+    "X1 is added and edited before any drawing; the X window is 760 px wide and its list leaves 7 px empty (was a fixed tall area)",
+    "All 13 visible Points and lines options have their own title",
+    "Double-click curve editing shows one Apply and one Cancel (the duplicated palette pair is gone)",
+    "Insert point on the curve applies a native helper point and changes the curve",
+    "Undo restores the curve before the inserted point; Redo (menu state, Ctrl+Y and history button) brings it back exactly",
+    "Save As and reopen keep the edited curve geometry, its inserted point and X1 = 120",
+    "After Close, Save and Save As stay disabled"
+  ],
+  "errors": []
+}
