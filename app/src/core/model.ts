@@ -21,6 +21,7 @@ export interface Measurement {
   id: number; // X<id>
   name: string;
   value: number;
+  code?: string; // name of this measurement in the MTM system (for imports)
 }
 
 export interface Variable {
@@ -70,6 +71,7 @@ export interface Model {
 /** A size (or a customer for made-to-measure): values that replace the base measurements. */
 export interface Size {
   name: string;
+  kind?: "size" | "customer"; // customers (made to measure) are not graded
   step: number; // grading steps from the base size (-2, -1, 1, 2 ...)
   values: Record<number, number>; // X id -> value; missing = base value
 }
@@ -105,6 +107,7 @@ export function sizeName(model: Model, i: number): string {
 /** Fill every size column from the grading steps: base + step × grading. */
 export function fillGrading(model: Model): void {
   for (const sz of model.sizes ?? []) {
+    if (sz.kind === "customer") continue;
     for (const m of model.measurements) {
       const g = model.grading?.[m.id];
       if (g) sz.values[m.id] = Math.round((m.value + sz.step * g) * 100) / 100;

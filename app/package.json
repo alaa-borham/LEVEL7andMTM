@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run build:cli",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:cli": "esbuild src/cli-entry.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist-cli/level7.cjs"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.21.5",
     "typescript": "5.6.3",
     "vite": "5.4.11",
     "vitest": "2.1.8"

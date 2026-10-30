@@ -519,3 +519,7 @@ table.grid td.val.bad {
 input[type="number"] {
   direction: ltr;
 }
+
+.size-table th.customer {
+  background: #fff7e6;
+}

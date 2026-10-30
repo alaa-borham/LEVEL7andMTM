@@ -49,7 +49,8 @@ const num = (v: number) => (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3); // no "-0.
 export function toGradedAama(model: Model, date = new Date()): GradedResult {
   const errors: string[] = [];
   // sizes in grading order (by step); the base size has step 0
-  const idx = [-1, ...(model.sizes ?? []).map((_, i) => i)];
+  // customers (made to measure) are not part of a grade rule table
+  const idx = [-1, ...(model.sizes ?? []).flatMap((s, i) => (s.kind === "customer" ? [] : [i]))];
   const stepOf = (i: number) => (i < 0 ? 0 : (model.sizes as NonNullable<Model["sizes"]>)[i].step);
   idx.sort((a, b) => stepOf(a) - stepOf(b) || a - b);
   const names = sizeTokens(

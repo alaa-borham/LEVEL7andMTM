@@ -7,3 +7,5 @@ node_modules/
 app/dist/
 desktop/dist/
 desktop/web/
+app/dist-cli/
+desktop/cli/

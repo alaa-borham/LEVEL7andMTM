@@ -26,6 +26,7 @@ npm run dev
 - البناء للنشر: `npm run build`، والناتج في `app/dist`.
 - الاختبارات: `npm test`.
 - دليل الاستخدام: [docs/user-guide.md](docs/user-guide.md).
+- **الربط مع MTM ونظام التعشيق** (سطر الأوامر، وصيغ الطلبات، والتقرير): [docs/integration.md](docs/integration.md).
 
 ## نسخة ويندوز (`desktop/`)
 

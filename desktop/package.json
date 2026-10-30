@@ -21,6 +21,10 @@
       {
         "from": "../app/dist",
         "to": "web"
+      },
+      {
+        "from": "../app/dist-cli",
+        "to": "cli"
       }
     ],
     "win": {

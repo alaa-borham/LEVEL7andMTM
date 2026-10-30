@@ -1,5 +1,6 @@
 import { toGradedAama } from "../core/aama-graded";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
+import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, dist, type Pt } from "../core/geometry";
 import {
   createdIds,
@@ -660,14 +661,21 @@ export class App {
       autosave(this.model);
     });
     const fileInput = $<HTMLInputElement>("#file-input");
-    let fileMode: "open" | "grafis" = "open";
+    let fileMode: "open" | "grafis" | "customers" = "open";
+    this.pickFile = (mode) => {
+      fileMode = mode;
+      fileInput.accept = mode === "customers" ? ".csv,.json,.txt" : ".json,application/json";
+      fileInput.click();
+    };
     fileInput.addEventListener("change", async () => {
       const f = fileInput.files?.[0];
       fileInput.value = "";
       if (!f) return;
       try {
         const text = await f.text();
-        if (fileMode === "open") {
+        if (fileMode === "customers") {
+          this.importCustomers(text, f.name);
+        } else if (fileMode === "open") {
           this.load(parseModel(text));
           this.toast(`تم فتح ${f.name}`);
         } else {
@@ -685,12 +693,10 @@ export class App {
           this.load(emptyModel());
           break;
         case "open":
-          fileMode = "open";
-          fileInput.click();
+          this.pickFile("open");
           break;
         case "import-grafis":
-          fileMode = "grafis";
-          fileInput.click();
+          this.pickFile("grafis");
           break;
         case "save":
           this.save();
@@ -725,6 +731,28 @@ export class App {
           break;
       }
     });
+  }
+
+  private pickFile: (mode: "open" | "grafis" | "customers") => void = () => {};
+  private importUnit: Unit = "mm";
+
+  private importCustomers(text: string, fileName: string): void {
+    const orders = /\.json$/i.test(fileName) || text.trim().startsWith("{") || text.trim().startsWith("[") ? parseOrders(text) : parseCsv(text, this.importUnit);
+    this.snapshot();
+    const unknown = new Set<string>();
+    let last = -1;
+    for (const o of orders) {
+      if (!o.unit) o.unit = this.importUnit;
+      const { index, applied } = addCustomer(this.model, o);
+      applied.unknown.forEach((k) => unknown.add(k));
+      last = index;
+    }
+    this.model.activeSize = last;
+    this.changed();
+    this.toast(
+      `استُورد ${orders.length} زبون` +
+        (unknown.size ? `. قياسات غير معروفة: ${[...unknown].slice(0, 6).join("، ")} (أضف رموزها في عمود «رمز MTM» بصفحة القياسات)` : ""),
+    );
   }
 
   private save(): void {
@@ -950,9 +978,13 @@ export class App {
     const g = this.model.grading ?? {};
     const head = sizes
       .map(
-        (sz, i) => `<th class="size-col">
+        (sz, i) => `<th class="size-col${sz.kind === "customer" ? " customer" : ""}">
           <input data-sname="${i}" value="${esc(sz.name)}" title="اسم المقاس أو الزبون"/>
-          <div class="step">درجة <input type="number" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>
+          ${
+            sz.kind === "customer"
+              ? `<div class="step">زبون</div>`
+              : `<div class="step">درجة <input type="number" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>`
+          }
           <button class="danger" data-sdel="${i}" title="حذف المقاس">×</button></th>`,
       )
       .join("");
@@ -969,8 +1001,13 @@ export class App {
     box.innerHTML = `
       <p class="empty">كل عمود مقاس أو زبون. الخانة الفارغة تأخذ القيمة الأساسية. اختر المقاس المعروض من أعلى الشاشة، والباترون يُعاد بناؤه بقياساته.</p>
       <div class="table-actions">
-        <button data-sadd>إضافة مقاس / زبون</button>
+        <button data-sadd>إضافة مقاس</button>
+        <button data-cadd>إضافة زبون</button>
         <button data-sfill title="قيمة كل مقاس = الأساسي + الدرجة × التدرج">تعبئة بالتدرج</button>
+      </div>
+      <div class="table-actions">
+        <button data-cimport title="CSV: سطر لكل زبون، أو JSON: طلب أو قائمة طلبات">استيراد زبائن (CSV / JSON)</button>
+        <label class="field-inline">وحدة الملف <select data-cunit><option value="mm">مم</option><option value="cm">سم</option><option value="in">إنش</option></select></label>
       </div>
       <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات فوق بعض</label>
       ${this.showNest ? `<div class="legend">${this.nest.map((n) => `<span><i style="background:${n.color}"></i>${esc(n.name)}</span>`).join("")}</div>` : ""}
@@ -1039,6 +1076,16 @@ export class App {
       fillGrading({ ...this.model, sizes: [this.model.sizes[this.model.sizes.length - 1]] });
       this.changed();
     });
+    box.querySelector("[data-cadd]")?.addEventListener("click", () => {
+      this.snapshot();
+      this.model.sizes ??= [];
+      this.model.sizes.push({ name: `زبون ${this.model.sizes.filter((x) => x.kind === "customer").length + 1}`, kind: "customer", step: 0, values: {} });
+      this.changed();
+    });
+    box.querySelector("[data-cimport]")?.addEventListener("click", () => {
+      this.importUnit = (box.querySelector("[data-cunit]") as HTMLSelectElement).value as Unit;
+      this.pickFile("customers");
+    });
     box.querySelector("[data-sfill]")?.addEventListener("click", () => {
       if (!Object.keys(this.model.grading ?? {}).length) {
         this.toast("أدخل قيم التدرج أولاً في عمود «التدرج»");
@@ -1064,7 +1111,7 @@ export class App {
         this.toast("أضف مقاسات أولاً: قواعد التدرج تحتاج أكثر من مقاس");
         return;
       }
-      const steps = [0, ...this.model.sizes.map((s) => s.step)];
+      const steps = [0, ...this.model.sizes.filter((s) => s.kind !== "customer").map((s) => s.step)];
       if (new Set(steps).size !== steps.length) {
         this.toast("لكل مقاس درجة مختلفة في جدول التدرج (والأساسي درجته 0). الزبائن لا تُصدَّر بقواعد التدرج");
         return;
@@ -1101,13 +1148,14 @@ export class App {
         (m, i) => `<tr>
           <td class="id">X${m.id}</td>
           <td><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="اسم القياس"/></td>
+          <td style="width:90px"><input class="expr" data-i="${i}" data-f="code" value="${esc(m.code ?? "")}" placeholder="—" title="اسم هذا القياس في نظام MTM أو ملف الاستيراد"/></td>
           <td style="width:90px"><input class="expr" type="number" step="any" data-i="${i}" data-f="value" value="${m.value}"/></td>
           <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
         </tr>`,
       )
       .join("");
     box.innerHTML =
-      `<table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>القيمة مم</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
+      `<table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>رمز MTM</th><th>القيمة مم</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
       `<div class="table-actions"><button data-add>إضافة قياس</button></div>`;
     this.bindTable(box, "measurements");
   }
