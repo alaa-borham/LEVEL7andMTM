@@ -24,7 +24,7 @@ export function thobeSample(): { m: Model; ids: Record<string, number> } {
     { id: 18, name: "الطول", expr: "X1" },
   ];
   const ids: Record<string, number> = {};
-  const add = (key: string, kind: "point" | "line", make: (id: number) => Step) => {
+  const add = (key: string, kind: "point" | "line" | "curve", make: (id: number) => Step) => {
     const id = newId(m, kind);
     ids[key] = id;
     m.steps.push(make(id));
@@ -44,5 +44,8 @@ export function thobeSample(): { m: Model; ids: Record<string, number> } {
   m.steps.push({ op: "trim", target: ids.up, end: "end", to: ids.sh });
   m.steps.push({ op: "mirror", axis: ids.cf, items: [{ src: ids.lL }, { src: ids.shL }] });
   add("par", "line", (id) => ({ op: "parallel", id, of: ids.sh, dist: "50", side: -1 }));
+  // front neck curve: leaves the centre front at a right angle, ends on the shoulder neck point
+  add("neckC", "curve", (id) => ({ op: "curve", id, through: [{ obj: ids.neckD }, { obj: ids.neck }], startAngle: "0", endAngle: "" }));
+  m.variables.push({ id: 19, name: "طول فتحة الرقبة الأمامية", expr: "", measure: { type: "length", obj: ids.neckC } });
   return { m, ids };
 }

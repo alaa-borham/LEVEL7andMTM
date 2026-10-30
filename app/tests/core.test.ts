@@ -1,6 +1,6 @@
 import { evaluate, FormulaError } from "../src/core/formula";
 import { crossings, pointAlong, subPolyline, type Pt } from "../src/core/geometry";
-import { evaluateModel } from "../src/core/model";
+import { emptyModel, evaluateModel, newId } from "../src/core/model";
 import { thobeSample as thobe } from "../src/core/sample";
 
 const ev = (s: string, x: Record<number, number> = {}, z: Record<number, number> = {}) =>
@@ -70,5 +70,85 @@ describe("model rebuilds the GRAFIS thobe", () => {
     expect(r.zErrors.get(9)).toMatch(/X99/);
     expect(r.stepErrors.size).toBeGreaterThan(0);
     expect(r.objects.size).toBeGreaterThan(3);
+  });
+});
+
+describe("phase 2: curves and measurements", () => {
+  const base = () => {
+    const m = emptyModel();
+    m.measurements = [{ id: 1, name: "a", value: 100 }];
+    const pid = (x: string, y: string) => {
+      const id = newId(m, "point");
+      m.steps.push({ op: "point", id, x, y });
+      return id;
+    };
+    const a = pid("0", "0");
+    const b = pid("X1", "50");
+    const c = pid("200", "0");
+    return { m, a, b, c };
+  };
+
+  it("curve passes through its points and honours end directions", () => {
+    const { m, a, b, c } = base();
+    const id = newId(m, "curve");
+    m.steps.push({ op: "curve", id, through: [{ obj: a }, { obj: b }, { obj: c }], startAngle: "90", endAngle: "" });
+    const r = evaluateModel(m);
+    expect([...r.stepErrors]).toEqual([]);
+    const pts = r.objects.get(id)!.pts;
+    expect(pts[0]).toEqual([0, 0]);
+    expect(pts[24][0]).toBeCloseTo(100);
+    expect(pts[24][1]).toBeCloseTo(50);
+    expect(pts[pts.length - 1]).toEqual([200, 0]);
+    // leaves the start straight up
+    expect(Math.abs(pts[1][0])).toBeLessThan(0.5);
+    expect(pts[1][1]).toBeGreaterThan(0);
+    expect(m.names[id]).toBe("C1");
+  });
+
+  it("other tools work on curves", () => {
+    const { m, a, b, c } = base();
+    const cv = newId(m, "curve");
+    m.steps.push({ op: "curve", id: cv, through: [{ obj: a }, { obj: b }, { obj: c }], startAngle: "", endAngle: "" });
+    const p = newId(m, "point");
+    m.steps.push({ op: "pointOn", id: p, on: cv, dist: "50", unit: "%", from: "start" });
+    const par = newId(m, "curve");
+    m.steps.push({ op: "parallel", id: par, of: cv, dist: "10", side: 1 });
+    const r = evaluateModel(m);
+    expect([...r.stepErrors]).toEqual([]);
+    // symmetric curve: the middle is the apex
+    expect(r.objects.get(p)!.pts[0][0]).toBeCloseTo(100, 0);
+    expect(r.objects.get(par)!.pts.length).toBe(r.objects.get(cv)!.pts.length);
+  });
+
+  it("measured variables follow the drawing and feed formulas", () => {
+    const { m, a, b, c } = base();
+    const L = newId(m, "line");
+    m.steps.push({ op: "line", id: L, p1: { obj: a }, p2: { obj: c } });
+    m.variables = [
+      { id: 1, name: "ab", expr: "", measure: { type: "dist", a: { obj: a }, b: { obj: b } } },
+      { id: 2, name: "len", expr: "", measure: { type: "length", obj: L } },
+      { id: 3, name: "half", expr: "Z2/2" },
+    ];
+    const q = newId(m, "point");
+    m.steps.push({ op: "pointOn", id: q, on: L, dist: "Z3", unit: "mm", from: "start" });
+    let r = evaluateModel(m);
+    expect([...r.stepErrors]).toEqual([]);
+    expect(r.z.get(1)).toBeCloseTo(Math.hypot(100, 50));
+    expect(r.z.get(2)).toBeCloseTo(200);
+    expect(r.objects.get(q)!.pts[0][0]).toBeCloseTo(100);
+    // change the measurement: the measured distance follows
+    m.measurements[0].value = 120;
+    r = evaluateModel(m);
+    expect(r.z.get(1)).toBeCloseTo(Math.hypot(120, 50));
+  });
+
+  it("a measurement used before its objects exist is an error, not a crash", () => {
+    const { m, a } = base();
+    m.variables = [{ id: 1, name: "len", expr: "", measure: { type: "length", obj: 999 } }];
+    const q = newId(m, "point");
+    m.steps.push({ op: "pointMove", id: q, from: { obj: a }, along: a, dist: "Z1" });
+    const r = evaluateModel(m);
+    expect(r.zErrors.get(1)).toBeTruthy();
+    expect(r.stepErrors.size).toBe(1);
   });
 });

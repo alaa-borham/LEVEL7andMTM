@@ -12,9 +12,9 @@ import {
   type Step,
 } from "../core/model";
 import { thobeSample } from "../core/sample";
-import { describe } from "./describe";
+import { describe, describeMeasure } from "./describe";
 import { autosave, download, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
-import { applyFields, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
+import { applyFields, pickedId, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
@@ -43,7 +43,7 @@ export class App {
 
   private tool: Tool | null = null;
   private picks: Pick[] = [];
-  private extra: number[] = [];
+  private extra: Pick[] = [];
   private collecting = false;
   private hover: Hover = null;
   private mouse: Pt = [0, 0];
@@ -167,14 +167,17 @@ export class App {
       parts.push(`<text x="${x + 5}" y="${y - 5}">${esc(o.name)}</text>`);
     }
     // picks already made by the current tool
-    for (const p of this.picks) parts.push(this.markSvg(p, "var(--select)"));
+    for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     this.svg.innerHTML = parts.join("");
   }
 
   private highlighted(): Set<number> {
-    const ids = new Set<number>(this.extra);
-    for (const p of this.picks) if (p.kind === "line") ids.add(p.obj);
+    const ids = new Set<number>();
+    for (const p of [...this.picks, ...this.extra]) {
+      if (p.kind === "line") ids.add(p.obj);
+      else if (p.kind === "point" && !p.ref.end && this.tool?.multi?.kind === "object") ids.add(p.ref.obj);
+    }
     const s = this.model.steps[this.selectedStep];
     if (s) {
       for (const id of createdIds(s)) ids.add(id);
@@ -260,7 +263,7 @@ export class App {
 
   private currentPickKind(): PickKind | null {
     if (!this.tool || this.form) return null;
-    if (this.collecting) return "object";
+    if (this.collecting) return this.tool.multi?.kind ?? null;
     return this.tool.picks[this.picks.length]?.kind ?? null;
   }
 
@@ -291,6 +294,7 @@ export class App {
     this.tool = t;
     this.selectedStep = -1;
     document.querySelectorAll("#tools button").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.tool === t.key));
+    this.collecting = !t.picks.length && !!t.multi;
     this.updatePrompt();
     this.renderSteps();
     this.render();
@@ -316,6 +320,7 @@ export class App {
     this.collecting = false;
     this.closeForm();
     this.tool = t;
+    this.collecting = !!t && !t.picks.length && !!t.multi;
     this.updatePrompt();
   }
 
@@ -323,7 +328,7 @@ export class App {
     let text = "اختر أداة من القائمة. اسحب بالزر الأيمن للتحريك، والعجلة للتكبير.";
     if (this.tool) {
       if (this.form) text = `${this.tool.name}: أدخل القيم ثم Enter`;
-      else if (this.collecting) text = `${this.tool.name}: ${this.tool.multi} (${this.extra.length} محدد)`;
+      else if (this.collecting) text = `${this.tool.name}: ${this.tool.multi?.prompt} (${this.extra.length} محدد)`;
       else text = `${this.tool.name}: ${this.tool.picks[this.picks.length]?.prompt ?? ""}`;
       text += " — Esc للإلغاء";
     }
@@ -334,11 +339,16 @@ export class App {
     const t = this.tool;
     if (!t) return;
     if (this.collecting) {
-      const id = p.kind === "point" ? p.ref.obj : p.kind === "line" ? p.obj : null;
-      if (id === null || (p.kind === "point" && p.ref.end)) return;
-      const i = this.extra.indexOf(id);
-      if (i >= 0) this.extra.splice(i, 1);
-      else this.extra.push(id);
+      if (t.multi?.kind === "point") {
+        const last = this.extra[this.extra.length - 1];
+        if (!(last && JSON.stringify(last.kind === "point" && last.ref) === JSON.stringify(p.kind === "point" && p.ref))) this.extra.push(p);
+      } else {
+        const id = pickedId(p);
+        if (id === null || (p.kind === "point" && p.ref.end)) return;
+        const i = this.extra.findIndex((q) => pickedId(q) === id);
+        if (i >= 0) this.extra.splice(i, 1);
+        else this.extra.push(p);
+      }
       this.updatePrompt();
       this.render();
       return;
@@ -360,8 +370,8 @@ export class App {
 
   private finishPicks(): void {
     const t = this.tool as Tool;
-    if (t.multi && !this.extra.length) {
-      this.toast("لم تحدد أي عنصر");
+    if (t.multi && this.extra.length < t.multi.min) {
+      this.toast(t.multi.kind === "point" ? `حدد ${t.multi.min} نقاط على الأقل` : "لم تحدد أي عنصر");
       return;
     }
     const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
@@ -376,11 +386,20 @@ export class App {
   private commit(values: Record<string, string>): void {
     const t = this.tool as Tool;
     this.snapshot();
-    const step: Step = t.build({ model: this.model, res: this.res, picks: this.picks, extra: this.extra }, values);
-    this.model.steps.push(step);
-    this.changed();
-    const err = this.res.stepErrors.get(this.model.steps.length - 1);
-    if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
+    const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
+    if (t.makeVar) {
+      const id = this.model.variables.reduce((a, v) => Math.max(a, v.id), 0) + 1;
+      this.model.variables.push({ id, ...t.makeVar(ctx, values) });
+      this.changed();
+      const v = this.res.z.get(id);
+      this.toast(`أُضيف Z${id}${v !== undefined ? ` = ${fmt(v)}` : ""} ويمكن استخدامه في المعادلات`);
+    } else if (t.build) {
+      const step: Step = t.build(ctx, values);
+      this.model.steps.push(step);
+      this.changed();
+      const err = this.res.stepErrors.get(this.model.steps.length - 1);
+      if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
+    }
     this.restartTool();
     this.render();
   }
@@ -398,14 +417,23 @@ export class App {
             ? `<label class="field"><span>${fl.label}</span><select data-key="${fl.key}">${fl.options
                 .map(([v, l]) => `<option value="${v}"${v === fl.value ? " selected" : ""}>${l}</option>`)
                 .join("")}</select></label>`
-            : `<label class="field"><span>${fl.label}</span><input class="expr" data-key="${fl.key}" value="${esc(fl.value)}"/></label><div class="field"><span></span><div class="preview" data-preview="${fl.key}"></div></div>`,
+            : fl.text
+              ? `<label class="field"><span>${fl.label}</span><input data-key="${fl.key}" value="${esc(fl.value)}"/></label>`
+              : `<label class="field"><span>${fl.label}</span><input class="expr" data-key="${fl.key}" value="${esc(fl.value)}"/></label><div class="field"><span></span><div class="preview" data-preview="${fl.key}"></div></div>`,
         )
         .join("") +
       `<p class="hint">تقبل الحقول أرقاماً أو معادلات مثل Z6 أو X3/2+10</p>` +
       `<div class="buttons"><button class="primary" data-ok>موافق</button><button data-cancel>إلغاء</button></div>`;
-    const vars = new Vars(this.model);
+    const vars = new Vars(this.model, undefined, this.res.z);
+    const optional = new Set(f.fields.filter((x) => x.optional).map((x) => x.key));
     const preview = (inp: HTMLInputElement) => {
       const out = box.querySelector(`[data-preview="${inp.dataset.key}"]`) as HTMLElement;
+      if (!inp.value.trim() && optional.has(inp.dataset.key as string)) {
+        out.textContent = "فارغ = حر";
+        out.classList.remove("bad");
+        inp.classList.remove("bad");
+        return;
+      }
       try {
         out.textContent = "= " + fmt(vars.eval(inp.value));
         out.classList.remove("bad");
@@ -740,7 +768,11 @@ export class App {
         return `<tr>
           <td class="id">Z${v.id}</td>
           <td><input data-i="${i}" data-f="name" value="${esc(v.name)}" placeholder="الوصف"/>
-              <input class="expr" data-i="${i}" data-f="expr" value="${esc(v.expr)}" style="margin-top:3px"/></td>
+              ${
+                v.measure
+                  ? `<div class="measure">${esc(describeMeasure(v.measure, this.model)).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}</div>`
+                  : `<input class="expr" data-i="${i}" data-f="expr" value="${esc(v.expr)}" style="margin-top:3px"/>`
+              }</td>
           <td class="val${err ? " bad" : ""}" data-zval="${v.id}">${err ? esc(err) : val !== undefined ? fmt(val) : ""}</td>
           <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
         </tr>`;
@@ -748,7 +780,8 @@ export class App {
       .join("");
     box.innerHTML =
       `<table class="grid"><thead><tr><th>رمز</th><th>الوصف والمعادلة</th><th>القيمة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
-      `<div class="table-actions"><button data-add>إضافة معادلة</button></div>`;
+      `<div class="table-actions"><button data-add>إضافة معادلة</button></div>` +
+      `<p class="empty">للقياس من الرسم استخدم أداتي «قياس مسافة» و«قياس طول». القيمة تؤخذ لحظة رسم العناصر المقاسة، مثل جرافس.</p>`;
     this.bindTable(box, "variables");
   }
 

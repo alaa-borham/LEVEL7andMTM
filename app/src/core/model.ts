@@ -8,8 +8,10 @@ import {
   directionAt,
   dist,
   mirrorPt,
+  offsetPolyline,
   pointAlong,
   polyLen,
+  smoothCurve,
   subPolyline,
   type Pt,
 } from "./geometry";
@@ -23,8 +25,12 @@ export interface Measurement {
 export interface Variable {
   id: number; // Z<id>
   name: string;
-  expr: string;
+  expr: string; // formula; unused when measure is set
+  measure?: Measure;
 }
+
+/** Value taken from the drawing: distance between two points, or length of a line/curve. */
+export type Measure = { type: "dist"; a: PointRef; b: PointRef } | { type: "length"; obj: number };
 
 /** A point object, or an end of a line. */
 export interface PointRef {
@@ -42,7 +48,8 @@ export type Step =
   | { op: "parallel"; id: number; of: number; dist: string; side: 1 | -1 }
   | { op: "setLength"; target: number; length: string }
   | { op: "trim"; target: number; end: "start" | "end"; to: number }
-  | { op: "mirror"; axis: number; items: { src: number; dst?: number }[] };
+  | { op: "mirror"; axis: number; items: { src: number; dst?: number }[] }
+  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string };
 
 export interface Model {
   version: 1;
@@ -74,23 +81,30 @@ export function emptyModel(name = "باترون جديد"): Model {
 }
 
 // ------------------------------------------------------------------ variables
+/** A measured variable whose objects do not exist yet at this point of the construction. */
+class NotReady extends FormulaError {}
+
+export type MeasureFn = (m: Measure) => number | null;
+
 export class Vars {
   readonly x = new Map<number, number>();
   readonly z = new Map<number, number>();
   readonly zErrors = new Map<number, string>();
-  private zExpr = new Map<number, string>();
+  private defs = new Map<number, Variable>();
   private active = new Set<number>();
 
-  constructor(model: Model) {
+  /**
+   * measure: takes a measurement in the drawing, or null while its objects are
+   * missing. seed: values already known (e.g. from a full evaluation).
+   */
+  constructor(
+    model: Model,
+    private measure?: MeasureFn,
+    seed?: Map<number, number>,
+  ) {
     for (const m of model.measurements) this.x.set(m.id, m.value);
-    for (const v of model.variables) this.zExpr.set(v.id, v.expr);
-    for (const id of this.zExpr.keys()) {
-      try {
-        this.zval(id);
-      } catch (e) {
-        if (!this.zErrors.has(id)) this.zErrors.set(id, (e as Error).message);
-      }
-    }
+    for (const v of model.variables) this.defs.set(v.id, v);
+    if (seed) for (const [k, v] of seed) this.z.set(k, v);
   }
 
   private lookup = (kind: "X" | "Z", n: number): number => {
@@ -107,19 +121,48 @@ export class Vars {
     if (cached !== undefined) return cached;
     const err = this.zErrors.get(n);
     if (err) throw new FormulaError(`Z${n}: ${err}`);
-    const src = this.zExpr.get(n);
-    if (src === undefined) throw new FormulaError(`المتغير Z${n} غير موجود`);
+    const def = this.defs.get(n);
+    if (def === undefined) throw new FormulaError(`المتغير Z${n} غير موجود`);
+    if (def.measure) {
+      const v = this.measure?.(def.measure) ?? null;
+      if (v === null) throw new NotReady(`Z${n} يُقاس من الرسم، وعناصره غير مرسومة بعد`);
+      this.z.set(n, v);
+      return v;
+    }
     if (this.active.has(n)) throw new FormulaError(`Z${n} يعتمد على نفسه`);
     this.active.add(n);
     try {
-      const v = evaluate(src, this.lookup);
+      const v = evaluate(def.expr, this.lookup);
       this.z.set(n, v);
       return v;
     } catch (e) {
-      this.zErrors.set(n, (e as Error).message);
+      if (!(e instanceof NotReady)) this.zErrors.set(n, (e as Error).message);
       throw e;
     } finally {
       this.active.delete(n);
+    }
+  }
+
+  /**
+   * Take every measurement whose objects exist now. Like GRAFIS, a measured
+   * value is fixed at the moment its objects are first available.
+   */
+  measureReady(): void {
+    for (const [n, def] of this.defs) {
+      if (!def.measure || this.z.has(n)) continue;
+      const v = this.measure?.(def.measure) ?? null;
+      if (v !== null) this.z.set(n, v);
+    }
+  }
+
+  /** Evaluate everything left (for display) and record what failed. */
+  finish(): void {
+    for (const id of this.defs.keys()) {
+      try {
+        this.zval(id);
+      } catch (e) {
+        if (!this.zErrors.has(id)) this.zErrors.set(id, (e as Error).message);
+      }
     }
   }
 
@@ -131,9 +174,24 @@ export class Vars {
 
 // ------------------------------------------------------------------ evaluation
 export function evaluateModel(model: Model): EvalResult {
-  const vars = new Vars(model);
   const objects = new Map<number, GObj>();
   const stepErrors = new Map<number, string>();
+  const refPoint = (r: PointRef): Pt | null => {
+    const o = objects.get(r.obj);
+    if (!o) return null;
+    if (o.kind === "point" || !r.end) return o.pts[0];
+    return r.end === "end" ? o.pts[o.pts.length - 1] : o.pts[0];
+  };
+  const vars = new Vars(model, (m) => {
+    if (m.type === "length") {
+      const o = objects.get(m.obj);
+      return o && o.kind === "line" ? polyLen(o.pts) : null;
+    }
+    const a = refPoint(m.a);
+    const b = refPoint(m.b);
+    return a && b ? dist(a, b) : null;
+  });
+  vars.measureReady();
 
   const need = (id: number): GObj => {
     const o = objects.get(id);
@@ -193,20 +251,23 @@ export function evaluateModel(model: Model): EvalResult {
           break;
         }
         case "parallel": {
-          const pts = needLine(s.of).pts;
-          const a = pts[0];
-          const b = pts[pts.length - 1];
-          const L = dist(a, b) || 1;
-          // left normal of the direction start -> end; side 1 = left, -1 = right
-          const k = s.side * vars.eval(s.dist);
-          const nx = (-(b[1] - a[1]) / L) * k;
-          const ny = ((b[0] - a[0]) / L) * k;
-          put(s.id, "line", pts.map((p) => [p[0] + nx, p[1] + ny] as Pt), i);
+          // side 1 = left of the direction start -> end, -1 = right
+          put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
           break;
         }
         case "setLength": {
           const o = needLine(s.target);
-          put(o.id, "line", [o.pts[0], pointAlong(o.pts, vars.eval(s.length))], i);
+          put(o.id, "line", subPolyline(o.pts, 0, vars.eval(s.length)), i);
+          break;
+        }
+        case "curve": {
+          if (s.through.length < 2) throw new Error("المنحنى يحتاج نقطتين على الأقل");
+          const dir = (a: string): Pt | null => {
+            if (!a.trim()) return null;
+            const r = (vars.eval(a) * Math.PI) / 180;
+            return [Math.cos(r), Math.sin(r)];
+          };
+          put(s.id, "line", smoothCurve(s.through.map(pointOf), dir(s.startAngle), dir(s.endAngle)), i);
           break;
         }
         case "trim": {
@@ -233,7 +294,9 @@ export function evaluateModel(model: Model): EvalResult {
     } catch (e) {
       stepErrors.set(i, (e as Error).message);
     }
+    vars.measureReady();
   });
+  vars.finish();
   return { objects, stepErrors, z: vars.z, zErrors: vars.zErrors };
 }
 
@@ -274,12 +337,14 @@ export function usedIds(s: Step): number[] {
       return [s.target, s.to];
     case "mirror":
       return [s.axis, ...s.items.map((it) => it.src)];
+    case "curve":
+      return s.through.map((r) => r.obj);
   }
 }
 
-export function newId(model: Model, kind: "point" | "line"): number {
+export function newId(model: Model, kind: "point" | "line" | "curve"): number {
   const id = model.nextId++;
-  const prefix = kind === "point" ? "P" : "L";
+  const prefix = kind === "point" ? "P" : kind === "curve" ? "C" : "L";
   let n = 1;
   const taken = new Set(Object.values(model.names));
   while (taken.has(`${prefix}${n}`)) n++;

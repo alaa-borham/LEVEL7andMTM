@@ -2,7 +2,17 @@
 // for, and the construction step it adds.
 
 import { dist, polyLen, type Pt } from "../core/geometry";
-import { nearerEnd, newId, sideOf, type EvalResult, type GObj, type Model, type PointRef, type Step } from "../core/model";
+import {
+  nearerEnd,
+  newId,
+  sideOf,
+  type EvalResult,
+  type GObj,
+  type Model,
+  type PointRef,
+  type Step,
+  type Variable,
+} from "../core/model";
 
 export type PickKind = "point" | "line" | "canvas" | "object";
 
@@ -15,6 +25,8 @@ export interface Field {
   key: string;
   label: string;
   value: string;
+  optional?: boolean; // may be left empty
+  text?: boolean; // plain text, not a formula
   options?: [string, string][]; // select: [value, label]
 }
 
@@ -22,7 +34,7 @@ export interface Ctx {
   model: Model;
   res: EvalResult;
   picks: Pick[];
-  extra: number[]; // multi-pick objects (mirror)
+  extra: Pick[]; // picks made in the multi-pick phase (mirror objects, curve points)
 }
 
 export interface Tool {
@@ -31,10 +43,20 @@ export interface Tool {
   group: string;
   shortcut?: string;
   picks: { kind: PickKind; prompt: string }[];
-  multi?: string; // prompt for picking any number of objects, finished with Enter
+  multi?: { kind: "point" | "object"; prompt: string; min: number }; // any number of picks, finished with Enter
   fields?: (c: Ctx) => Field[];
-  build: (c: Ctx, v: Record<string, string>) => Step;
+  build?: (c: Ctx, v: Record<string, string>) => Step;
+  makeVar?: (c: Ctx, v: Record<string, string>) => Omit<Variable, "id">; // measurement tools
 }
+
+/** Object id of a multi-pick (a whole point or line). */
+export const pickedId = (p: Pick): number | null => (p.kind === "point" ? p.ref.obj : p.kind === "line" ? p.obj : null);
+
+/** Kind for naming a copy of an object (curves keep the C prefix). */
+const copyKind = (c: Ctx, id: number): "point" | "line" | "curve" => {
+  const o = obj(c, id);
+  return o.kind === "point" ? "point" : (c.model.names[id] ?? "").startsWith("C") ? "curve" : "line";
+};
 
 const r1 = (x: number) => String(Math.round(x * 10) / 10);
 const obj = (c: Ctx, id: number): GObj => c.res.objects.get(id) as GObj;
@@ -168,11 +190,11 @@ export const TOOLS: Tool[] = [
     group: "التعديل",
     shortcut: "8",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
-    multi: "انقر العناصر المراد نسخها بالانعكاس، ثم Enter للتنفيذ",
+    multi: { kind: "object", prompt: "انقر العناصر المراد نسخها بالانعكاس، ثم Enter للتنفيذ", min: 1 },
     build: (c) => ({
       op: "mirror",
       axis: line(c, 0).obj,
-      items: c.extra.map((src) => ({ src, dst: newId(c.model, obj(c, src).kind) })),
+      items: c.extra.map((p) => pickedId(p) as number).map((src) => ({ src, dst: newId(c.model, copyKind(c, src)) })),
     }),
   },
   {
@@ -180,8 +202,46 @@ export const TOOLS: Tool[] = [
     name: "انعكاس (نقل)",
     group: "التعديل",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
-    multi: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ",
-    build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((src) => ({ src })) }),
+    multi: { kind: "object", prompt: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ", min: 1 },
+    build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((p) => ({ src: pickedId(p) as number })) }),
+  },
+  {
+    key: "curve",
+    name: "منحنى عبر نقاط",
+    group: "المنحنيات",
+    shortcut: "9",
+    picks: [],
+    multi: { kind: "point", prompt: "انقر نقاط المنحنى بالترتيب، ثم Enter", min: 2 },
+    fields: () => [
+      { key: "startAngle", label: "اتجاه البداية °", value: "", optional: true },
+      { key: "endAngle", label: "اتجاه النهاية °", value: "", optional: true },
+    ],
+    build: (c, v) => ({
+      op: "curve",
+      id: newId(c.model, "curve"),
+      through: c.extra.map((p) => (p as Extract<Pick, { kind: "point" }>).ref),
+      startAngle: v.startAngle,
+      endAngle: v.endAngle,
+    }),
+  },
+  {
+    key: "measureDist",
+    name: "قياس مسافة ← Z",
+    group: "القياس من الرسم",
+    picks: [
+      { kind: "point", prompt: "انقر النقطة الأولى" },
+      { kind: "point", prompt: "انقر النقطة الثانية" },
+    ],
+    fields: (c) => [{ key: "name", label: "الوصف", value: `مسافة ${r1(dist(c.picks[0].at, c.picks[1].at))}`, text: true }],
+    makeVar: (c, v) => ({ name: v.name, expr: "", measure: { type: "dist", a: point(c, 0).ref, b: point(c, 1).ref } }),
+  },
+  {
+    key: "measureLength",
+    name: "قياس طول ← Z",
+    group: "القياس من الرسم",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى" }],
+    fields: (c) => [{ key: "name", label: "الوصف", value: `طول ${c.model.names[line(c, 0).obj] ?? ""}`, text: true }],
+    makeVar: (c, v) => ({ name: v.name, expr: "", measure: { type: "length", obj: line(c, 0).obj } }),
   },
 ];
 
@@ -215,6 +275,11 @@ export function stepFields(s: Step): Field[] {
       return [{ key: "length", label: "الطول الجديد", value: s.length }];
     case "trim":
       return [{ key: "end", label: "الطرف", value: s.end, options: [["start", "البداية"], ["end", "النهاية"]] }];
+    case "curve":
+      return [
+        { key: "startAngle", label: "اتجاه البداية °", value: s.startAngle, optional: true },
+        { key: "endAngle", label: "اتجاه النهاية °", value: s.endAngle, optional: true },
+      ];
     default:
       return [];
   }

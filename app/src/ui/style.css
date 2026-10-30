@@ -364,3 +364,11 @@ table.grid td.val.bad {
   border-radius: 6px;
   z-index: 10;
 }
+
+.measure {
+  margin-top: 3px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: var(--accent-soft);
+  border-radius: 5px;
+}

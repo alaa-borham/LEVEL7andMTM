@@ -141,3 +141,64 @@ export function closestOnPolyline(p: Pt[], x: Pt): { d: number; s: number; pt: P
   }
   return best;
 }
+
+const unit = (v: Pt): Pt => {
+  const n = Math.hypot(v[0], v[1]) || 1;
+  return [v[0] / n, v[1] / n];
+};
+
+/**
+ * Smooth curve through points (cubic Hermite, chord-length tangents).
+ * startDir / endDir: optional unit directions at the ends; otherwise the end
+ * tangent follows the neighbouring span. Returned as a dense polyline.
+ */
+export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null, perSpan = 24): Pt[] {
+  const n = pts.length;
+  if (n < 2) return [...pts];
+  const tan: Pt[] = pts.map((p, i) => {
+    if (i > 0 && i < n - 1) {
+      const a = unit([p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]]);
+      const b = unit([pts[i + 1][0] - p[0], pts[i + 1][1] - p[1]]);
+      return unit([a[0] + b[0], a[1] + b[1]]);
+    }
+    return [0, 0];
+  });
+  const chord = (i: number): Pt => unit([pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]]);
+  // free ends: mirror the neighbouring tangent about the chord (quadratic end condition)
+  const freeEnd = (c: Pt, t: Pt): Pt => (n === 2 ? c : unit([2 * c[0] * (c[0] * t[0] + c[1] * t[1]) - t[0], 2 * c[1] * (c[0] * t[0] + c[1] * t[1]) - t[1]]));
+  tan[0] = startDir ? unit(startDir) : freeEnd(chord(0), n > 2 ? tan[1] : chord(0));
+  tan[n - 1] = endDir ? unit(endDir) : freeEnd(chord(n - 2), n > 2 ? tan[n - 2] : chord(n - 2));
+  if (n === 2 && startDir && !endDir) tan[1] = freeEnd(chord(0), tan[0]);
+  if (n === 2 && endDir && !startDir) tan[0] = freeEnd(chord(0), tan[1]);
+
+  const out: Pt[] = [pts[0]];
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i];
+    const p1 = pts[i + 1];
+    const m = dist(p0, p1);
+    const t0 = tan[i];
+    const t1 = tan[i + 1];
+    for (let k = 1; k <= perSpan; k++) {
+      const s = k / perSpan;
+      const h00 = 2 * s ** 3 - 3 * s ** 2 + 1;
+      const h10 = s ** 3 - 2 * s ** 2 + s;
+      const h01 = -2 * s ** 3 + 3 * s ** 2;
+      const h11 = s ** 3 - s ** 2;
+      out.push([
+        h00 * p0[0] + h10 * m * t0[0] + h01 * p1[0] + h11 * m * t1[0],
+        h00 * p0[1] + h10 * m * t0[1] + h01 * p1[1] + h11 * m * t1[1],
+      ]);
+    }
+  }
+  return out;
+}
+
+/** Polyline moved sideways by d (positive = left of the direction of travel). */
+export function offsetPolyline(p: Pt[], d: number): Pt[] {
+  return p.map((q, i) => {
+    const a = p[Math.max(0, i - 1)];
+    const b = p[Math.min(p.length - 1, i + 1)];
+    const t = unit([b[0] - a[0], b[1] - a[1]]);
+    return [q[0] - t[1] * d, q[1] + t[0] * d] as Pt;
+  });
+}
