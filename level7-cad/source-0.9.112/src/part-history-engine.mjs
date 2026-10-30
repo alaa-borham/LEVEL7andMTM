@@ -37,7 +37,7 @@ import {standardSizeContext} from './standard-size-catalog.js';
 import {replayEndpointNotch,replayIntersectionNotch,replayCopiedNotch} from './notch-history-kernel.mjs';
 import {replayContourOffset} from './contour-offset-kernel.mjs';
 import {replayGrainMarker} from "./grain-history-kernel.mjs";
-import {applyParallelPath} from './parallel-path-kernel.mjs';
+import {applyParallelPath,constructionPoints} from './parallel-path-kernel.mjs';
 import {joinComputedObjects} from './construction-polyline-kernel.mjs';
 /** Experimental generic contiguous-prefix replay. Cached geometry is never an input.
  * Stops at the first unsupported operation: returned objects are historical, not
@@ -208,7 +208,11 @@ function runPartPrefix(bytes,doc,{partId,sizeKey,resolveParent}){
     ensure(!definitions.some(d=>d.recordStep>record&&d.recordStep<=record+2),'Z definition inside parallel group');
     const readInput=(raw,number)=>{const q=v(raw),binding=q.getUint16(6,true);ensure(raw.subarray(12).every(x=>x===0),'Unknown parallel numeric fields');if(!binding){const value=q.getFloat32(8,true);ensure(Number.isFinite(value),'Invalid parallel input');return {value,dependencies:[]};}const z=zValues().find(z=>z.index===binding-200&&z.recordStep<=number);ensure(binding>200&&z,'Unresolved parallel parameter');return {value:z.value,dependencies:['Z'+z.index]};};
     const start=readInput(b,record),end=readInput(second,record+1),id=c.getUint16(10,true),source=objects.find(o=>o.id===c.getUint16(6,true));ensure(source&&!objects.some(o=>o.id===id),'Missing/duplicate parallel object');
-    const result=applyParallelPath({source,id,record:record+2,start:compact?end.value:start.value,end:compact?start.value:end.value,side:c.getFloat32(16,true),dependencies:[...new Set([...start.dependencies,...end.dependencies])]});
+    // 0.9.112: on a sampled curve GRAFIS applies the first (start) input at the end
+    // of the source path; verified on ALAA2026.mdl part 7 (9/11 and 10/12 mm
+    // tapered allowances). Straight sources keep the previous mapping.
+    const swap=compact||(!compact&&start.value!==end.value&&constructionPoints(source).length>2);
+    const result=applyParallelPath({source,id,record:record+2,start:swap?end.value:start.value,end:swap?start.value:end.value,side:c.getFloat32(16,true),dependencies:[...new Set([...start.dependencies,...end.dependencies])]});
     linear=null;axis=null;put(result);trace.push({record,lastRecord:record+2,operation:'parallel-path',objectId:id});record+=2;
    }
    else if(op===197&&sub===100&&h.getUint16(4,true)===603){

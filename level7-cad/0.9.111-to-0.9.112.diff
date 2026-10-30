@@ -1,0 +1,1298 @@
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/HEAD dev/.git/HEAD
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/HEAD	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/HEAD	2026-10-30 17:46:31.268946235 +0000
+@@ -0,0 +1 @@
++ref: refs/heads/master
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/config dev/.git/config
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/config	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/config	2026-10-30 17:46:31.269058587 +0000
+@@ -0,0 +1,5 @@
++[core]
++	repositoryformatversion = 0
++	filemode = true
++	bare = false
++	logallrefupdates = true
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/description dev/.git/description
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/description	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/description	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1 @@
++Unnamed repository; edit this file 'description' to name the repository.
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/applypatch-msg.sample dev/.git/hooks/applypatch-msg.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/applypatch-msg.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/applypatch-msg.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,15 @@
++#!/bin/sh
++#
++# An example hook script to check the commit log message taken by
++# applypatch from an e-mail message.
++#
++# The hook should exit with non-zero status after issuing an
++# appropriate message if it wants to stop the commit.  The hook is
++# allowed to edit the commit message file.
++#
++# To enable this hook, rename this file to "applypatch-msg".
++
++. git-sh-setup
++commitmsg="$(git rev-parse --git-path hooks/commit-msg)"
++test -x "$commitmsg" && exec "$commitmsg" ${1+"$@"}
++:
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/commit-msg.sample dev/.git/hooks/commit-msg.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/commit-msg.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/commit-msg.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,24 @@
++#!/bin/sh
++#
++# An example hook script to check the commit log message.
++# Called by "git commit" with one argument, the name of the file
++# that has the commit message.  The hook should exit with non-zero
++# status after issuing an appropriate message if it wants to stop the
++# commit.  The hook is allowed to edit the commit message file.
++#
++# To enable this hook, rename this file to "commit-msg".
++
++# Uncomment the below to add a Signed-off-by line to the message.
++# Doing this in a hook is a bad idea in general, but the prepare-commit-msg
++# hook is more suited to it.
++#
++# SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
++# grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
++
++# This example catches duplicate Signed-off-by lines.
++
++test "" = "$(grep '^Signed-off-by: ' "$1" |
++	 sort | uniq -c | sed -e '/^[ 	]*1[ 	]/d')" || {
++	echo >&2 Duplicate Signed-off-by lines.
++	exit 1
++}
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/fsmonitor-watchman.sample dev/.git/hooks/fsmonitor-watchman.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/fsmonitor-watchman.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/fsmonitor-watchman.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,174 @@
++#!/usr/bin/perl
++
++use strict;
++use warnings;
++use IPC::Open2;
++
++# An example hook script to integrate Watchman
++# (https://facebook.github.io/watchman/) with git to speed up detecting
++# new and modified files.
++#
++# The hook is passed a version (currently 2) and last update token
++# formatted as a string and outputs to stdout a new update token and
++# all files that have been modified since the update token. Paths must
++# be relative to the root of the working tree and separated by a single NUL.
++#
++# To enable this hook, rename this file to "query-watchman" and set
++# 'git config core.fsmonitor .git/hooks/query-watchman'
++#
++my ($version, $last_update_token) = @ARGV;
++
++# Uncomment for debugging
++# print STDERR "$0 $version $last_update_token\n";
++
++# Check the hook interface version
++if ($version ne 2) {
++	die "Unsupported query-fsmonitor hook version '$version'.\n" .
++	    "Falling back to scanning...\n";
++}
++
++my $git_work_tree = get_working_dir();
++
++my $retry = 1;
++
++my $json_pkg;
++eval {
++	require JSON::XS;
++	$json_pkg = "JSON::XS";
++	1;
++} or do {
++	require JSON::PP;
++	$json_pkg = "JSON::PP";
++};
++
++launch_watchman();
++
++sub launch_watchman {
++	my $o = watchman_query();
++	if (is_work_tree_watched($o)) {
++		output_result($o->{clock}, @{$o->{files}});
++	}
++}
++
++sub output_result {
++	my ($clockid, @files) = @_;
++
++	# Uncomment for debugging watchman output
++	# open (my $fh, ">", ".git/watchman-output.out");
++	# binmode $fh, ":utf8";
++	# print $fh "$clockid\n@files\n";
++	# close $fh;
++
++	binmode STDOUT, ":utf8";
++	print $clockid;
++	print "\0";
++	local $, = "\0";
++	print @files;
++}
++
++sub watchman_clock {
++	my $response = qx/watchman clock "$git_work_tree"/;
++	die "Failed to get clock id on '$git_work_tree'.\n" .
++		"Falling back to scanning...\n" if $? != 0;
++
++	return $json_pkg->new->utf8->decode($response);
++}
++
++sub watchman_query {
++	my $pid = open2(\*CHLD_OUT, \*CHLD_IN, 'watchman -j --no-pretty')
++	or die "open2() failed: $!\n" .
++	"Falling back to scanning...\n";
++
++	# In the query expression below we're asking for names of files that
++	# changed since $last_update_token but not from the .git folder.
++	#
++	# To accomplish this, we're using the "since" generator to use the
++	# recency index to select candidate nodes and "fields" to limit the
++	# output to file names only. Then we're using the "expression" term to
++	# further constrain the results.
++	my $last_update_line = "";
++	if (substr($last_update_token, 0, 1) eq "c") {
++		$last_update_token = "\"$last_update_token\"";
++		$last_update_line = qq[\n"since": $last_update_token,];
++	}
++	my $query = <<"	END";
++		["query", "$git_work_tree", {$last_update_line
++			"fields": ["name"],
++			"expression": ["not", ["dirname", ".git"]]
++		}]
++	END
++
++	# Uncomment for debugging the watchman query
++	# open (my $fh, ">", ".git/watchman-query.json");
++	# print $fh $query;
++	# close $fh;
++
++	print CHLD_IN $query;
++	close CHLD_IN;
++	my $response = do {local $/; <CHLD_OUT>};
++
++	# Uncomment for debugging the watch response
++	# open ($fh, ">", ".git/watchman-response.json");
++	# print $fh $response;
++	# close $fh;
++
++	die "Watchman: command returned no output.\n" .
++	"Falling back to scanning...\n" if $response eq "";
++	die "Watchman: command returned invalid output: $response\n" .
++	"Falling back to scanning...\n" unless $response =~ /^\{/;
++
++	return $json_pkg->new->utf8->decode($response);
++}
++
++sub is_work_tree_watched {
++	my ($output) = @_;
++	my $error = $output->{error};
++	if ($retry > 0 and $error and $error =~ m/unable to resolve root .* directory (.*) is not watched/) {
++		$retry--;
++		my $response = qx/watchman watch "$git_work_tree"/;
++		die "Failed to make watchman watch '$git_work_tree'.\n" .
++		    "Falling back to scanning...\n" if $? != 0;
++		$output = $json_pkg->new->utf8->decode($response);
++		$error = $output->{error};
++		die "Watchman: $error.\n" .
++		"Falling back to scanning...\n" if $error;
++
++		# Uncomment for debugging watchman output
++		# open (my $fh, ">", ".git/watchman-output.out");
++		# close $fh;
++
++		# Watchman will always return all files on the first query so
++		# return the fast "everything is dirty" flag to git and do the
++		# Watchman query just to get it over with now so we won't pay
++		# the cost in git to look up each individual file.
++		my $o = watchman_clock();
++		$error = $output->{error};
++
++		die "Watchman: $error.\n" .
++		"Falling back to scanning...\n" if $error;
++
++		output_result($o->{clock}, ("/"));
++		$last_update_token = $o->{clock};
++
++		eval { launch_watchman() };
++		return 0;
++	}
++
++	die "Watchman: $error.\n" .
++	"Falling back to scanning...\n" if $error;
++
++	return 1;
++}
++
++sub get_working_dir {
++	my $working_dir;
++	if ($^O =~ 'msys' || $^O =~ 'cygwin') {
++		$working_dir = Win32::GetCwd();
++		$working_dir =~ tr/\\/\//;
++	} else {
++		require Cwd;
++		$working_dir = Cwd::cwd();
++	}
++
++	return $working_dir;
++}
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/post-update.sample dev/.git/hooks/post-update.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/post-update.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/post-update.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,8 @@
++#!/bin/sh
++#
++# An example hook script to prepare a packed repository for use over
++# dumb transports.
++#
++# To enable this hook, rename this file to "post-update".
++
++exec git update-server-info
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-applypatch.sample dev/.git/hooks/pre-applypatch.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-applypatch.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-applypatch.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,14 @@
++#!/bin/sh
++#
++# An example hook script to verify what is about to be committed
++# by applypatch from an e-mail message.
++#
++# The hook should exit with non-zero status after issuing an
++# appropriate message if it wants to stop the commit.
++#
++# To enable this hook, rename this file to "pre-applypatch".
++
++. git-sh-setup
++precommit="$(git rev-parse --git-path hooks/pre-commit)"
++test -x "$precommit" && exec "$precommit" ${1+"$@"}
++:
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-commit.sample dev/.git/hooks/pre-commit.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-commit.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-commit.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,49 @@
++#!/bin/sh
++#
++# An example hook script to verify what is about to be committed.
++# Called by "git commit" with no arguments.  The hook should
++# exit with non-zero status after issuing an appropriate message if
++# it wants to stop the commit.
++#
++# To enable this hook, rename this file to "pre-commit".
++
++if git rev-parse --verify HEAD >/dev/null 2>&1
++then
++	against=HEAD
++else
++	# Initial commit: diff against an empty tree object
++	against=$(git hash-object -t tree /dev/null)
++fi
++
++# If you want to allow non-ASCII filenames set this variable to true.
++allownonascii=$(git config --type=bool hooks.allownonascii)
++
++# Redirect output to stderr.
++exec 1>&2
++
++# Cross platform projects tend to avoid non-ASCII filenames; prevent
++# them from being added to the repository. We exploit the fact that the
++# printable range starts at the space character and ends with tilde.
++if [ "$allownonascii" != "true" ] &&
++	# Note that the use of brackets around a tr range is ok here, (it's
++	# even required, for portability to Solaris 10's /usr/bin/tr), since
++	# the square bracket bytes happen to fall in the designated range.
++	test $(git diff --cached --name-only --diff-filter=A -z $against |
++	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
++then
++	cat <<\EOF
++Error: Attempt to add a non-ASCII file name.
++
++This can cause problems if you want to work with people on other platforms.
++
++To be portable it is advisable to rename the file.
++
++If you know what you are doing you can disable this check using:
++
++  git config hooks.allownonascii true
++EOF
++	exit 1
++fi
++
++# If there are whitespace errors, print the offending file names and fail.
++exec git diff-index --check --cached $against --
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-merge-commit.sample dev/.git/hooks/pre-merge-commit.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-merge-commit.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-merge-commit.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,13 @@
++#!/bin/sh
++#
++# An example hook script to verify what is about to be committed.
++# Called by "git merge" with no arguments.  The hook should
++# exit with non-zero status after issuing an appropriate message to
++# stderr if it wants to stop the merge commit.
++#
++# To enable this hook, rename this file to "pre-merge-commit".
++
++. git-sh-setup
++test -x "$GIT_DIR/hooks/pre-commit" &&
++        exec "$GIT_DIR/hooks/pre-commit"
++:
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-push.sample dev/.git/hooks/pre-push.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-push.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-push.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,53 @@
++#!/bin/sh
++
++# An example hook script to verify what is about to be pushed.  Called by "git
++# push" after it has checked the remote status, but before anything has been
++# pushed.  If this script exits with a non-zero status nothing will be pushed.
++#
++# This hook is called with the following parameters:
++#
++# $1 -- Name of the remote to which the push is being done
++# $2 -- URL to which the push is being done
++#
++# If pushing without using a named remote those arguments will be equal.
++#
++# Information about the commits which are being pushed is supplied as lines to
++# the standard input in the form:
++#
++#   <local ref> <local oid> <remote ref> <remote oid>
++#
++# This sample shows how to prevent push of commits where the log message starts
++# with "WIP" (work in progress).
++
++remote="$1"
++url="$2"
++
++zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
++
++while read local_ref local_oid remote_ref remote_oid
++do
++	if test "$local_oid" = "$zero"
++	then
++		# Handle delete
++		:
++	else
++		if test "$remote_oid" = "$zero"
++		then
++			# New branch, examine all commits
++			range="$local_oid"
++		else
++			# Update to existing branch, examine new commits
++			range="$remote_oid..$local_oid"
++		fi
++
++		# Check for WIP commit
++		commit=$(git rev-list -n 1 --grep '^WIP' "$range")
++		if test -n "$commit"
++		then
++			echo >&2 "Found WIP commit in $local_ref, not pushing"
++			exit 1
++		fi
++	fi
++done
++
++exit 0
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-rebase.sample dev/.git/hooks/pre-rebase.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-rebase.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-rebase.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,169 @@
++#!/bin/sh
++#
++# Copyright (c) 2006, 2008 Junio C Hamano
++#
++# The "pre-rebase" hook is run just before "git rebase" starts doing
++# its job, and can prevent the command from running by exiting with
++# non-zero status.
++#
++# The hook is called with the following parameters:
++#
++# $1 -- the upstream the series was forked from.
++# $2 -- the branch being rebased (or empty when rebasing the current branch).
++#
++# This sample shows how to prevent topic branches that are already
++# merged to 'next' branch from getting rebased, because allowing it
++# would result in rebasing already published history.
++
++publish=next
++basebranch="$1"
++if test "$#" = 2
++then
++	topic="refs/heads/$2"
++else
++	topic=`git symbolic-ref HEAD` ||
++	exit 0 ;# we do not interrupt rebasing detached HEAD
++fi
++
++case "$topic" in
++refs/heads/??/*)
++	;;
++*)
++	exit 0 ;# we do not interrupt others.
++	;;
++esac
++
++# Now we are dealing with a topic branch being rebased
++# on top of master.  Is it OK to rebase it?
++
++# Does the topic really exist?
++git show-ref -q "$topic" || {
++	echo >&2 "No such branch $topic"
++	exit 1
++}
++
++# Is topic fully merged to master?
++not_in_master=`git rev-list --pretty=oneline ^master "$topic"`
++if test -z "$not_in_master"
++then
++	echo >&2 "$topic is fully merged to master; better remove it."
++	exit 1 ;# we could allow it, but there is no point.
++fi
++
++# Is topic ever merged to next?  If so you should not be rebasing it.
++only_next_1=`git rev-list ^master "^$topic" ${publish} | sort`
++only_next_2=`git rev-list ^master           ${publish} | sort`
++if test "$only_next_1" = "$only_next_2"
++then
++	not_in_topic=`git rev-list "^$topic" master`
++	if test -z "$not_in_topic"
++	then
++		echo >&2 "$topic is already up to date with master"
++		exit 1 ;# we could allow it, but there is no point.
++	else
++		exit 0
++	fi
++else
++	not_in_next=`git rev-list --pretty=oneline ^${publish} "$topic"`
++	/usr/bin/perl -e '
++		my $topic = $ARGV[0];
++		my $msg = "* $topic has commits already merged to public branch:\n";
++		my (%not_in_next) = map {
++			/^([0-9a-f]+) /;
++			($1 => 1);
++		} split(/\n/, $ARGV[1]);
++		for my $elem (map {
++				/^([0-9a-f]+) (.*)$/;
++				[$1 => $2];
++			} split(/\n/, $ARGV[2])) {
++			if (!exists $not_in_next{$elem->[0]}) {
++				if ($msg) {
++					print STDERR $msg;
++					undef $msg;
++				}
++				print STDERR " $elem->[1]\n";
++			}
++		}
++	' "$topic" "$not_in_next" "$not_in_master"
++	exit 1
++fi
++
++<<\DOC_END
++
++This sample hook safeguards topic branches that have been
++published from being rewound.
++
++The workflow assumed here is:
++
++ * Once a topic branch forks from "master", "master" is never
++   merged into it again (either directly or indirectly).
++
++ * Once a topic branch is fully cooked and merged into "master",
++   it is deleted.  If you need to build on top of it to correct
++   earlier mistakes, a new topic branch is created by forking at
++   the tip of the "master".  This is not strictly necessary, but
++   it makes it easier to keep your history simple.
++
++ * Whenever you need to test or publish your changes to topic
++   branches, merge them into "next" branch.
++
++The script, being an example, hardcodes the publish branch name
++to be "next", but it is trivial to make it configurable via
++$GIT_DIR/config mechanism.
++
++With this workflow, you would want to know:
++
++(1) ... if a topic branch has ever been merged to "next".  Young
++    topic branches can have stupid mistakes you would rather
++    clean up before publishing, and things that have not been
++    merged into other branches can be easily rebased without
++    affecting other people.  But once it is published, you would
++    not want to rewind it.
++
++(2) ... if a topic branch has been fully merged to "master".
++    Then you can delete it.  More importantly, you should not
++    build on top of it -- other people may already want to
++    change things related to the topic as patches against your
++    "master", so if you need further changes, it is better to
++    fork the topic (perhaps with the same name) afresh from the
++    tip of "master".
++
++Let's look at this example:
++
++		   o---o---o---o---o---o---o---o---o---o "next"
++		  /       /           /           /
++		 /   a---a---b A     /           /
++		/   /               /           /
++	       /   /   c---c---c---c B         /
++	      /   /   /             \         /
++	     /   /   /   b---b C     \       /
++	    /   /   /   /             \     /
++    ---o---o---o---o---o---o---o---o---o---o---o "master"
++
++
++A, B and C are topic branches.
++
++ * A has one fix since it was merged up to "next".
++
++ * B has finished.  It has been fully merged up to "master" and "next",
++   and is ready to be deleted.
++
++ * C has not merged to "next" at all.
++
++We would want to allow C to be rebased, refuse A, and encourage
++B to be deleted.
++
++To compute (1):
++
++	git rev-list ^master ^topic next
++	git rev-list ^master        next
++
++	if these match, topic has not merged in next at all.
++
++To compute (2):
++
++	git rev-list master..topic
++
++	if this is empty, it is fully merged to "master".
++
++DOC_END
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-receive.sample dev/.git/hooks/pre-receive.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/pre-receive.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/pre-receive.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,24 @@
++#!/bin/sh
++#
++# An example hook script to make use of push options.
++# The example simply echoes all push options that start with 'echoback='
++# and rejects all pushes when the "reject" push option is used.
++#
++# To enable this hook, rename this file to "pre-receive".
++
++if test -n "$GIT_PUSH_OPTION_COUNT"
++then
++	i=0
++	while test "$i" -lt "$GIT_PUSH_OPTION_COUNT"
++	do
++		eval "value=\$GIT_PUSH_OPTION_$i"
++		case "$value" in
++		echoback=*)
++			echo "echo from the pre-receive-hook: ${value#*=}" >&2
++			;;
++		reject)
++			exit 1
++		esac
++		i=$((i + 1))
++	done
++fi
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/prepare-commit-msg.sample dev/.git/hooks/prepare-commit-msg.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/prepare-commit-msg.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/prepare-commit-msg.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,42 @@
++#!/bin/sh
++#
++# An example hook script to prepare the commit log message.
++# Called by "git commit" with the name of the file that has the
++# commit message, followed by the description of the commit
++# message's source.  The hook's purpose is to edit the commit
++# message file.  If the hook fails with a non-zero status,
++# the commit is aborted.
++#
++# To enable this hook, rename this file to "prepare-commit-msg".
++
++# This hook includes three examples. The first one removes the
++# "# Please enter the commit message..." help message.
++#
++# The second includes the output of "git diff --name-status -r"
++# into the message, just before the "git status" output.  It is
++# commented because it doesn't cope with --amend or with squashed
++# commits.
++#
++# The third example adds a Signed-off-by line to the message, that can
++# still be edited.  This is rarely a good idea.
++
++COMMIT_MSG_FILE=$1
++COMMIT_SOURCE=$2
++SHA1=$3
++
++/usr/bin/perl -i.bak -ne 'print unless(m/^. Please enter the commit message/..m/^#$/)' "$COMMIT_MSG_FILE"
++
++# case "$COMMIT_SOURCE,$SHA1" in
++#  ,|template,)
++#    /usr/bin/perl -i.bak -pe '
++#       print "\n" . `git diff --cached --name-status -r`
++# 	 if /^#/ && $first++ == 0' "$COMMIT_MSG_FILE" ;;
++#  *) ;;
++# esac
++
++# SOB=$(git var GIT_COMMITTER_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
++# git interpret-trailers --in-place --trailer "$SOB" "$COMMIT_MSG_FILE"
++# if test -z "$COMMIT_SOURCE"
++# then
++#   /usr/bin/perl -i.bak -pe 'print "\n" if !$first_line++' "$COMMIT_MSG_FILE"
++# fi
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/push-to-checkout.sample dev/.git/hooks/push-to-checkout.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/push-to-checkout.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/push-to-checkout.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,78 @@
++#!/bin/sh
++
++# An example hook script to update a checked-out tree on a git push.
++#
++# This hook is invoked by git-receive-pack(1) when it reacts to git
++# push and updates reference(s) in its repository, and when the push
++# tries to update the branch that is currently checked out and the
++# receive.denyCurrentBranch configuration variable is set to
++# updateInstead.
++#
++# By default, such a push is refused if the working tree and the index
++# of the remote repository has any difference from the currently
++# checked out commit; when both the working tree and the index match
++# the current commit, they are updated to match the newly pushed tip
++# of the branch. This hook is to be used to override the default
++# behaviour; however the code below reimplements the default behaviour
++# as a starting point for convenient modification.
++#
++# The hook receives the commit with which the tip of the current
++# branch is going to be updated:
++commit=$1
++
++# It can exit with a non-zero status to refuse the push (when it does
++# so, it must not modify the index or the working tree).
++die () {
++	echo >&2 "$*"
++	exit 1
++}
++
++# Or it can make any necessary changes to the working tree and to the
++# index to bring them to the desired state when the tip of the current
++# branch is updated to the new commit, and exit with a zero status.
++#
++# For example, the hook can simply run git read-tree -u -m HEAD "$1"
++# in order to emulate git fetch that is run in the reverse direction
++# with git push, as the two-tree form of git read-tree -u -m is
++# essentially the same as git switch or git checkout that switches
++# branches while keeping the local changes in the working tree that do
++# not interfere with the difference between the branches.
++
++# The below is a more-or-less exact translation to shell of the C code
++# for the default behaviour for git's push-to-checkout hook defined in
++# the push_to_deploy() function in builtin/receive-pack.c.
++#
++# Note that the hook will be executed from the repository directory,
++# not from the working tree, so if you want to perform operations on
++# the working tree, you will have to adapt your code accordingly, e.g.
++# by adding "cd .." or using relative paths.
++
++if ! git update-index -q --ignore-submodules --refresh
++then
++	die "Up-to-date check failed"
++fi
++
++if ! git diff-files --quiet --ignore-submodules --
++then
++	die "Working directory has unstaged changes"
++fi
++
++# This is a rough translation of:
++#
++#   head_has_history() ? "HEAD" : EMPTY_TREE_SHA1_HEX
++if git cat-file -e HEAD 2>/dev/null
++then
++	head=HEAD
++else
++	head=$(git hash-object -t tree --stdin </dev/null)
++fi
++
++if ! git diff-index --quiet --cached --ignore-submodules $head --
++then
++	die "Working directory has staged changes"
++fi
++
++if ! git read-tree -u -m "$commit"
++then
++	die "Could not update working tree to new HEAD"
++fi
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/sendemail-validate.sample dev/.git/hooks/sendemail-validate.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/sendemail-validate.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/sendemail-validate.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,77 @@
++#!/bin/sh
++
++# An example hook script to validate a patch (and/or patch series) before
++# sending it via email.
++#
++# The hook should exit with non-zero status after issuing an appropriate
++# message if it wants to prevent the email(s) from being sent.
++#
++# To enable this hook, rename this file to "sendemail-validate".
++#
++# By default, it will only check that the patch(es) can be applied on top of
++# the default upstream branch without conflicts in a secondary worktree. After
++# validation (successful or not) of the last patch of a series, the worktree
++# will be deleted.
++#
++# The following config variables can be set to change the default remote and
++# remote ref that are used to apply the patches against:
++#
++#   sendemail.validateRemote (default: origin)
++#   sendemail.validateRemoteRef (default: HEAD)
++#
++# Replace the TODO placeholders with appropriate checks according to your
++# needs.
++
++validate_cover_letter () {
++	file="$1"
++	# TODO: Replace with appropriate checks (e.g. spell checking).
++	true
++}
++
++validate_patch () {
++	file="$1"
++	# Ensure that the patch applies without conflicts.
++	git am -3 "$file" || return
++	# TODO: Replace with appropriate checks for this patch
++	# (e.g. checkpatch.pl).
++	true
++}
++
++validate_series () {
++	# TODO: Replace with appropriate checks for the whole series
++	# (e.g. quick build, coding style checks, etc.).
++	true
++}
++
++# main -------------------------------------------------------------------------
++
++if test "$GIT_SENDEMAIL_FILE_COUNTER" = 1
++then
++	remote=$(git config --default origin --get sendemail.validateRemote) &&
++	ref=$(git config --default HEAD --get sendemail.validateRemoteRef) &&
++	worktree=$(mktemp --tmpdir -d sendemail-validate.XXXXXXX) &&
++	git worktree add -fd --checkout "$worktree" "refs/remotes/$remote/$ref" &&
++	git config --replace-all sendemail.validateWorktree "$worktree"
++else
++	worktree=$(git config --get sendemail.validateWorktree)
++fi || {
++	echo "sendemail-validate: error: failed to prepare worktree" >&2
++	exit 1
++}
++
++unset GIT_DIR GIT_WORK_TREE
++cd "$worktree" &&
++
++if grep -q "^diff --git " "$1"
++then
++	validate_patch "$1"
++else
++	validate_cover_letter "$1"
++fi &&
++
++if test "$GIT_SENDEMAIL_FILE_COUNTER" = "$GIT_SENDEMAIL_FILE_TOTAL"
++then
++	git config --unset-all sendemail.validateWorktree &&
++	trap 'git worktree remove -ff "$worktree"' EXIT &&
++	validate_series
++fi
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/update.sample dev/.git/hooks/update.sample
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/hooks/update.sample	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/hooks/update.sample	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,128 @@
++#!/bin/sh
++#
++# An example hook script to block unannotated tags from entering.
++# Called by "git receive-pack" with arguments: refname sha1-old sha1-new
++#
++# To enable this hook, rename this file to "update".
++#
++# Config
++# ------
++# hooks.allowunannotated
++#   This boolean sets whether unannotated tags will be allowed into the
++#   repository.  By default they won't be.
++# hooks.allowdeletetag
++#   This boolean sets whether deleting tags will be allowed in the
++#   repository.  By default they won't be.
++# hooks.allowmodifytag
++#   This boolean sets whether a tag may be modified after creation. By default
++#   it won't be.
++# hooks.allowdeletebranch
++#   This boolean sets whether deleting branches will be allowed in the
++#   repository.  By default they won't be.
++# hooks.denycreatebranch
++#   This boolean sets whether remotely creating branches will be denied
++#   in the repository.  By default this is allowed.
++#
++
++# --- Command line
++refname="$1"
++oldrev="$2"
++newrev="$3"
++
++# --- Safety check
++if [ -z "$GIT_DIR" ]; then
++	echo "Don't run this script from the command line." >&2
++	echo " (if you want, you could supply GIT_DIR then run" >&2
++	echo "  $0 <ref> <oldrev> <newrev>)" >&2
++	exit 1
++fi
++
++if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
++	echo "usage: $0 <ref> <oldrev> <newrev>" >&2
++	exit 1
++fi
++
++# --- Config
++allowunannotated=$(git config --type=bool hooks.allowunannotated)
++allowdeletebranch=$(git config --type=bool hooks.allowdeletebranch)
++denycreatebranch=$(git config --type=bool hooks.denycreatebranch)
++allowdeletetag=$(git config --type=bool hooks.allowdeletetag)
++allowmodifytag=$(git config --type=bool hooks.allowmodifytag)
++
++# check for no description
++projectdesc=$(sed -e '1q' "$GIT_DIR/description")
++case "$projectdesc" in
++"Unnamed repository"* | "")
++	echo "*** Project description file hasn't been set" >&2
++	exit 1
++	;;
++esac
++
++# --- Check types
++# if $newrev is 0000...0000, it's a commit to delete a ref.
++zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
++if [ "$newrev" = "$zero" ]; then
++	newrev_type=delete
++else
++	newrev_type=$(git cat-file -t $newrev)
++fi
++
++case "$refname","$newrev_type" in
++	refs/tags/*,commit)
++		# un-annotated tag
++		short_refname=${refname##refs/tags/}
++		if [ "$allowunannotated" != "true" ]; then
++			echo "*** The un-annotated tag, $short_refname, is not allowed in this repository" >&2
++			echo "*** Use 'git tag [ -a | -s ]' for tags you want to propagate." >&2
++			exit 1
++		fi
++		;;
++	refs/tags/*,delete)
++		# delete tag
++		if [ "$allowdeletetag" != "true" ]; then
++			echo "*** Deleting a tag is not allowed in this repository" >&2
++			exit 1
++		fi
++		;;
++	refs/tags/*,tag)
++		# annotated tag
++		if [ "$allowmodifytag" != "true" ] && git rev-parse $refname > /dev/null 2>&1
++		then
++			echo "*** Tag '$refname' already exists." >&2
++			echo "*** Modifying a tag is not allowed in this repository." >&2
++			exit 1
++		fi
++		;;
++	refs/heads/*,commit)
++		# branch
++		if [ "$oldrev" = "$zero" -a "$denycreatebranch" = "true" ]; then
++			echo "*** Creating a branch is not allowed in this repository" >&2
++			exit 1
++		fi
++		;;
++	refs/heads/*,delete)
++		# delete branch
++		if [ "$allowdeletebranch" != "true" ]; then
++			echo "*** Deleting a branch is not allowed in this repository" >&2
++			exit 1
++		fi
++		;;
++	refs/remotes/*,commit)
++		# tracking branch
++		;;
++	refs/remotes/*,delete)
++		# delete tracking branch
++		if [ "$allowdeletebranch" != "true" ]; then
++			echo "*** Deleting a tracking branch is not allowed in this repository" >&2
++			exit 1
++		fi
++		;;
++	*)
++		# Anything else (is there anything else?)
++		echo "*** Update hook: unknown type of update to ref $refname of type $newrev_type" >&2
++		exit 1
++		;;
++esac
++
++# --- Finished
++exit 0
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/.git/info/exclude dev/.git/info/exclude
+--- src0911/work/LEVEL7-CAD-0.9.111-source/.git/info/exclude	1970-01-01 00:00:00.000000000 +0000
++++ dev/.git/info/exclude	2026-10-30 17:46:31.265418234 +0000
+@@ -0,0 +1,6 @@
++# git ls-files --others --exclude-from=.git/info/exclude
++# Lines that start with '#' are comments.
++# For a project mostly in C, the following would be a good set of
++# exclude patterns (uncomment them if you want to use them):
++# *.[oa]
++# *~
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/README.md dev/README.md
+--- src0911/work/LEVEL7-CAD-0.9.111-source/README.md	2026-10-30 19:30:02.000000000 +0000
++++ dev/README.md	2026-10-30 22:13:50.107637433 +0000
+@@ -1,3 +1,9 @@
++LEVEL7 and MTM 0.9.112
++
++Display name changes from LEVEL7 CAD to LEVEL7 and MTM, with a new icon (L7, tape-measure arc, MTM); the user-data folder keeps its old name so existing profiles remain. Redo is added (Edit menu, command bar, history panel, Ctrl+Y / Ctrl+Shift+Z) with the same part-link guard as Undo; any new edit clears it. Document commands (Save, Save As, Close, X/Z, part views) start disabled, so an empty workspace or the state right after Close never offers Save. The X window is narrower and its list grows with its rows instead of reserving a tall empty area. Double-click curve editing shows a single Apply/Cancel pair (the palette repeated the same handlers). Each Points and lines drawing option has its own title. Geometry fix: a tapered parallel (seam allowance) on a sampled curve now applies its first value at the end of the source path, as GRAFIS does; ALAA2026.mdl part 7 matches the GRAFIS-stored geometry within 0.0064 mm (was up to 2.5 mm). Native MDL formats and link guards are unchanged. 22 broad Grafis option groups remain pending and further options are state- or scope-limited; full Grafis parity is not claimed.
++
++---
++
+ LEVEL7 CAD0.9.111
+ 
+ Fixes fresh-drawing parameter-pool collision with local X: new interactive constructs reserve pool1, known previous-release Line10/Line20/Curve10 collisions relocate their native parameter payload without changing object identities or geometry, and unused scalars save without forcing a geometric change. Local X adds before, during and after native Line10/Line20/Curve10 drawing; pending endpoints, angle, length and tangents survive Add X and verified scalar edits. Supported independent native drawing parts can add, insert, duplicate, reorder and delete while linked histories retain protection. Menus are exclusive; File order follows the supplied Grafis reference with unavailable commands explicitly disabled. Save and Save As are distinct, current save targets are opaque native capabilities, external changes and junction redirection refuse replacement, Close resets the document and Exit uses the existing guarded native close flow. Direction palette is compact, movable and remembers its position; direction ray starts at the picked origin and displays an arc. Redundant Selection/Record/MDL-info footer, raw origin coordinates and status coordinates are removed from view; legacy curve numeric fields give way to the direct construction palette, and the X dialog is narrower. Existing bounded geometry/history/link families remain regression tested.22 broad Grafis option groups remain pending; full tool and interaction parity is not claimed.
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/assets/icon.svg dev/assets/icon.svg
+--- src0911/work/LEVEL7-CAD-0.9.111-source/assets/icon.svg	2026-10-27 03:38:24.000000000 +0000
++++ dev/assets/icon.svg	2026-10-30 20:22:17.640587745 +0000
+@@ -1 +1 @@
+-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title"><title id="title">LEVEL7 CAD</title><rect width="256" height="256" rx="44" fill="#0b2338"/><rect x="18" y="18" width="220" height="220" rx="31" fill="none" stroke="#458994" stroke-width="3"/><path d="M49 54h25v83h39v24H49zm74 0h85v24l-44 83h-29l47-83h-59z" fill="#f4d78c"/><path d="M94 184H78v30h16m14 0 12-30 12 30m-19-10h14m21-20h12q17 0 17 15t-17 15h-12z" fill="none" stroke="#92ddd4" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/></svg>
++<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title"><title id="title">LEVEL7 and MTM</title><rect width="256" height="256" rx="48" fill="#0b2338"/><path d="M40 196C88 172 168 172 216 196" fill="none" stroke="#29a4dc" stroke-width="10" stroke-linecap="round"/><path d="M62 186v14M90 179v14M118 176v14M146 176v14M174 179v14M202 186v14" stroke="#29a4dc" stroke-width="5" stroke-linecap="round"/><path d="M50 38h30v84h44v28H50zm86 0h80v26l-42 86h-32l42-84h-48z" fill="#f4d78c"/><text x="128" y="243" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="40" font-weight="700" letter-spacing="4" fill="#92ddd4">MTM</text></svg>
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/desktop/main.cjs dev/desktop/main.cjs
+--- src0911/work/LEVEL7-CAD-0.9.111-source/desktop/main.cjs	2026-10-30 18:18:02.000000000 +0000
++++ dev/desktop/main.cjs	2026-10-30 20:22:44.798735196 +0000
+@@ -19,7 +19,7 @@
+ const FORMATS = Object.freeze({
+   text: { name: 'Text report', extensions: ['txt'], suffix: '.txt' },
+   mdl: { name: 'GRAFIS native style', extensions: ['mdl'], suffix: '.mdl' },
+-  project: { name: 'LEVEL7 CAD project', extensions: ['json'], suffix: '.json' },
++  project: { name: 'LEVEL7 and MTM project', extensions: ['json'], suffix: '.json' },
+   svg: { name: 'SVG pattern (millimetres)', extensions: ['svg'], suffix: '.svg' },
+   dxf: { name: 'ASCII DXF pattern', extensions: ['dxf'], suffix: '.dxf' },
+   hpgl: { name: 'HPGL plotter drawing', extensions: ['plt', 'hpgl'], suffix: '.plt' }
+@@ -32,7 +32,9 @@
+ app.setPath('crashDumps', path.join(DATA_ROOT, 'CrashDumps'));
+ app.setAppLogsPath(path.join(DATA_ROOT, 'Logs'));
+ app.enableSandbox();
+-app.setName('LEVEL7 CAD');
++// Display name 0.9.112: "LEVEL7 and MTM". The data folder below keeps the old name so
++// existing settings and profiles are found after the update.
++app.setName('LEVEL7 and MTM');
+ // Local diagnostics only: no server, upload or design data in the event log.
+ crashReporter.start({ uploadToServer: false });
+ if (process.platform === 'win32') app.setAppUserModelId('LEVEL7CAD');
+@@ -144,7 +146,7 @@
+ async function chooseSave(filename, format) {
+   const result = await dialog.showSaveDialog(mainWindow, {
+     title: `Save ${format.name}`,
+-    defaultPath: safeFilename(filename, 'LEVEL7 CAD' + format.suffix),
++    defaultPath: safeFilename(filename, 'LEVEL7 and MTM' + format.suffix),
+     filters: [{ name: format.name, extensions: format.extensions }],
+     properties: ['showOverwriteConfirmation', 'createDirectory']
+   });
+@@ -247,7 +249,7 @@
+       properties: ['openFile'],
+       filters: measurements
+         ? [{ name: 'Measurement tables', extensions: ['csv', 'mas'] }, { name: 'Supported files', extensions: ['json', 'dxf', 'csv', 'mas'] }]
+-        : [{ name: 'LEVEL7 CAD and interchange', extensions: ['json', 'dxf', 'csv', 'mas'] }]
++        : [{ name: 'LEVEL7 and MTM and interchange', extensions: ['json', 'dxf', 'csv', 'mas'] }]
+     });
+     if (result.canceled || !result.filePaths[0]) return null;
+     const selected = result.filePaths[0];
+@@ -330,7 +332,7 @@
+     minWidth: 1080,
+     minHeight: 700,
+     backgroundColor: '#101722',
+-    title: 'LEVEL7 CAD',
++    title: 'LEVEL7 and MTM',
+     icon: path.join(APP_ROOT, 'assets', 'icon.ico'),
+     autoHideMenuBar: true,
+     show: false,
+@@ -356,7 +358,7 @@
+       const flow = { window: win, token: null };closeFlow = flow;
+       try {
+         const choice = await dialog.showMessageBox(win, {
+-          type: 'question', title: 'LEVEL7 CAD', message: 'هل تريد حفظ التعديلات قبل إغلاق البرنامج؟',
++          type: 'question', title: 'LEVEL7 and MTM', message: 'هل تريد حفظ التعديلات قبل إغلاق البرنامج؟',
+           detail: 'حفظ وإغلاق يحفظ نسخة MDL أولًا. إذا ألغيت الحفظ أو تعذّر، يبقى البرنامج مفتوحًا.',
+           buttons: ['حفظ وإغلاق', 'إغلاق دون حفظ', 'إلغاء'], defaultId: 2, cancelId: 2, noLink: true
+         });
+@@ -378,7 +380,7 @@
+     } catch (error) { console.error('Could not record renderer failure:', error.message); }
+     try {
+       const choice = await dialog.showMessageBox(win, {
+-        type: 'error', title: 'LEVEL7 CAD',
++        type: 'error', title: 'LEVEL7 and MTM',
+         message: 'توقفت نافذة الرسم عن العمل.',
+         detail: 'يمكن إعادة فتح الواجهة ثم فتح آخر نسخة حفظتها. التعديلات غير المحفوظة قد تكون فُقدت. سُجل تشخيص محلي للمساعدة في تحديد السبب.',
+         buttons: ['إعادة فتح الواجهة', 'إغلاق البرنامج'], defaultId: 0, cancelId: 1
+@@ -401,7 +403,7 @@
+   registerIpc();
+   await createWindow();
+ }).catch(error => {
+-  dialog.showErrorBox('LEVEL7 CAD could not start', error.message);
++  dialog.showErrorBox('LEVEL7 and MTM could not start', error.message);
+   app.quit();
+ });
+ 
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/native.html dev/native.html
+--- src0911/work/LEVEL7-CAD-0.9.111-source/native.html	2026-10-30 18:18:02.000000000 +0000
++++ dev/native.html	2026-10-30 22:13:50.094847168 +0000
+@@ -5,13 +5,14 @@
+   <meta name="viewport" content="width=device-width,initial-scale=1">
+   <meta name="color-scheme" content="light">
+   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+-  <title>LEVEL7 CAD — Native MDL</title>
++  <title>LEVEL7 and MTM — Native MDL</title>
+   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+   <link rel="stylesheet" href="src/native.css">
+   <link rel="stylesheet" href="src/point-construction.css">
+   <link rel="stylesheet" href="src/xz-workspace.css">
+   <link rel="stylesheet" href="src/parameter-layout.css">
+   <link rel="stylesheet" href="src/values-classic-layout.css">
++  <link rel="stylesheet" href="src/ux-0112.css">
+ <style>#construction-options{font-size:11px;margin:5px 0 9px;line-height:1.6}#construction-options label{display:block;margin-bottom:5px}#construction-options input{display:block;width:100%;min-width:0;box-sizing:border-box;height:29px;font-size:12px}#construction-options small{display:block;margin-top:5px;color:#41627a}#construction-options #construction-error{color:#a22e21}</style></head>
+ <body>
+   <svg class="symbol-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+@@ -49,7 +50,7 @@
+ 
+   <main id="native-shell" class="native-shell">
+     <header class="app-topbar">
+-      <div class="app-brand"><img src="assets/icon.svg" width="19" height="19" alt=""><strong>LEVEL7 CAD</strong></div>
++      <div class="app-brand"><img src="assets/icon.svg" width="19" height="19" alt=""><strong>LEVEL7 and MTM</strong></div>
+       <div class="document-tab"><span id="document-name">No style open</span><span class="file-type">MDL</span></div>
+       <span id="mode-badge" class="mode-badge">MDL</span>
+     </header>
+@@ -61,9 +62,9 @@
+ <hr>
+ <button type="button" data-action="open" >Open …<kbd>Ctrl+O</kbd></button>
+ <button type="button" data-action="open-any" >Open (in any folder)<kbd>Ctrl+Shift+O</kbd></button>
+-<button type="button" data-action="save-current" id="menu-save-current">Save<kbd>Ctrl+S</kbd></button>
+-<button type="button" data-action="save-as" id="menu-save">Save As …</button>
+-<button type="button" data-action="close-document" id="menu-close-document">Close<kbd>Ctrl+F4</kbd></button>
++<button type="button" data-action="save-current" id="menu-save-current" disabled>Save<kbd>Ctrl+S</kbd></button>
++<button type="button" data-action="save-as" id="menu-save" disabled>Save As …</button>
++<button type="button" data-action="close-document" id="menu-close-document" disabled>Close<kbd>Ctrl+F4</kbd></button>
+ <hr>
+ <button type="button" disabled data-file-pending="true" title="غير متاح بعد" >File options …</button>
+ <hr>
+@@ -81,11 +82,11 @@
+ <hr>
+ <button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Last opened files　›</button>
+ <hr>
+-<button type="button" data-action="exit-app" id="menu-exit">Exit LEVEL7 CAD<kbd>Alt+F4</kbd></button>
++<button type="button" data-action="exit-app" id="menu-exit">Exit LEVEL7 and MTM<kbd>Alt+F4</kbd></button>
+ </div></details>
+       <details class="menu" name="main-menu"><summary>Edit</summary><div class="menu-popup">
+         <button type="button" data-action="history">Construction record…</button>
+-        <button type="button" data-action="undo" id="menu-undo" disabled>Undo<kbd>Ctrl+Z</kbd></button>
++        <button type="button" data-action="undo" id="menu-undo" disabled>Undo<kbd>Ctrl+Z</kbd></button><button type="button" data-action="redo" id="menu-redo" disabled>Redo<kbd>Ctrl+Y</kbd></button>
+         <hr><button type="button" data-action="tool-select">Select / inspect</button>
+         <button type="button" data-action="fit">Drag / Zoom — Centre</button>
+       </div></details>
+@@ -125,7 +126,7 @@
+           <div class="palette-group"><button type="button" class="palette-command" data-action="reset" title="Preview previous record / عرض خطوات سابقة" aria-label="Preview previous record / عرض خطوات سابقة" disabled><svg aria-hidden="true"><use href="#icon-reset"/></svg><small>Reset</small></button><button type="button" class="palette-command" data-action="restore" title="Restore record / استعادة الخطوات" aria-label="Restore record / استعادة الخطوات" disabled><svg aria-hidden="true"><use href="#icon-restore"/></svg><small>Restore</small></button><button type="button" class="palette-command" data-action="replay" title="Test Run active part / إعادة حساب القطعة المعتمدة" aria-label="Test Run active part / إعادة حساب القطعة المعتمدة" disabled><svg aria-hidden="true"><use href="#icon-replay"/></svg><small>Run</small></button></div>
+           <div class="palette-group"><button type="button" class="palette-command" data-action="x-values" id="quick-x-values" title="X Values / قيم X · Ctrl+X" aria-label="X Values / قيم X · Ctrl+X" disabled><span class="palette-letter" aria-hidden="true">X</span><small>Ctrl+X</small></button><button type="button" class="palette-command" data-action="z-values" id="quick-z-values" title="Z Values / قيم Z · F11" aria-label="Z Values / قيم Z · F11" disabled><span class="palette-letter" aria-hidden="true">Z</span><small>F11</small></button><button type="button" class="palette-command" data-action="xz-workspace" id="quick-xz-workspace" title="تجربة X/Z على الرسم · 49 عنصرًا فقط"><span class="palette-letter" aria-hidden="true">XZ</span><small>Preview</small></button><button type="button" class="palette-command unavailable-command" id="unsupported-size-table" title="Native Size Table / جدول المقاسات والتدريج · Ctrl+G · غير متاح حاليًا / Not implemented" aria-label="Native Size Table / جدول المقاسات والتدريج · Ctrl+G · غير متاح حاليًا / Not implemented" disabled><svg aria-hidden="true"><use href="#icon-history"/></svg><small>Ctrl+G</small></button><button type="button" class="palette-command" data-action="measurements" title="Charts / size information / جداول القياسات ومعلومات المقاسات" aria-label="Charts / size information / جداول القياسات ومعلومات المقاسات"><svg aria-hidden="true"><use href="#icon-ruler"/></svg><small>Charts</small></button></div>
+           <div class="palette-group"><button type="button" class="palette-command" data-action="zoom-out" title="Zoom out / تصغير · −" aria-label="Zoom out / تصغير · −"><span class="palette-letter" aria-hidden="true">−</span><small>−</small></button><button type="button" class="palette-command" data-action="zoom-in" title="Zoom in / تكبير · +" aria-label="Zoom in / تكبير · +"><span class="palette-letter" aria-hidden="true">+</span><small>+</small></button></div>
+-          <div class="palette-group"><button type="button" class="palette-command" data-action="undo" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><small>Undo</small></button><button type="button" class="palette-command" data-action="new-template" id="toolbar-new" title="New fixed N38 template / نموذج جديد · Ctrl+N" aria-label="New fixed N38 template / نموذج جديد · Ctrl+N"><svg aria-hidden="true"><use href="#icon-new"/></svg><small>New</small></button><button type="button" class="palette-command" data-action="open" title="Open MDL / فتح ملف · Ctrl+O" aria-label="Open MDL / فتح ملف · Ctrl+O"><svg aria-hidden="true"><use href="#icon-open"/></svg><small>Open</small></button></div>
++          <div class="palette-group"><button type="button" class="palette-command" data-action="undo" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><small>Undo</small></button><button type="button" class="palette-command redo-command" data-action="redo" title="Redo / إعادة · Ctrl+Y" aria-label="Redo / إعادة · Ctrl+Y" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><small>Redo</small></button><button type="button" class="palette-command" data-action="new-template" id="toolbar-new" title="New fixed N38 template / نموذج جديد · Ctrl+N" aria-label="New fixed N38 template / نموذج جديد · Ctrl+N"><svg aria-hidden="true"><use href="#icon-new"/></svg><small>New</small></button><button type="button" class="palette-command" data-action="open" title="Open MDL / فتح ملف · Ctrl+O" aria-label="Open MDL / فتح ملف · Ctrl+O"><svg aria-hidden="true"><use href="#icon-open"/></svg><small>Open</small></button></div>
+         </div>
+       </section>
+     </div>
+@@ -149,7 +150,7 @@
+       </section>
+       <aside class="command-panel" aria-label="Construction tools"><section id="direct-path-editor" class="tool-section direct-path-editor" dir="rtl" aria-label="تحرير العنصر بالدابل كليك" hidden><header><strong id="direct-path-title"></strong><button type="button" id="direct-path-close" aria-label="إنهاء التحرير">×</button></header><p id="direct-path-source"></p><form id="direct-path-form" novalidate><label>التعديل<select id="direct-path-mode"></select></label><div id="direct-path-fields"></div><p id="curve-construction-unavailable" role="status"></p><p id="direct-path-error" role="alert"></p><p id="direct-path-note" role="status"></p><div class="direct-path-actions"><button type="button" id="direct-path-preview">معاينة</button><button type="submit" id="direct-path-apply">تطبيق</button><button type="button" id="direct-path-cancel">إلغاء</button></div></form></section>
+         <section class="tool-section history-controls"><div class="section-heading"><h2>History</h2><output id="record-count" class="record-counter">000</output></div>
+-          <div class="command-row"><button type="button" class="construction-tool" data-action="undo" id="undo-button" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><span>Undo</span></button><button type="button" class="construction-tool" data-action="reset" id="reset-button" title="Previous record / عرض السابق" aria-label="Previous record / عرض السابق" disabled><svg aria-hidden="true"><use href="#icon-reset"/></svg><span>Reset</span></button><button type="button" class="construction-tool" data-action="restore" id="restore-button" title="Restore record / استعادة" aria-label="Restore record / استعادة" disabled><svg aria-hidden="true"><use href="#icon-restore"/></svg><span>Restore</span></button></div>
++          <div class="command-row"><button type="button" class="construction-tool" data-action="undo" id="undo-button" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><span>Undo</span></button><button type="button" class="construction-tool redo-command" data-action="redo" id="redo-button" title="Redo / إعادة · Ctrl+Y" aria-label="Redo / إعادة · Ctrl+Y" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><span>Redo</span></button><button type="button" class="construction-tool" data-action="reset" id="reset-button" title="Previous record / عرض السابق" aria-label="Previous record / عرض السابق" disabled><svg aria-hidden="true"><use href="#icon-reset"/></svg><span>Reset</span></button><button type="button" class="construction-tool" data-action="restore" id="restore-button" title="Restore record / استعادة" aria-label="Restore record / استعادة" disabled><svg aria-hidden="true"><use href="#icon-restore"/></svg><span>Restore</span></button></div>
+           <div class="reset-row"><label for="reset-count">Steps</label><input id="reset-count" type="number" min="1" max="9999" value="1" aria-label="Number of steps to reset"></div>
+           <button type="button" class="full-command" data-action="replay" id="replay-button" title="Test Run active supported part / إعادة حساب القطعة المعتمدة" disabled><svg class="inline-icon"><use href="#icon-replay"/></svg>Test Run</button>
+         </section>
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/package.json dev/package.json
+--- src0911/work/LEVEL7-CAD-0.9.111-source/package.json	2026-10-30 17:53:44.000000000 +0000
++++ dev/package.json	2026-10-30 20:22:34.014439812 +0000
+@@ -1,13 +1,13 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.111",
++  "version": "0.9.112",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+   "private": true,
+-  "author": "LEVEL7 CAD",
++  "author": "LEVEL7",
+   "scripts": {
+     "start": "electron ."
+   },
+-  "productName": "LEVEL7 CAD"
++  "productName": "LEVEL7 and MTM"
+ }
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/src/native-app.js dev/src/native-app.js
+--- src0911/work/LEVEL7-CAD-0.9.111-source/src/native-app.js	2026-10-30 18:54:42.000000000 +0000
++++ dev/src/native-app.js	2026-10-30 22:13:50.093505727 +0000
+@@ -65,7 +65,7 @@
+ let fileSaveToken=null;
+ let style = null, savedStyle = null, filename = '', metadata = null, summary = null, activePart = 1;
+ let cursor = 0, selected = null, dirty = false, busy = false, mode = 'select';
+-let undoStack = [], view = { x: -20, y: -100, w: 240, h: 160 }, drag = null;
++let undoStack = [], redoStack = [], view = { x: -20, y: -100, w: 240, h: 160 }, drag = null;
+ let noticeTimer = null, chart = null;
+ let pointOperation = 'edit';
+ let previewStyle = null, previews = new Map();
+@@ -421,6 +421,7 @@
+   assertPartLinksPreserved(style,next);
+   undoStack.push({ style, dirty, selected, cursor, activePart });
+   if (undoStack.length > 50) undoStack.shift();
++  redoStack = []; // a new edit ends the redo chain
+   if (parameterAnnouncement === style) parameterAnnouncement = next;
+   style = next;
+   activePart = nextPart;
+@@ -453,7 +454,7 @@
+   n38?.reset();
+   alaaAppend?.reset();
+   xzTables?.reset(); xzWorkspace?.reset();
+-  dirty = false; undoStack = []; chart = null; mode = 'select'; pointConstruction?.reset();clearDrawing();
++  dirty = false; undoStack = []; redoStack = []; chart = null; mode = 'select'; pointConstruction?.reset();clearDrawing();
+   overview = false; hiddenParts = new Set();
+   partFilter = ''; $('#part-search').value = ''; $('#part-list').scrollTop = 0;
+   clearTimeout(noticeTimer); $('#native-notice').hidden = true;
+@@ -509,7 +510,7 @@
+   const current = model(), complete = model(true);
+   const appendInfo = appendPartInfo();
+   text($('#document-name'), style ? filename + (dirty ? ' *' : '') : 'No style open');
+-  document.title = style ? `LEVEL7 CAD — [${filename}]${dirty ? ' *' : ''}` : 'LEVEL7 CAD';
++  document.title = style ? `LEVEL7 and MTM — [${filename}]${dirty ? ' *' : ''}` : 'LEVEL7 and MTM';
+   text($('#mode-badge'), !style ? 'MDL' : n38?.eligible() ? `${n38.capability().workOnly?'WORK · ':''}New-N38 X/Z` : alaaAppend?.eligible() ? 'Selected part drawing' : appendInfo?.bootstrapEligible ? 'N38 template' : complete.eligible ? 'Editable MDL' : canEditParameters() ? 'Limited X1/Z1 · cached' : cachedPart().available && cachedPart().totalObjects ? 'Read-only MDL · cached' : 'Read-only MDL');
+   $('#mode-badge').dataset.state = !style ? 'idle' : n38?.eligible() || alaaAppend?.eligible() || complete.eligible || canEditParameters() || appendInfo?.bootstrapEligible ? 'editable' : 'read-only';
+   text($('#active-part-name'), style ? `${counter(activePart)} — ${partName(activePart)}` : 'No active part');
+@@ -525,6 +526,7 @@
+     'close-document':!!style,
+     replay: !!complete?.eligible || !!n38?.eligible()||hasCompleteOriginalPreview(style,{partId:activePart,sizeKey:metadata?.referenceSize?.name}),
+     undo: undoStack.length > 0,
++    redo: redoStack.length > 0,
+     reset: (!!complete?.eligible || !!n38?.eligible()) && cursor > 0,
+     restore: (!!complete?.eligible || !!n38?.eligible()) && cursor < complete.totalRecords,
+     'tool-point': (!!complete?.eligible || !!n38?.eligible() || !!alaaAppend?.canEditPoints()) && cursor === complete.totalRecords && complete.points.length > 0,
+@@ -553,7 +555,9 @@
+     button.title = alaaAppend?.eligible() ? 'Draw on the selected part; literal points and lines. Unknown original geometry stays read-only.' : n38?.eligible() ? 'Restricted own New-N38 native point/line creation' : appendInfo?.appendReason || (cursor !== complete?.totalRecords ? 'Restore the complete native record before creating an object.' : action === 'create-point' ? 'Create an absolute-coordinate point' : 'Create a line referencing existing points');
+   });
+   for(const action of drawingModes)$$(`[data-action="${action}"]`).forEach(button=>{
+-    button.title=['draw-fraction','draw-distance'].includes(action)?'نقطة مرتبطة بخط جديد قابل للتحرير؛ غير متاحة للخطوط الأصلية والمنحنيات بعد.':(['draw-horizontal','draw-vertical'].includes(action)?'خط باتجاه ثابت؛ انقر البداية والنهاية دون نقاط مسبقة.':null)|| (alaaAppend?.eligible()?'Selected part: draw numeric points/lines; existing literal endpoints can be reused. Unknown original geometry stays read-only.':n38?.eligible()||appendInfo?.appendEligible?({'draw-point':'Point · رسم نقطة','draw-line':'Line · رسم خط بنقرتين','draw-polyline':'Polyline · خطوط متصلة، Enter للإنهاء','draw-rectangle':'Rectangle · مستطيل بزاويتين متقابلتين','draw-polar':'خط بطول وزاوية','draw-parallel':'نسخة موازية بإحداثيات عددية','draw-perpendicular':'عمود إلى خط أو امتداده، بإحداثيات عددية','draw-midpoint':'نقطة منتصف عددية'}[action]):alaaAppend?.reason()||'Native drawing unavailable for this document and active part.');
++    // 0.9.112: every drawing option keeps its own title (previously point, line and
++    // polyline shared one generic English text, as did horizontal and vertical).
++    button.title=['draw-fraction','draw-distance'].includes(action)?'نقطة مرتبطة بخط جديد قابل للتحرير؛ غير متاحة للخطوط الأصلية والمنحنيات بعد.':({'draw-horizontal':'Horizontal · خط أفقي؛ انقر البداية والنهاية','draw-vertical':'Vertical · خط رأسي؛ انقر البداية والنهاية'}[action]??null)|| (alaaAppend?.eligible()||n38?.eligible()||appendInfo?.appendEligible?({'draw-point':'Point · رسم نقطة','draw-line':'Line · رسم خط بنقرتين','draw-polyline':'Polyline · خطوط متصلة، Enter للإنهاء','draw-rectangle':'Rectangle · مستطيل بزاويتين متقابلتين','draw-polar':'خط بطول وزاوية','draw-parallel':'نسخة موازية بإحداثيات عددية','draw-perpendicular':'عمود إلى خط أو امتداده، بإحداثيات عددية','draw-midpoint':'نقطة منتصف عددية'}[action]):alaaAppend?.reason()||'Native drawing unavailable for this document and active part.');
+   });
+   $('#drawing-grid').disabled = busy || !canDraw();
+   $('#part-search').disabled = busy || !style;
+@@ -794,7 +798,7 @@
+     dialog('file-info-dialog');return;
+   }
+   const current = model(true);
+-  const details = !style ? 'LEVEL7 CAD — Native CAD\nOpen a .MDL file to inspect its native construction.\nSupported editing: verified absolute-point and straight-line records.\nOther operations remain read-only.' :
++  const details = !style ? 'LEVEL7 and MTM — Native CAD\nOpen a .MDL file to inspect its native construction.\nSupported editing: verified absolute-point and straight-line records.\nOther operations remain read-only.' :
+     `${filename}\n\nFormat: ${summary.variant}\nBytes: ${summary.byteLength}\nBlocks: ${summary.blockCount}\nParts: ${summary.partCount}\nNative records: ${current.totalRecords}\nMode: ${appendPartInfo()?.bootstrapEligible ? 'N38 template' : current.eligible ? 'Editable MDL' : 'Read-only MDL'}\nMeasurement system: ${metadata.measurementSystem?.title || 'Unknown'}\nReference size: ${metadata.referenceSize?.name || 'Unknown'}\nCreation: ${appendPartInfo()?.appendEligible ? 'Available' : appendPartInfo()?.appendReason || 'Unsupported'}\n\n${appendPartInfo()?.bootstrapEligible ? 'The fixed N38 template is ready for its first absolute point.' : current.reason || 'Absolute points and their dependent straight lines can be edited. Eligible files also support creating absolute points and referenced lines.'}\n\nNew uses a fixed N38 template and retains its persistent part identity; a fresh native identity is not generated.\nUnknown fields are preserved. Unsupported construction commands are not executed or rewritten. Full GRAFIS compatibility is not established.`;
+   const preview = useCachedPart() ? cachedPart() : null;
+   text($('#file-info-content'), details + (canEditParameters() ? '\n\nVerified bounded parameter point: local X1 and Z1 formulas X1*2 / X1*3 can be edited. Only point2004 is recalculated; its native Z201 reference and retained historical input float remain intact. General point/line drawing and arbitrary parameter editing stay disabled.' : '') + (preview ? preview.available ? `\n\nPartial cached preview — ${canEditParameters() ? 'limited X1/Z1 point editing' : 'read only'}\nPart ${activePart}: ${preview.objects.length}/${preview.totalObjects} objects shown; ${preview.unsupported.length} omitted.\nNo unknown native history was executed. Curves and unresolved classes are omitted.\n${preview.warnings.join('\n')}` : `\n\n${preview.noStoredGeometry ? 'No stored geometry for this part.' : 'No validated preview is available for this part.'}\n${preview.warnings.join('\n')}` : '')); dialog('file-info-dialog');
+@@ -952,11 +956,27 @@
+   try { assertPartLinksPreserved(style,previous.style); }
+   catch(error) { notice(error.message,true,true); return; }
+   undoStack.pop();
++  redoStack.push({ style, dirty, selected, cursor, activePart });
+   clearDrawing();
+   if (parameterAnnouncement === style) parameterAnnouncement = previous.style;
+   const changedPart = activePart !== previous.activePart;
+   style = previous.style; dirty = style !== savedStyle; selected = previous.selected; cursor = previous.cursor; activePart = previous.activePart;
+   summary = getNativeSummary(style); metadata = readNativeMetadata(style); render(); if (changedPart) fit(); status('تم التراجع عن التعديل.');
++}
++// Redo re-applies a document state removed by Undo, with the same link guard.
++function redo() {
++  if (busy) return;
++  if(xzTables?.hasPending()){notice('احفظ تعديلات X/Z وأعد فتح النسخة قبل إعادة التنفيذ.',true);return;}
++  const next = redoStack.at(-1); if (!next) return;
++  try { assertPartLinksPreserved(style,next.style); }
++  catch(error) { notice(error.message,true,true); return; }
++  redoStack.pop();
++  undoStack.push({ style, dirty, selected, cursor, activePart });
++  clearDrawing();
++  if (parameterAnnouncement === style) parameterAnnouncement = next.style;
++  const changedPart = activePart !== next.activePart;
++  style = next.style; dirty = style !== savedStyle; selected = next.selected; cursor = next.cursor; activePart = next.activePart;
++  summary = getNativeSummary(style); metadata = readNativeMetadata(style); render(); if (changedPart) fit(); status('تمت إعادة التنفيذ.');
+ }
+ function zoom(factor, at = null) {
+   const cx = at?.x ?? view.x+view.w/2, cy = at?.y ?? view.y+view.h/2;
+@@ -1076,6 +1096,7 @@
+   else if (action === 'reset') reset(-1);
+   else if (action === 'restore') reset(1);
+   else if (action === 'undo') undo();
++  else if (action === 'redo') redo();
+   else if (action === 'create-point') createPoint();
+   else if (action === 'create-line') createLine();
+   else if (drawingModes.includes(action)) { if (!canDraw() || busy) return; clearDrawing(); mode = action; selected = null; render(); status(construction?.owns(action)?$('#construction-hint').textContent:action === 'draw-rectangle'?'اختر زاويتي المستطيل. يحفظ كأربعة خطوط بنقاط مشتركة.':action==='draw-polyline'?'اختر نقاط المسار بالتتابع. Enter أو Escape للإنهاء.':action === 'draw-point' ? 'انقر في الرسم لإنشاء نقطة أصلية. الالتقاط للنقاط الموجودة ضمن 8 بكسل.' : 'حدد بداية الخط ثم نهايته. الالتقاط للنقاط الموجودة · Shift: أفقي/رأسي · Escape: إلغاء.'); }
+@@ -1119,6 +1140,7 @@
+   else if (event.ctrlKey && event.key.toLowerCase() === 't' && style) { event.preventDefault(); partProperties?.open(); }
+   else if (!editing && event.ctrlKey && event.key.toLowerCase() === 'x' && style) { event.preventDefault(); showXValues(); }
+   else if (event.key === 'F11' && style) { event.preventDefault(); showZValues(); }
++  else if (!editing && event.ctrlKey && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) { event.preventDefault(); redo(); }
+   else if (!editing && event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
+   else if (!editing && event.ctrlKey && event.shiftKey && event.code === 'Digit1') { event.preventDefault(); replay(); }
+   else if (!editing && (event.key === 'F6' || event.key === 'Home')) { event.preventDefault(); fit(); }
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/src/part-history-engine.mjs dev/src/part-history-engine.mjs
+--- src0911/work/LEVEL7-CAD-0.9.111-source/src/part-history-engine.mjs	2026-10-30 15:58:20.000000000 +0000
++++ dev/src/part-history-engine.mjs	2026-10-30 22:13:50.088351665 +0000
+@@ -37,7 +37,7 @@
+ import {replayEndpointNotch,replayIntersectionNotch,replayCopiedNotch} from './notch-history-kernel.mjs';
+ import {replayContourOffset} from './contour-offset-kernel.mjs';
+ import {replayGrainMarker} from "./grain-history-kernel.mjs";
+-import {applyParallelPath} from './parallel-path-kernel.mjs';
++import {applyParallelPath,constructionPoints} from './parallel-path-kernel.mjs';
+ import {joinComputedObjects} from './construction-polyline-kernel.mjs';
+ /** Experimental generic contiguous-prefix replay. Cached geometry is never an input.
+  * Stops at the first unsupported operation: returned objects are historical, not
+@@ -208,7 +208,11 @@
+     ensure(!definitions.some(d=>d.recordStep>record&&d.recordStep<=record+2),'Z definition inside parallel group');
+     const readInput=(raw,number)=>{const q=v(raw),binding=q.getUint16(6,true);ensure(raw.subarray(12).every(x=>x===0),'Unknown parallel numeric fields');if(!binding){const value=q.getFloat32(8,true);ensure(Number.isFinite(value),'Invalid parallel input');return {value,dependencies:[]};}const z=zValues().find(z=>z.index===binding-200&&z.recordStep<=number);ensure(binding>200&&z,'Unresolved parallel parameter');return {value:z.value,dependencies:['Z'+z.index]};};
+     const start=readInput(b,record),end=readInput(second,record+1),id=c.getUint16(10,true),source=objects.find(o=>o.id===c.getUint16(6,true));ensure(source&&!objects.some(o=>o.id===id),'Missing/duplicate parallel object');
+-    const result=applyParallelPath({source,id,record:record+2,start:compact?end.value:start.value,end:compact?start.value:end.value,side:c.getFloat32(16,true),dependencies:[...new Set([...start.dependencies,...end.dependencies])]});
++    // 0.9.112: on a sampled curve GRAFIS applies the first (start) input at the end
++    // of the source path; verified on ALAA2026.mdl part 7 (9/11 and 10/12 mm
++    // tapered allowances). Straight sources keep the previous mapping.
++    const swap=compact||(!compact&&start.value!==end.value&&constructionPoints(source).length>2);
++    const result=applyParallelPath({source,id,record:record+2,start:swap?end.value:start.value,end:swap?start.value:end.value,side:c.getFloat32(16,true),dependencies:[...new Set([...start.dependencies,...end.dependencies])]});
+     linear=null;axis=null;put(result);trace.push({record,lastRecord:record+2,operation:'parallel-path',objectId:id});record+=2;
+    }
+    else if(op===197&&sub===100&&h.getUint16(4,true)===603){
+diff -ruN -x node_modules -x '*.png' -x '*.ico' src0911/work/LEVEL7-CAD-0.9.111-source/src/ux-0112.css dev/src/ux-0112.css
+--- src0911/work/LEVEL7-CAD-0.9.111-source/src/ux-0112.css	1970-01-01 00:00:00.000000000 +0000
++++ dev/src/ux-0112.css	2026-10-30 20:26:50.613019344 +0000
+@@ -0,0 +1,17 @@
++/* 0.9.112 layout adjustments (loaded last). */
++
++/* Compact X window: the list grows with its rows instead of reserving a tall
++   empty area; it scrolls only when there are many values. */
++#x-values-dialog{width:min(760px,96vw)}
++#x-values-dialog .x-grouped-scroll{height:auto;min-height:64px;max-height:clamp(180px,46vh,540px)}
++#x-values-dialog .x-list-layout{grid-template-columns:minmax(0,1fr) 130px;align-items:start}
++#x-values-dialog .x-size-panel select{min-height:0;flex:none}
++#x-values-dialog .x-scope-toolbar{grid-template-columns:200px minmax(160px,1fr) 140px}
++
++/* Curve editing: Apply/Cancel exist once, in the double-click editor header;
++   the palette copies called the same handlers. */
++#curve-construction-apply,#curve-construction-cancel{display:none}
++
++/* Redo uses the Undo arrow mirrored. */
++.redo-command svg{transform:scaleX(-1)}
++.command-row:has(#redo-button){grid-template-columns:repeat(4,minmax(0,1fr))}

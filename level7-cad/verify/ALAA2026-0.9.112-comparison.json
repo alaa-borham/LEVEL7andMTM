@@ -39,8 +39,8 @@
   "computed": 29,
   "cached": 33,
   "compared": 29,
-  "matching": 16,
-  "worst": 2.532,
+  "matching": 29,
+  "worst": 0.006,
   "notInCache": 0
  },
  {

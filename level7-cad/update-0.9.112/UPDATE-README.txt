@@ -7,6 +7,7 @@ Copy these files over the 0.9.111 application folder, keeping their paths:
   package.json                                         version 0.9.112, productName
   src/native-app.js                                    Redo, option titles, window title
   src/ux-0112.css                                      compact X window, single Apply, Redo icon
+  src/part-history-engine.mjs                          tapered curve allowance direction (part 7 fix)
   README.md                                            release notes
 
 Make a backup copy of the application folder first. User data (LOCALAPPDATA\LEVEL7 CAD)
