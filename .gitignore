@@ -3,3 +3,7 @@ __pycache__/
 out/
 # customer/company models stay out of git
 samples/*.mdl
+node_modules/
+app/dist/
+desktop/dist/
+desktop/web/

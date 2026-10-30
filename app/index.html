@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LEVEL7 CAD</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">LEVEL7 <span>CAD</span></div>
+      <input id="model-name" class="model-name" aria-label="اسم الباترون" />
+      <nav class="actions">
+        <button data-action="new" title="باترون جديد">جديد</button>
+        <button data-action="open" title="فتح ملف باترون">فتح</button>
+        <button data-action="save" title="حفظ الباترون في ملف">حفظ</button>
+        <button data-action="import-grafis" title="استيراد القياسات والمعادلات من ملف JSON مستخرج من جرافس">استيراد من جرافس</button>
+        <button data-action="dxf" title="تصدير الرسم بصيغة DXF">تصدير DXF</button>
+        <span class="sep"></span>
+        <button data-action="undo" title="تراجع (Ctrl+Z)">تراجع</button>
+        <button data-action="redo" title="إعادة (Ctrl+Y)">إعادة</button>
+        <button data-action="fit" title="ملء الشاشة بالرسم (F)">ملء الشاشة</button>
+        <button data-action="demo" title="فتح مثال: بداية الثوب الأساسي">مثال</button>
+      </nav>
+      <input type="file" id="file-input" accept=".json,application/json" hidden />
+    </header>
+
+    <main class="layout">
+      <aside class="tools" id="tools" aria-label="الأدوات"></aside>
+
+      <section class="canvas-wrap">
+        <svg id="canvas" tabindex="0" aria-label="لوحة الرسم"></svg>
+        <div class="tool-box" id="tool-box" hidden></div>
+        <footer class="status">
+          <span id="prompt">اختر أداة من القائمة</span>
+          <span id="coords" dir="ltr"></span>
+        </footer>
+      </section>
+
+      <aside class="panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="steps" class="active">خطوات البناء</button>
+          <button role="tab" data-tab="x">القياسات X</button>
+          <button role="tab" data-tab="z">المعادلات Z</button>
+        </div>
+        <div class="tab-body" id="tab-steps"></div>
+        <div class="tab-body" id="tab-x" hidden></div>
+        <div class="tab-body" id="tab-z" hidden></div>
+      </aside>
+    </main>
+    <div class="toast" id="toast" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

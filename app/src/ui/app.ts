@@ -1,0 +1,805 @@
+import { closestOnPolyline, dist, type Pt } from "../core/geometry";
+import {
+  createdIds,
+  emptyModel,
+  usedIds,
+  evaluateModel,
+  Vars,
+  type EvalResult,
+  type GObj,
+  type Model,
+  type PointRef,
+  type Step,
+} from "../core/model";
+import { thobeSample } from "../core/sample";
+import { describe } from "./describe";
+import { autosave, download, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
+import { applyFields, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
+
+const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
+const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
+
+const PICK_PX = 10;
+
+type Hover = Pick | null;
+
+interface FormState {
+  title: string;
+  fields: Field[];
+  onOk: (v: Record<string, string>) => void;
+}
+
+export class App {
+  model: Model;
+  res!: EvalResult;
+  private undoStack: string[] = [];
+  private redoStack: string[] = [];
+
+  // view: world point at the canvas centre and pixels per mm
+  private cx = 0;
+  private cy = 0;
+  private scale = 1;
+
+  private tool: Tool | null = null;
+  private picks: Pick[] = [];
+  private extra: number[] = [];
+  private collecting = false;
+  private hover: Hover = null;
+  private mouse: Pt = [0, 0];
+  private form: FormState | null = null;
+  private selectedStep = -1;
+  private pan: { x: number; y: number; cx: number; cy: number } | null = null;
+
+  private svg = $<SVGSVGElement & HTMLElement>("#canvas");
+
+  constructor() {
+    this.model = restore() ?? emptyModel();
+    this.evaluate();
+    this.buildTools();
+    this.bindTopbar();
+    this.bindTabs();
+    this.bindCanvas();
+    this.bindKeys();
+    this.renderPanels();
+    requestAnimationFrame(() => this.fit());
+  }
+
+  // ------------------------------------------------------------ model state
+  private evaluate(): void {
+    this.res = evaluateModel(this.model);
+  }
+
+  /** Call before every change so it can be undone. */
+  private snapshot(): void {
+    this.undoStack.push(JSON.stringify(this.model));
+    if (this.undoStack.length > 200) this.undoStack.shift();
+    this.redoStack = [];
+  }
+
+  private changed(panels = true): void {
+    this.evaluate();
+    autosave(this.model);
+    if (panels) this.renderPanels();
+    else this.refreshValues();
+    this.render();
+  }
+
+  private load(m: Model): void {
+    this.snapshot();
+    this.model = m;
+    this.cancelTool();
+    this.selectedStep = -1;
+    this.changed();
+    this.fit();
+  }
+
+  private undo(): void {
+    const prev = this.undoStack.pop();
+    if (!prev) return;
+    this.redoStack.push(JSON.stringify(this.model));
+    this.model = parseModel(prev);
+    this.cancelTool();
+    this.changed();
+  }
+
+  private redo(): void {
+    const next = this.redoStack.pop();
+    if (!next) return;
+    this.undoStack.push(JSON.stringify(this.model));
+    this.model = parseModel(next);
+    this.cancelTool();
+    this.changed();
+  }
+
+  // ------------------------------------------------------------ view
+  private toScreen = (p: Pt): Pt => {
+    const r = this.svg.getBoundingClientRect();
+    return [(p[0] - this.cx) * this.scale + r.width / 2, r.height / 2 - (p[1] - this.cy) * this.scale];
+  };
+
+  private toWorld = (x: number, y: number): Pt => {
+    const r = this.svg.getBoundingClientRect();
+    return [(x - r.width / 2) / this.scale + this.cx, (r.height / 2 - y) / this.scale + this.cy];
+  };
+
+  fit(): void {
+    const all = [...this.res.objects.values()].flatMap((o) => o.pts);
+    const r = this.svg.getBoundingClientRect();
+    if (!all.length || !r.width) {
+      this.cx = 0;
+      this.cy = 0;
+      this.scale = 1;
+      this.render();
+      return;
+    }
+    const xs = all.map((p) => p[0]);
+    const ys = all.map((p) => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    this.cx = (x0 + x1) / 2;
+    this.cy = (y0 + y1) / 2;
+    const w = Math.max(x1 - x0, 50);
+    const h = Math.max(y1 - y0, 50);
+    this.scale = Math.min((r.width - 80) / w, (r.height - 80) / h);
+    this.render();
+  }
+
+  // ------------------------------------------------------------ rendering
+  render(): void {
+    const r = this.svg.getBoundingClientRect();
+    const parts: string[] = [this.gridSvg(r.width, r.height)];
+    const highlight = this.highlighted();
+    const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
+
+    for (const o of this.res.objects.values()) {
+      if (o.kind !== "line") continue;
+      const pts = o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ");
+      const w = highlight.has(o.id) ? 2.5 : 1.4;
+      parts.push(`<polyline points="${pts}" fill="none" stroke="${lineColor(o)}" stroke-width="${w}"/>`);
+      const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
+      parts.push(`<text x="${mid[0] + 4}" y="${mid[1] - 4}">${esc(o.name)}</text>`);
+    }
+    for (const o of this.res.objects.values()) {
+      if (o.kind !== "point") continue;
+      const [x, y] = this.toScreen(o.pts[0]);
+      const c = highlight.has(o.id) ? "var(--select)" : "var(--point)";
+      parts.push(`<circle cx="${x}" cy="${y}" r="3.2" fill="${c}"/>`);
+      parts.push(`<text x="${x + 5}" y="${y - 5}">${esc(o.name)}</text>`);
+    }
+    // picks already made by the current tool
+    for (const p of this.picks) parts.push(this.markSvg(p, "var(--select)"));
+    if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
+    this.svg.innerHTML = parts.join("");
+  }
+
+  private highlighted(): Set<number> {
+    const ids = new Set<number>(this.extra);
+    for (const p of this.picks) if (p.kind === "line") ids.add(p.obj);
+    const s = this.model.steps[this.selectedStep];
+    if (s) {
+      for (const id of createdIds(s)) ids.add(id);
+      if (s.op === "setLength" || s.op === "trim") ids.add(s.target);
+      if (s.op === "mirror") for (const it of s.items) ids.add(it.dst ?? it.src);
+    }
+    return ids;
+  }
+
+  private markSvg(p: Pick, color: string): string {
+    if (p.kind === "line") {
+      const o = this.res.objects.get(p.obj);
+      if (!o) return "";
+      const pts = o.pts.map((q) => this.toScreen(q).join(",")).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3.5" opacity="0.8"/>`;
+    }
+    const [x, y] = this.toScreen(p.kind === "point" ? this.pointOf(p.ref) : p.at);
+    return `<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="${color}" stroke-width="2"/>`;
+  }
+
+  private gridSvg(w: number, h: number): string {
+    // pick a grid step that is 15-150 px on screen
+    let step = 1;
+    for (const s of [1, 5, 10, 50, 100, 500, 1000]) {
+      step = s;
+      if (s * this.scale >= 15) break;
+    }
+    const [x0, y1] = this.toWorld(0, 0);
+    const [x1, y0] = this.toWorld(w, h);
+    const out: string[] = [];
+    const major = step * 10;
+    for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
+      const sx = this.toScreen([x, 0])[0].toFixed(1);
+      const c = Math.abs(x % major) < 1e-9 ? "var(--grid-major)" : "var(--grid)";
+      out.push(`<line x1="${sx}" y1="0" x2="${sx}" y2="${h}" stroke="${c}"/>`);
+    }
+    for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
+      const sy = this.toScreen([0, y])[1].toFixed(1);
+      const c = Math.abs(y % major) < 1e-9 ? "var(--grid-major)" : "var(--grid)";
+      out.push(`<line x1="0" y1="${sy}" x2="${w}" y2="${sy}" stroke="${c}"/>`);
+    }
+    const [ox, oy] = this.toScreen([0, 0]);
+    out.push(`<line x1="${ox - 8}" y1="${oy}" x2="${ox + 8}" y2="${oy}" stroke="#9aa3ad"/>`);
+    out.push(`<line x1="${ox}" y1="${oy - 8}" x2="${ox}" y2="${oy + 8}" stroke="#9aa3ad"/>`);
+    return out.join("");
+  }
+
+  // ------------------------------------------------------------ picking
+  private pointOf(r: PointRef): Pt {
+    const o = this.res.objects.get(r.obj);
+    if (!o) return [0, 0];
+    if (o.kind === "point" || !r.end) return o.pts[0];
+    return r.end === "end" ? o.pts[o.pts.length - 1] : o.pts[0];
+  }
+
+  /** What would be picked at screen position (sx, sy) for this kind of pick. */
+  private hit(kind: PickKind, sx: number, sy: number): Hover {
+    const w = this.toWorld(sx, sy);
+    const near = (p: Pt) => dist(this.toScreen(p), [sx, sy]);
+    if (kind === "canvas") return { kind: "canvas", at: w };
+
+    if (kind === "point" || kind === "object") {
+      let best: { d: number; ref: PointRef } | null = null;
+      for (const o of this.res.objects.values()) {
+        const cands: PointRef[] = o.kind === "point" ? [{ obj: o.id }] : kind === "point" ? [{ obj: o.id, end: "start" }, { obj: o.id, end: "end" }] : [];
+        for (const ref of cands) {
+          const d = near(this.pointOf(ref));
+          if (d <= PICK_PX && (!best || d < best.d)) best = { d, ref };
+        }
+      }
+      if (best) return { kind: "point", ref: best.ref, at: w };
+      if (kind === "point") return null;
+    }
+    let bestLine: { d: number; id: number } | null = null;
+    for (const o of this.res.objects.values()) {
+      if (o.kind !== "line") continue;
+      const c = closestOnPolyline(o.pts, w);
+      const d = c.d * this.scale;
+      if (d <= PICK_PX && (!bestLine || d < bestLine.d)) bestLine = { d, id: o.id };
+    }
+    return bestLine ? { kind: "line", obj: bestLine.id, at: w } : null;
+  }
+
+  private currentPickKind(): PickKind | null {
+    if (!this.tool || this.form) return null;
+    if (this.collecting) return "object";
+    return this.tool.picks[this.picks.length]?.kind ?? null;
+  }
+
+  // ------------------------------------------------------------ tools
+  private buildTools(): void {
+    const box = $("#tools");
+    const groups = [...new Set(TOOLS.map((t) => t.group))];
+    box.innerHTML = groups
+      .map(
+        (g) =>
+          `<h3>${g}</h3>` +
+          TOOLS.filter((t) => t.group === g)
+            .map((t) => `<button data-tool="${t.key}">${t.name}${t.shortcut ? `<span class="key">${t.shortcut}</span>` : ""}</button>`)
+            .join(""),
+      )
+      .join("");
+    box.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button[data-tool]") as HTMLElement | null;
+      if (!b) return;
+      const t = TOOLS.find((x) => x.key === b.dataset.tool) as Tool;
+      if (this.tool === t) this.cancelTool();
+      else this.selectTool(t);
+    });
+  }
+
+  selectTool(t: Tool): void {
+    this.cancelTool();
+    this.tool = t;
+    this.selectedStep = -1;
+    document.querySelectorAll("#tools button").forEach((b) => b.classList.toggle("active", (b as HTMLElement).dataset.tool === t.key));
+    this.updatePrompt();
+    this.renderSteps();
+    this.render();
+    this.svg.focus();
+  }
+
+  cancelTool(): void {
+    this.tool = null;
+    this.picks = [];
+    this.extra = [];
+    this.collecting = false;
+    this.hover = null;
+    this.closeForm();
+    document.querySelectorAll("#tools button").forEach((b) => b.classList.remove("active"));
+    this.updatePrompt();
+    this.render();
+  }
+
+  private restartTool(): void {
+    const t = this.tool;
+    this.picks = [];
+    this.extra = [];
+    this.collecting = false;
+    this.closeForm();
+    this.tool = t;
+    this.updatePrompt();
+  }
+
+  private updatePrompt(): void {
+    let text = "اختر أداة من القائمة. اسحب بالزر الأيمن للتحريك، والعجلة للتكبير.";
+    if (this.tool) {
+      if (this.form) text = `${this.tool.name}: أدخل القيم ثم Enter`;
+      else if (this.collecting) text = `${this.tool.name}: ${this.tool.multi} (${this.extra.length} محدد)`;
+      else text = `${this.tool.name}: ${this.tool.picks[this.picks.length]?.prompt ?? ""}`;
+      text += " — Esc للإلغاء";
+    }
+    $("#prompt").textContent = text;
+  }
+
+  private onPick(p: Pick): void {
+    const t = this.tool;
+    if (!t) return;
+    if (this.collecting) {
+      const id = p.kind === "point" ? p.ref.obj : p.kind === "line" ? p.obj : null;
+      if (id === null || (p.kind === "point" && p.ref.end)) return;
+      const i = this.extra.indexOf(id);
+      if (i >= 0) this.extra.splice(i, 1);
+      else this.extra.push(id);
+      this.updatePrompt();
+      this.render();
+      return;
+    }
+    this.picks.push(p);
+    if (this.picks.length < t.picks.length) {
+      this.updatePrompt();
+      this.render();
+      return;
+    }
+    if (t.multi) {
+      this.collecting = true;
+      this.updatePrompt();
+      this.render();
+      return;
+    }
+    this.finishPicks();
+  }
+
+  private finishPicks(): void {
+    const t = this.tool as Tool;
+    if (t.multi && !this.extra.length) {
+      this.toast("لم تحدد أي عنصر");
+      return;
+    }
+    const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
+    const fields = t.fields?.(ctx) ?? [];
+    if (!fields.length) {
+      this.commit({});
+      return;
+    }
+    this.openForm({ title: t.name, fields, onOk: (v) => this.commit(v) });
+  }
+
+  private commit(values: Record<string, string>): void {
+    const t = this.tool as Tool;
+    this.snapshot();
+    const step: Step = t.build({ model: this.model, res: this.res, picks: this.picks, extra: this.extra }, values);
+    this.model.steps.push(step);
+    this.changed();
+    const err = this.res.stepErrors.get(this.model.steps.length - 1);
+    if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
+    this.restartTool();
+    this.render();
+  }
+
+  // ------------------------------------------------------------ form
+  private openForm(f: FormState): void {
+    this.form = f;
+    const box = $("#tool-box");
+    box.hidden = false;
+    box.innerHTML =
+      `<h4>${esc(f.title)}</h4>` +
+      f.fields
+        .map((fl) =>
+          fl.options
+            ? `<label class="field"><span>${fl.label}</span><select data-key="${fl.key}">${fl.options
+                .map(([v, l]) => `<option value="${v}"${v === fl.value ? " selected" : ""}>${l}</option>`)
+                .join("")}</select></label>`
+            : `<label class="field"><span>${fl.label}</span><input class="expr" data-key="${fl.key}" value="${esc(fl.value)}"/></label><div class="field"><span></span><div class="preview" data-preview="${fl.key}"></div></div>`,
+        )
+        .join("") +
+      `<p class="hint">تقبل الحقول أرقاماً أو معادلات مثل Z6 أو X3/2+10</p>` +
+      `<div class="buttons"><button class="primary" data-ok>موافق</button><button data-cancel>إلغاء</button></div>`;
+    const vars = new Vars(this.model);
+    const preview = (inp: HTMLInputElement) => {
+      const out = box.querySelector(`[data-preview="${inp.dataset.key}"]`) as HTMLElement;
+      try {
+        out.textContent = "= " + fmt(vars.eval(inp.value));
+        out.classList.remove("bad");
+        inp.classList.remove("bad");
+      } catch (e) {
+        out.textContent = (e as Error).message;
+        out.classList.add("bad");
+        inp.classList.add("bad");
+      }
+    };
+    box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => {
+      preview(inp);
+      inp.addEventListener("input", () => preview(inp));
+    });
+    const ok = () => {
+      const v: Record<string, string> = {};
+      let bad = false;
+      box.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => {
+        v[el.dataset.key as string] = el.value.trim();
+        if (el.classList.contains("bad")) bad = true;
+      });
+      if (bad) {
+        this.toast("صحح القيم المعلّمة بالأحمر");
+        return;
+      }
+      const cb = f.onOk;
+      this.closeForm();
+      cb(v);
+    };
+    box.querySelector("[data-ok]")?.addEventListener("click", ok);
+    box.querySelector("[data-cancel]")?.addEventListener("click", () => (this.tool ? this.restartTool() : this.closeForm()));
+    box.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        ok();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.cancelTool();
+      }
+      e.stopPropagation();
+    };
+    (box.querySelector("input, select") as HTMLElement | null)?.focus();
+    (box.querySelector("input") as HTMLInputElement | null)?.select();
+    this.updatePrompt();
+  }
+
+  private closeForm(): void {
+    this.form = null;
+    const box = $("#tool-box");
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+
+  // ------------------------------------------------------------ events
+  private bindCanvas(): void {
+    const svg = this.svg;
+    svg.addEventListener("contextmenu", (e) => e.preventDefault());
+    svg.addEventListener("mousedown", (e) => {
+      svg.focus();
+      if (e.button === 1 || e.button === 2) {
+        this.pan = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
+        svg.classList.add("panning");
+        e.preventDefault();
+        return;
+      }
+      if (e.button !== 0) return;
+      const kind = this.currentPickKind();
+      if (!kind) return;
+      const r = svg.getBoundingClientRect();
+      const h = this.hit(kind, e.clientX - r.left, e.clientY - r.top);
+      if (h) this.onPick(h);
+      else if (kind !== "canvas") this.toast(kind === "line" ? "انقر على خط" : "انقر على نقطة أو طرف خط");
+    });
+    window.addEventListener("mouseup", () => {
+      this.pan = null;
+      svg.classList.remove("panning");
+    });
+    svg.addEventListener("mousemove", (e) => {
+      const r = svg.getBoundingClientRect();
+      const sx = e.clientX - r.left;
+      const sy = e.clientY - r.top;
+      if (this.pan) {
+        this.cx = this.pan.cx - (e.clientX - this.pan.x) / this.scale;
+        this.cy = this.pan.cy + (e.clientY - this.pan.y) / this.scale;
+        this.render();
+        return;
+      }
+      this.mouse = this.toWorld(sx, sy);
+      $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
+      const kind = this.currentPickKind();
+      const h = kind ? this.hit(kind, sx, sy) : null;
+      if (JSON.stringify(h && { ...h, at: 0 }) !== JSON.stringify(this.hover && { ...this.hover, at: 0 })) {
+        this.hover = h;
+        this.render();
+      }
+    });
+    svg.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const r = svg.getBoundingClientRect();
+        const before = this.toWorld(e.clientX - r.left, e.clientY - r.top);
+        this.scale = Math.min(200, Math.max(0.02, this.scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+        const after = this.toWorld(e.clientX - r.left, e.clientY - r.top);
+        this.cx += before[0] - after[0];
+        this.cy += before[1] - after[1];
+        this.render();
+      },
+      { passive: false },
+    );
+    window.addEventListener("resize", () => this.render());
+  }
+
+  private bindKeys(): void {
+    window.addEventListener("keydown", (e) => {
+      const typing = (e.target as HTMLElement).matches("input, select, textarea");
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) {
+        e.preventDefault();
+        this.undo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y" && !typing) {
+        e.preventDefault();
+        this.redo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        this.save();
+      } else if (typing) {
+        return;
+      } else if (e.key === "Escape") {
+        this.cancelTool();
+      } else if (e.key === "Enter" && this.collecting) {
+        this.finishPicks();
+      } else if (e.key.toLowerCase() === "f") {
+        this.fit();
+      } else {
+        const t = TOOLS.find((x) => x.shortcut === e.key);
+        if (t) this.selectTool(t);
+      }
+    });
+  }
+
+  private bindTopbar(): void {
+    const name = $<HTMLInputElement>("#model-name");
+    name.value = this.model.name;
+    name.addEventListener("change", () => {
+      this.snapshot();
+      this.model.name = name.value;
+      autosave(this.model);
+    });
+    const fileInput = $<HTMLInputElement>("#file-input");
+    let fileMode: "open" | "grafis" = "open";
+    fileInput.addEventListener("change", async () => {
+      const f = fileInput.files?.[0];
+      fileInput.value = "";
+      if (!f) return;
+      try {
+        const text = await f.text();
+        if (fileMode === "open") {
+          this.load(parseModel(text));
+          this.toast(`تم فتح ${f.name}`);
+        } else {
+          this.importGrafis(text);
+        }
+      } catch (e) {
+        this.toast(`تعذر قراءة الملف: ${(e as Error).message}`);
+      }
+    });
+    document.querySelector(".actions")?.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button[data-action]") as HTMLElement | null;
+      switch (b?.dataset.action) {
+        case "new":
+          if (this.model.steps.length && !confirm("بدء باترون جديد؟ يمكنك التراجع بعدها.")) return;
+          this.load(emptyModel());
+          break;
+        case "open":
+          fileMode = "open";
+          fileInput.click();
+          break;
+        case "import-grafis":
+          fileMode = "grafis";
+          fileInput.click();
+          break;
+        case "save":
+          this.save();
+          break;
+        case "dxf":
+          download(`${safeFileName(this.model.name)}.dxf`, toDxf(this.res.objects.values()), "application/dxf");
+          break;
+        case "undo":
+          this.undo();
+          break;
+        case "redo":
+          this.redo();
+          break;
+        case "fit":
+          this.fit();
+          break;
+        case "demo":
+          this.load(thobeSample().m);
+          break;
+      }
+    });
+  }
+
+  private save(): void {
+    download(`${safeFileName(this.model.name)}.level7.json`, JSON.stringify(this.model, null, 1), "application/json");
+  }
+
+  private importGrafis(text: string): void {
+    const g = fromGrafis(text);
+    this.snapshot();
+    this.model.measurements = g.measurements;
+    this.model.variables = g.variables;
+    if (!this.model.steps.length) this.model.name = g.name;
+    this.changed();
+    this.toast(
+      `تم استيراد ${g.measurements.length} قياس و${g.variables.length} معادلة` +
+        (g.skipped.length ? `. ${g.skipped.length} متغير يُقاس من الرسم وُضع صفراً مؤقتاً` : ""),
+    );
+  }
+
+  private toastTimer = 0;
+  toast(msg: string): void {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => (t.hidden = true), 3500);
+  }
+
+  // ------------------------------------------------------------ panels
+  private bindTabs(): void {
+    document.querySelector(".tabs")?.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("button[data-tab]") as HTMLElement | null;
+      if (!b) return;
+      document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
+      for (const id of ["steps", "x", "z"]) $(`#tab-${id}`).hidden = id !== b.dataset.tab;
+    });
+  }
+
+  renderPanels(): void {
+    $<HTMLInputElement>("#model-name").value = this.model.name;
+    this.renderSteps();
+    this.renderX();
+    this.renderZ();
+  }
+
+  private renderSteps(): void {
+    const box = $("#tab-steps");
+    if (!this.model.steps.length) {
+      box.innerHTML = `<div class="empty">لا توجد خطوات بعد.<br>ابدأ بأداة «نقطة حرة» أو «خط بزاوية وطول»، أو افتح «مثال» من الشريط العلوي.<br>كل خطوة تبقى مربوطة بالقياسات والمعادلات.</div>`;
+      return;
+    }
+    box.innerHTML =
+      `<ol class="steps">` +
+      this.model.steps
+        .map((s, i) => {
+          const err = this.res.stepErrors.get(i);
+          const editable = stepFields(s).length > 0;
+          return `<li data-i="${i}" class="${i === this.selectedStep ? "selected" : ""}${err ? " error" : ""}">
+            <span class="num">${i + 1}</span>
+            <span class="desc">${esc(describe(s, this.model)).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}${err ? `<span class="err">${esc(err)}</span>` : ""}</span>
+            <span class="row-actions">${editable ? `<button data-edit="${i}" title="تعديل القيم">تعديل</button>` : ""}<button class="danger" data-del="${i}" title="حذف الخطوة">حذف</button></span>
+          </li>`;
+        })
+        .join("") +
+      `</ol>`;
+    box.querySelectorAll<HTMLElement>("li").forEach((li) =>
+      li.addEventListener("click", (e) => {
+        const i = Number(li.dataset.i);
+        const t = e.target as HTMLElement;
+        if (t.dataset.edit) return this.editStep(i);
+        if (t.dataset.del) return this.deleteStep(i);
+        this.selectedStep = this.selectedStep === i ? -1 : i;
+        this.renderSteps();
+        this.render();
+      }),
+    );
+  }
+
+  private editStep(i: number): void {
+    const s = this.model.steps[i];
+    this.cancelTool();
+    this.selectedStep = i;
+    this.render();
+    this.openForm({
+      title: `تعديل الخطوة ${i + 1}`,
+      fields: stepFields(s),
+      onOk: (v) => {
+        this.snapshot();
+        applyFields(this.model.steps[i], v);
+        this.changed();
+      },
+    });
+  }
+
+  private deleteStep(i: number): void {
+    const s = this.model.steps[i];
+    const ids = createdIds(s);
+    const users = this.model.steps.slice(i + 1).filter((t) => usedIds(t).some((id) => ids.includes(id)));
+    if (ids.length && users.length && !confirm(`${users.length} خطوة لاحقة تعتمد على هذه الخطوة وستظهر فيها أخطاء. حذف؟`)) return;
+    this.snapshot();
+    this.model.steps.splice(i, 1);
+    for (const id of ids) delete this.model.names[id];
+    this.selectedStep = -1;
+    this.changed();
+  }
+
+  private renderX(): void {
+    const box = $("#tab-x");
+    const rows = this.model.measurements
+      .map(
+        (m, i) => `<tr>
+          <td class="id">X${m.id}</td>
+          <td><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="اسم القياس"/></td>
+          <td style="width:90px"><input class="expr" type="number" step="any" data-i="${i}" data-f="value" value="${m.value}"/></td>
+          <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
+        </tr>`,
+      )
+      .join("");
+    box.innerHTML =
+      `<table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>القيمة مم</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
+      `<div class="table-actions"><button data-add>إضافة قياس</button></div>`;
+    this.bindTable(box, "measurements");
+  }
+
+  private renderZ(): void {
+    const box = $("#tab-z");
+    const rows = this.model.variables
+      .map((v, i) => {
+        const val = this.res.z.get(v.id);
+        const err = this.res.zErrors.get(v.id);
+        return `<tr>
+          <td class="id">Z${v.id}</td>
+          <td><input data-i="${i}" data-f="name" value="${esc(v.name)}" placeholder="الوصف"/>
+              <input class="expr" data-i="${i}" data-f="expr" value="${esc(v.expr)}" style="margin-top:3px"/></td>
+          <td class="val${err ? " bad" : ""}" data-zval="${v.id}">${err ? esc(err) : val !== undefined ? fmt(val) : ""}</td>
+          <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
+        </tr>`;
+      })
+      .join("");
+    box.innerHTML =
+      `<table class="grid"><thead><tr><th>رمز</th><th>الوصف والمعادلة</th><th>القيمة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
+      `<div class="table-actions"><button data-add>إضافة معادلة</button></div>`;
+    this.bindTable(box, "variables");
+  }
+
+  private bindTable(box: HTMLElement, key: "measurements" | "variables"): void {
+    let snapped = false;
+    box.querySelectorAll<HTMLInputElement>("input[data-f]").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        if (!snapped) {
+          this.snapshot();
+          snapped = true;
+        }
+        const row = this.model[key][Number(inp.dataset.i)] as unknown as Record<string, unknown>;
+        if (inp.dataset.f === "value") {
+          const v = Number(inp.value);
+          if (inp.value === "" || Number.isNaN(v)) return;
+          row.value = v;
+        } else row[inp.dataset.f as string] = inp.value;
+        this.changed(false);
+      });
+      inp.addEventListener("change", () => {
+        snapped = false;
+        this.renderSteps();
+      });
+    });
+    box.querySelectorAll<HTMLElement>("[data-del]").forEach((b) =>
+      b.addEventListener("click", () => {
+        this.snapshot();
+        this.model[key].splice(Number(b.dataset.del), 1);
+        this.changed();
+      }),
+    );
+    box.querySelector("[data-add]")?.addEventListener("click", () => {
+      this.snapshot();
+      const list = this.model[key];
+      const id = list.reduce((a, r) => Math.max(a, r.id), 0) + 1;
+      if (key === "measurements") this.model.measurements.push({ id, name: "", value: 0 });
+      else this.model.variables.push({ id, name: "", expr: "0" });
+      this.changed();
+      const inputs = box.querySelectorAll<HTMLInputElement>("input[data-f='name']");
+      inputs[inputs.length - 1]?.focus();
+    });
+  }
+
+  /** Update computed values in place while the user types in a table. */
+  private refreshValues(): void {
+    document.querySelectorAll<HTMLElement>("[data-zval]").forEach((td) => {
+      const id = Number(td.dataset.zval);
+      const err = this.res.zErrors.get(id);
+      const v = this.res.z.get(id);
+      td.textContent = err ?? (v !== undefined ? fmt(v) : "");
+      td.classList.toggle("bad", !!err);
+    });
+  }
+}

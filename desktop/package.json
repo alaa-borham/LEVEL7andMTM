@@ -1,0 +1,44 @@
+{
+  "name": "level7-cad-desktop",
+  "productName": "LEVEL7 CAD",
+  "version": "0.1.0",
+  "description": "LEVEL7 CAD - pattern construction",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "build:web": "npm --prefix ../app run build",
+    "start": "npm run build:web && electron .",
+    "dist:win": "npm run build:web && electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.level7.cad",
+    "productName": "LEVEL7 CAD",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      {
+        "from": "../app/dist",
+        "to": "web"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "LEVEL7 CAD"
+    }
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  }
+}
