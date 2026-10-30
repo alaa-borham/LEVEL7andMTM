@@ -55,6 +55,21 @@ describe("model rebuilds the GRAFIS thobe", () => {
     close(o("par"), [[0, -50], [185, -50]]);
   });
 
+  it("builds the demo piece", () => {
+    const { m } = thobe();
+    const r = evaluateModel(m);
+    expect([...r.pieceErrors]).toEqual([]);
+    const g = r.pieces.get(1)!;
+    const xs = g.sew.map((p) => p[0]);
+    const ys = g.sew.map((p) => p[1]);
+    expect(Math.min(...xs)).toBeCloseTo(0);
+    expect(Math.max(...xs)).toBeCloseTo(172);
+    expect(Math.min(...ys)).toBeCloseTo(-1320);
+    // hem allowance 40, nothing on the centre front (fold)
+    expect(Math.min(...g.cut.map((p) => p[1]))).toBeCloseTo(-1360);
+    expect(Math.min(...g.cut.map((p) => p[0]))).toBeCloseTo(0);
+  });
+
   it("follows a measurement change", () => {
     const { m, ids } = thobe();
     m.measurements.find((x) => x.id === 3)!.value = 400; // shoulder

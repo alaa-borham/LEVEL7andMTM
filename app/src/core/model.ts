@@ -3,6 +3,7 @@
 // the whole pattern - the same principle as GRAFIS.
 
 import { evaluate, FormulaError } from "./formula";
+import { buildPiece, type Piece, type PieceGeo } from "./piece";
 import {
   crossings,
   directionAt,
@@ -57,6 +58,8 @@ export interface Model {
   measurements: Measurement[];
   variables: Variable[];
   steps: Step[];
+  pieces?: Piece[];
+  size?: string; // size or customer the measurements belong to (written into exports)
   nextId: number;
   names: Record<number, string>; // object display names (P1, L3, ...)
 }
@@ -72,6 +75,8 @@ export interface GObj {
 export interface EvalResult {
   objects: Map<number, GObj>;
   stepErrors: Map<number, string>;
+  pieces: Map<number, PieceGeo>;
+  pieceErrors: Map<number, string>;
   z: Map<number, number>;
   zErrors: Map<number, string>;
 }
@@ -297,7 +302,30 @@ export function evaluateModel(model: Model): EvalResult {
     vars.measureReady();
   });
   vars.finish();
-  return { objects, stepErrors, z: vars.z, zErrors: vars.zErrors };
+
+  const pieces = new Map<number, PieceGeo>();
+  const pieceErrors = new Map<number, string>();
+  for (const pc of model.pieces ?? []) {
+    try {
+      pieces.set(
+        pc.id,
+        buildPiece({
+          piece: pc,
+          edges: pc.edges.map((id) => needLine(id).pts),
+          allowance: pc.edges.map((_, k) => vars.eval(pc.seam[k] ?? "0")),
+          notchPoints: pc.notches.map((r) => {
+            const p = refPoint(r);
+            if (!p) throw new Error(`نقطة النوتش ${model.names[r.obj] ?? r.obj} غير موجودة`);
+            return p;
+          }),
+          grainAngle: vars.eval(pc.grain || "90"),
+        }),
+      );
+    } catch (e) {
+      pieceErrors.set(pc.id, (e as Error).message);
+    }
+  }
+  return { objects, stepErrors, z: vars.z, zErrors: vars.zErrors, pieces, pieceErrors };
 }
 
 // ------------------------------------------------------------------ helpers

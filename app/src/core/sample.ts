@@ -47,5 +47,21 @@ export function thobeSample(): { m: Model; ids: Record<string, number> } {
   // front neck curve: leaves the centre front at a right angle, ends on the shoulder neck point
   add("neckC", "curve", (id) => ({ op: "curve", id, through: [{ obj: ids.neckD }, { obj: ids.neck }], startAngle: "0", endAngle: "" }));
   m.variables.push({ id: 19, name: "طول فتحة الرقبة الأمامية", expr: "", measure: { type: "length", obj: ids.neckC } });
+  // a simple front half piece (demonstration only): neck, shoulder, side, hem, centre front
+  add("side", "line", (id) => ({ op: "lineAngle", id, start: { obj: ids.lR, end: "end" }, angle: "-90", length: "Z18" }));
+  add("hem", "line", (id) => ({ op: "lineAngle", id, start: { obj: ids.cf, end: "end" }, angle: "0", length: "250" }));
+  add("waist", "point", (id) => ({ op: "pointOn", id, on: ids.side, dist: "400", unit: "mm", from: "start" }));
+  m.pieces = [
+    {
+      id: 1,
+      name: "أمام (مثال)",
+      quantity: 1,
+      fabric: "قماش الوجه",
+      edges: [ids.neckC, ids.shR, ids.side, ids.hem, ids.cf],
+      seam: ["8", "10", "10", "40", "0"],
+      notches: [{ obj: ids.waist }],
+      grain: "90",
+    },
+  ];
   return { m, ids };
 }

@@ -105,7 +105,8 @@ export function subPolyline(p: Pt[], s0: number, s1: number): Pt[] {
   const L = polyLen(p);
   const out: Pt[] = [pointAlong(p, s0)];
   let acc = 0;
-  for (let i = 1; i < p.length; i++) {
+  // interior vertices only: the end vertices lie on the extension lines anyway
+  for (let i = 1; i < p.length - 1; i++) {
     acc += dist(p[i - 1], p[i]);
     if (acc > s0 + 1e-9 && acc < s1 - 1e-9) out.push(p[i]);
   }

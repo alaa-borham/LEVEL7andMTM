@@ -14,7 +14,9 @@
         <button data-action="open" title="فتح ملف باترون">فتح</button>
         <button data-action="save" title="حفظ الباترون في ملف">حفظ</button>
         <button data-action="import-grafis" title="استيراد القياسات والمعادلات من ملف JSON مستخرج من جرافس">استيراد من جرافس</button>
-        <button data-action="dxf" title="تصدير الرسم بصيغة DXF">تصدير DXF</button>
+        <button data-action="dxf" title="تصدير خطوط البناء بصيغة DXF">تصدير DXF</button>
+        <button data-action="aama" title="تصدير القطع بصيغة DXF-AAMA لنظام التعشيق">تصدير AAMA</button>
+        <button data-action="plt" title="تصدير القطع بصيغة PLT للبلوتر">تصدير PLT</button>
         <span class="sep"></span>
         <button data-action="undo" title="تراجع (Ctrl+Z)">تراجع</button>
         <button data-action="redo" title="إعادة (Ctrl+Y)">إعادة</button>
@@ -41,10 +43,12 @@
           <button role="tab" data-tab="steps" class="active">خطوات البناء</button>
           <button role="tab" data-tab="x">القياسات X</button>
           <button role="tab" data-tab="z">المعادلات Z</button>
+          <button role="tab" data-tab="pieces">القطع</button>
         </div>
         <div class="tab-body" id="tab-steps"></div>
         <div class="tab-body" id="tab-x" hidden></div>
         <div class="tab-body" id="tab-z" hidden></div>
+        <div class="tab-body" id="tab-pieces" hidden></div>
       </aside>
     </main>
     <div class="toast" id="toast" hidden></div>

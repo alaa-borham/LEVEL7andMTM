@@ -13,6 +13,7 @@ import {
   type Step,
   type Variable,
 } from "../core/model";
+import type { Piece } from "../core/piece";
 
 export type PickKind = "point" | "line" | "canvas" | "object";
 
@@ -43,10 +44,12 @@ export interface Tool {
   group: string;
   shortcut?: string;
   picks: { kind: PickKind; prompt: string }[];
-  multi?: { kind: "point" | "object"; prompt: string; min: number }; // any number of picks, finished with Enter
+  multi?: { kind: "point" | "object" | "line"; prompt: string; min: number }; // any number of picks, finished with Enter
   fields?: (c: Ctx) => Field[];
   build?: (c: Ctx, v: Record<string, string>) => Step;
   makeVar?: (c: Ctx, v: Record<string, string>) => Omit<Variable, "id">; // measurement tools
+  makePiece?: (c: Ctx, v: Record<string, string>) => Omit<Piece, "id">;
+  addNotch?: boolean; // notch tool: the picked point goes to the nearest piece
 }
 
 /** Object id of a multi-pick (a whole point or line). */
@@ -223,6 +226,37 @@ export const TOOLS: Tool[] = [
       startAngle: v.startAngle,
       endAngle: v.endAngle,
     }),
+  },
+  {
+    key: "piece",
+    name: "قطعة من الحدود",
+    group: "القطع",
+    shortcut: "0",
+    picks: [],
+    multi: { kind: "line", prompt: "انقر حدود القطعة بالترتيب حولها (خطوط ومنحنيات)، ثم Enter", min: 2 },
+    fields: (c) => [
+      { key: "name", label: "اسم القطعة", value: `قطعة ${(c.model.pieces?.length ?? 0) + 1}`, text: true },
+      { key: "seam", label: "حاشية الخياطة", value: "10" },
+      { key: "quantity", label: "العدد", value: "1", text: true },
+      { key: "fabric", label: "القماش", value: "قماش الوجه", text: true },
+      { key: "grain", label: "خط النسيج °", value: "90" },
+    ],
+    makePiece: (c, v) => ({
+      name: v.name,
+      quantity: Math.max(1, Math.round(Number(v.quantity) || 1)),
+      fabric: v.fabric,
+      edges: c.extra.map((p) => pickedId(p) as number),
+      seam: c.extra.map(() => v.seam),
+      notches: [],
+      grain: v.grain,
+    }),
+  },
+  {
+    key: "notch",
+    name: "نوتش",
+    group: "القطع",
+    picks: [{ kind: "point", prompt: "انقر نقطة على حدود القطعة (نقطة أو طرف خط)" }],
+    addNotch: true,
   },
   {
     key: "measureDist",

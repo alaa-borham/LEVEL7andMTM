@@ -1,3 +1,4 @@
+import { toAamaDxf, toPlt } from "../core/export";
 import { closestOnPolyline, dist, type Pt } from "../core/geometry";
 import {
   createdIds,
@@ -151,6 +152,7 @@ export class App {
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
 
+    if (this.showPieces) parts.push(this.piecesSvg());
     for (const o of this.res.objects.values()) {
       if (o.kind !== "line") continue;
       const pts = o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ");
@@ -185,6 +187,36 @@ export class App {
       if (s.op === "mirror") for (const it of s.items) ids.add(it.dst ?? it.src);
     }
     return ids;
+  }
+
+  private showPieces = true;
+
+  private piecesSvg(): string {
+    const out: string[] = [];
+    const pts = (p: Pt[]) => p.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ");
+    for (const pc of this.model.pieces ?? []) {
+      const g = this.res.pieces.get(pc.id);
+      if (!g) continue;
+      out.push(`<polygon points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="2"/>`);
+      out.push(`<polygon points="${pts(g.sew)}" fill="none" stroke="var(--piece)" stroke-width="1.2" stroke-dasharray="6 4"/>`);
+      for (const n of g.notches) out.push(`<polyline points="${pts([n.at, n.to])}" stroke="var(--piece)" stroke-width="2.2"/>`);
+      const [a, b] = g.grain.map((q) => this.toScreen(q));
+      const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      const head = (p: Pt, dir: number) =>
+        `<polyline points="${[dir + 2.6, dir - 2.6].map((t) => [p[0] + 10 * Math.cos(t), p[1] + 10 * Math.sin(t)].join(",")).join(` ${p.join(",")} `)}" fill="none" stroke="var(--piece)" stroke-width="1.4"/>`;
+      out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="var(--piece)" stroke-width="1.4"/>`);
+      out.push(head(b, ang), head(a, ang + Math.PI));
+      const c = this.toScreen(g.centre);
+      out.push(`<text class="piece-label" x="${c[0] + 8}" y="${c[1]}">${esc(pc.name)} (${pc.quantity})</text>`);
+    }
+    return out.join("");
+  }
+
+  private pieceItems() {
+    return (this.model.pieces ?? []).flatMap((piece) => {
+      const geo = this.res.pieces.get(piece.id);
+      return geo ? [{ piece, geo }] : [];
+    });
   }
 
   private markSvg(p: Pick, color: string): string {
@@ -387,7 +419,31 @@ export class App {
     const t = this.tool as Tool;
     this.snapshot();
     const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
-    if (t.makeVar) {
+    if (t.makePiece) {
+      this.model.pieces ??= [];
+      const id = this.model.pieces.reduce((a, p) => Math.max(a, p.id), 0) + 1;
+      this.model.pieces.push({ id, ...t.makePiece(ctx, values) });
+      this.changed();
+      const err = this.res.pieceErrors.get(id);
+      this.toast(err ? `أُنشئت القطعة لكن فيها خطأ: ${err}` : "أُنشئت القطعة. عدّل حواشي كل حد من صفحة «القطع»");
+    } else if (t.addNotch) {
+      const pick = this.picks[0];
+      const at = pick.kind === "point" ? this.pointOf(pick.ref) : pick.at;
+      let best: { id: number; d: number } | null = null;
+      for (const [id, g] of this.res.pieces) {
+        const d = closestOnPolyline([...g.sew, g.sew[0]], at).d;
+        if (!best || d < best.d) best = { id, d };
+      }
+      const pc = best && this.model.pieces?.find((p) => p.id === best!.id);
+      if (!pc || pick.kind !== "point") {
+        this.undoStack.pop();
+        this.toast("لا توجد قطعة لإضافة النوتش إليها");
+      } else {
+        pc.notches.push(pick.ref);
+        this.changed();
+        this.toast(`أُضيف نوتش إلى «${pc.name}»`);
+      }
+    } else if (t.makeVar) {
       const id = this.model.variables.reduce((a, v) => Math.max(a, v.id), 0) + 1;
       this.model.variables.push({ id, ...t.makeVar(ctx, values) });
       this.changed();
@@ -618,6 +674,19 @@ export class App {
         case "save":
           this.save();
           break;
+        case "aama":
+        case "plt": {
+          const items = this.pieceItems();
+          if (!items.length) {
+            this.toast("لا توجد قطع للتصدير. أنشئ قطعة بأداة «قطعة من الحدود»");
+            return;
+          }
+          const size = this.model.size || "BASE";
+          const base = `${safeFileName(this.model.name)}_${safeFileName(size)}`;
+          if (b?.dataset.action === "aama") download(`${base}.dxf`, toAamaDxf(items, { style: this.model.name, size }), "application/dxf");
+          else download(`${base}.plt`, toPlt(items, { size }), "application/vnd.hp-hpgl");
+          break;
+        }
         case "dxf":
           download(`${safeFileName(this.model.name)}.dxf`, toDxf(this.res.objects.values()), "application/dxf");
           break;
@@ -669,7 +738,7 @@ export class App {
       const b = (e.target as HTMLElement).closest("button[data-tab]") as HTMLElement | null;
       if (!b) return;
       document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
-      for (const id of ["steps", "x", "z"]) $(`#tab-${id}`).hidden = id !== b.dataset.tab;
+      for (const id of ["steps", "x", "z", "pieces"]) $(`#tab-${id}`).hidden = id !== b.dataset.tab;
     });
   }
 
@@ -678,6 +747,7 @@ export class App {
     this.renderSteps();
     this.renderX();
     this.renderZ();
+    this.renderPieces();
   }
 
   private renderSteps(): void {
@@ -739,6 +809,91 @@ export class App {
     for (const id of ids) delete this.model.names[id];
     this.selectedStep = -1;
     this.changed();
+  }
+
+  private renderPieces(): void {
+    const box = $("#tab-pieces");
+    const pieces = this.model.pieces ?? [];
+    const head = `<div class="piece-top">
+        <label class="field-inline">المقاس / الزبون <input data-size value="${esc(this.model.size ?? "")}" placeholder="مثل 52 أو اسم الزبون"/></label>
+        <label class="field-inline"><input type="checkbox" data-show ${this.showPieces ? "checked" : ""}/> إظهار القطع على الرسم</label>
+      </div>`;
+    if (!pieces.length) {
+      box.innerHTML = head + `<div class="empty">لا توجد قطع بعد.<br>استخدم أداة «قطعة من الحدود»: انقر حدود القطعة بالترتيب حولها ثم Enter. الخطوط الزائدة تُقص تلقائياً عند نقاط التقاء الحدود.</div>`;
+    } else {
+      box.innerHTML =
+        head +
+        pieces
+          .map((pc, i) => {
+            const err = this.res.pieceErrors.get(pc.id);
+            const nm = (id: number) => esc(this.model.names[id] ?? `#${id}`);
+            return `<section class="piece-card" data-p="${i}">
+            <div class="piece-head"><input data-pf="name" value="${esc(pc.name)}"/><button class="danger" data-pdel title="حذف القطعة">حذف</button></div>
+            ${err ? `<div class="err">${esc(err)}</div>` : ""}
+            <div class="piece-grid">
+              <label>العدد <input data-pf="quantity" type="number" min="1" value="${pc.quantity}"/></label>
+              <label>القماش <input data-pf="fabric" value="${esc(pc.fabric)}"/></label>
+              <label>خط النسيج ° <input class="expr" data-pf="grain" value="${esc(pc.grain)}"/></label>
+            </div>
+            <table class="grid"><thead><tr><th>الحد</th><th>حاشية الخياطة مم</th></tr></thead><tbody>
+              ${pc.edges.map((id, k) => `<tr><td class="id">${nm(id)}</td><td><input class="expr" data-seam="${k}" value="${esc(pc.seam[k] ?? "0")}"/></td></tr>`).join("")}
+            </tbody></table>
+            <div class="notches">النوتشات: ${
+              pc.notches.length
+                ? pc.notches.map((r, k) => `<span class="chip">${nm(r.obj)}${r.end ? (r.end === "start" ? " (بداية)" : " (نهاية)") : ""}<button data-ndel="${k}" title="حذف">×</button></span>`).join(" ")
+                : "لا يوجد. أضفها بأداة «نوتش»"
+            }</div>
+          </section>`;
+          })
+          .join("");
+    }
+    box.querySelector<HTMLInputElement>("[data-size]")?.addEventListener("change", (e) => {
+      this.snapshot();
+      this.model.size = (e.target as HTMLInputElement).value.trim();
+      autosave(this.model);
+    });
+    box.querySelector<HTMLInputElement>("[data-show]")?.addEventListener("change", (e) => {
+      this.showPieces = (e.target as HTMLInputElement).checked;
+      this.render();
+    });
+    box.querySelectorAll<HTMLElement>(".piece-card").forEach((card) => {
+      const pc = pieces[Number(card.dataset.p)];
+      let snapped = false;
+      const edit = (fn: () => void) => {
+        if (!snapped) {
+          this.snapshot();
+          snapped = true;
+        }
+        fn();
+        this.changed(false);
+      };
+      card.querySelectorAll<HTMLInputElement>("input[data-pf]").forEach((inp) =>
+        inp.addEventListener("input", () =>
+          edit(() => {
+            const f = inp.dataset.pf as "name" | "quantity" | "fabric" | "grain";
+            if (f === "quantity") pc.quantity = Math.max(1, Math.round(Number(inp.value) || 1));
+            else pc[f] = inp.value;
+          }),
+        ),
+      );
+      card.querySelectorAll<HTMLInputElement>("input[data-seam]").forEach((inp) =>
+        inp.addEventListener("input", () => edit(() => (pc.seam[Number(inp.dataset.seam)] = inp.value))),
+      );
+      card.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", () => ((snapped = false), this.renderPieces())));
+      card.querySelector("[data-pdel]")?.addEventListener("click", () => {
+        if (!confirm(`حذف القطعة «${pc.name}»؟`)) return;
+        this.snapshot();
+        this.model.pieces = pieces.filter((p) => p !== pc);
+        this.changed();
+      });
+      card.querySelectorAll<HTMLElement>("[data-ndel]").forEach((b) =>
+        b.addEventListener("click", () => {
+          this.snapshot();
+          pc.notches.splice(Number(b.dataset.ndel), 1);
+          this.changed();
+        }),
+      );
+    });
   }
 
   private renderX(): void {

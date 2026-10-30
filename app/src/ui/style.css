@@ -13,6 +13,8 @@
   --select: #0b6bcb;
   --grid: #eceef1;
   --grid-major: #dde1e6;
+  --piece: #2e7d32;
+  --piece-fill: rgba(46, 125, 50, 0.07);
   font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", Arial, sans-serif;
   font-size: 14px;
   color: var(--text);
@@ -371,4 +373,78 @@ table.grid td.val.bad {
   font-size: 12px;
   background: var(--accent-soft);
   border-radius: 5px;
+}
+
+#canvas text.piece-label {
+  fill: var(--piece);
+  font-size: 13px;
+  font-weight: 600;
+}
+.piece-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.field-inline input:not([type="checkbox"]) {
+  flex: 1;
+}
+.piece-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+.piece-head {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.piece-head input {
+  flex: 1;
+  font-weight: 600;
+}
+.piece-grid {
+  display: grid;
+  grid-template-columns: 70px 1fr 90px;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.piece-grid input {
+  width: 100%;
+}
+.piece-card .err {
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.notches {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 2;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 0 4px 0 8px;
+  color: var(--text);
+  direction: ltr;
+}
+.chip button {
+  border: none;
+  background: none;
+  padding: 0 4px;
+  color: var(--danger);
 }
