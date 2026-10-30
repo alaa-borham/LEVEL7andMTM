@@ -11,6 +11,7 @@ import unittest
 from grafis_mdl.export import to_dxf, to_svg
 from grafis_mdl.formula import FormulaError, evaluate, evaluate_all
 from grafis_mdl.reader import GrafisModel
+from grafis_mdl.replay import compare, replay
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLE = os.environ.get("GRAFIS_SAMPLE", os.path.join(ROOT, "samples", "ALAA2026.mdl"))
@@ -35,8 +36,10 @@ class FormulaTests(unittest.TestCase):
         self.assertEqual(self.ev("CMDIF[X4>50]{X4/20}{0}", {4: 60}), 3)
 
     def test_errors(self):
+        # like GRAFIS, a dangling operator is dropped
+        self.assertEqual(self.ev("X35/", {35: 300}), 300)
         with self.assertRaises(FormulaError):
-            self.ev("X35/", {35: 300})
+            self.ev("X35*(2", {35: 300})
         values, errors = evaluate_all({1: 10}, {1: "X1*2", 2: "Z1+Z3", 3: "Z2"})
         self.assertEqual(values[1], 20)
         self.assertIn(2, errors)
@@ -99,6 +102,22 @@ class ModelTests(unittest.TestCase):
         self.assertAlmostEqual(-geo[2004].points[0][1], z[11], places=2)  # front shoulder drop R
         self.assertAlmostEqual(-geo[2003].points[0][1], z[12], places=2)  # front shoulder drop L
         self.assertAlmostEqual(length(2003), z[15], places=2)
+
+    def test_measured_variables(self):
+        zs = {z.number: z for z in self.m.z_variables(THOBE)}
+        self.assertEqual(zs[23].formula, "AB")
+        self.assertEqual([p.obj for p in zs[23].picks], [2018, 2016])
+        self.assertEqual(zs[28].formula, "GL")
+
+    def test_replay_matches_grafis(self):
+        """Rebuild the thobe from its protocol; what we build must equal GRAFIS."""
+        res = replay(self.m, THOBE)
+        rows = compare(self.m, THOBE, res)
+        built = {i: d for i, src, d in rows if src == "built" and d is not None}
+        self.assertGreaterEqual(len(built), 120)
+        wrong = {i for i, d in built.items() if d >= 0.05}
+        # 2161/2168 wait for the "corner" command (5/1), see docs/protocol.md
+        self.assertLessEqual(wrong, {2161, 2168})
 
 
 if __name__ == "__main__":

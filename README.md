@@ -23,6 +23,12 @@ python3 -m grafis_mdl extract samples/ALAA2026.mdl --part 2 --out out
 
 تقرير الثوب الأساسي: [docs/basic-thobe.md](docs/basic-thobe.md)
 
+إعادة البناء من بروتوكول Grafis (تجريبي): [docs/protocol.md](docs/protocol.md)
+
+```bash
+python3 -m grafis_mdl replay samples/ALAA2026.mdl --part 2
+```
+
 ## الاختبارات
 
 ```bash

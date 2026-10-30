@@ -116,7 +116,11 @@ class _Parser:
 
 
 def evaluate(src: str, lookup) -> float:
-    p = _Parser(tokenize(src), lookup)
+    tokens = tokenize(src)
+    # GRAFIS ignores a dangling operator at the end ("X35/" is evaluated as X35)
+    while tokens and tokens[-1] in ("+", "-", "*", "/"):
+        tokens.pop()
+    p = _Parser(tokens, lookup)
     v = p.expr()
     if p.peek() is not None:
         raise FormulaError(f"unexpected {p.peek()!r}")

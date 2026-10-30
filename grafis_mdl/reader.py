@@ -74,11 +74,27 @@ class Variable:
 
 
 @dataclass
+class MeasurePick:
+    """A point picked for a measured variable: type 2 = end point of ``obj``
+    (param 0 start, 1 end), type 6 = intersection of ``obj`` and ``obj2``."""
+
+    obj: int
+    type: int
+    obj2: int
+    param: float
+
+
+@dataclass
 class ZVariable:
     number: int
-    formula: str
+    formula: str  # an expression, or a measurement keyword (AB, GL, ...) when picks are set
     description: str
     history: list[tuple[str, str]]  # (date, formula), newest first
+    picks: list[MeasurePick] = field(default_factory=list)
+
+    @property
+    def measured(self) -> bool:
+        return bool(self.picks)
 
     @property
     def name(self) -> str:
@@ -318,24 +334,36 @@ class GrafisModel:
             return []
         b = blk.data
         heads = []
-        # header: u16 number, u16 ?, u16 formula length, u16 ?, 12 zero bytes, formula, NUL
-        for m in re.finditer(rb"(?s)(?=(..)(..)(..)(..)\x00{12})", b):
+        # header: u16 number, u16 ?, u16 formula length, u16 description length,
+        # u16 pick count (measured variables), 10 zero bytes, formula, NUL
+        for m in re.finditer(rb"(?s)(?=(..)(..)(..)(..)(..)\x00{10})", b):
             h = m.start()
             if h < 28:
                 continue
-            num, _t, flen, _x = struct.unpack_from("<4H", b, h)
-            if not (0 < num < 1000 and 0 < flen < 200):
+            num, _t, flen, dlen, npicks = struct.unpack_from("<5H", b, h)
+            if not (0 < num < 1000 and 0 < flen < 200 and npicks < 10):
                 continue
             f = b[h + 20 : h + 20 + flen]
             if len(f) != flen or not re.fullmatch(rb"[0-9A-Za-z(\-][ -~]*", f):
                 continue
-            if any(num == n for _, n, _ in heads):
+            if any(num == n for _, n, *_ in heads):
                 continue
-            heads.append((h, num, flen))
+            heads.append((h, num, flen, dlen, npicks))
         out = []
-        for i, (h, num, flen) in enumerate(heads):
+        for i, (h, num, flen, dlen, npicks) in enumerate(heads):
             end = heads[i + 1][0] - 4 if i + 1 < len(heads) else len(b)
             formula = b[h + 20 : h + 20 + flen].decode("latin1").strip()
+            picks = []
+            if npicks:
+                # measured variable: text fields padded to 8 bytes, then 12-byte picks
+                t0 = h + 20 + (flen + 7) // 8 * 8
+                desc = _txt(b[t0 : t0 + dlen]).strip()
+                p0 = t0 + (dlen + 7) // 8 * 8
+                for k in range(npicks):
+                    obj, typ, obj2, _r, param = struct.unpack_from("<4Hf", b, p0 + 12 * k)
+                    picks.append(MeasurePick(obj, typ, obj2, round(param, 6)))
+                out.append(ZVariable(num, formula, desc, [], picks))
+                continue
             rest = b[h + 20 + flen : end].lstrip(b"\0").split(b"\0")[0]
             lines = _txt(rest).split("\r\n")
             desc = lines[0].strip()
