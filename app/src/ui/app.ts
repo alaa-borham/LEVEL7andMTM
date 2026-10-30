@@ -1,3 +1,4 @@
+import { toGradedAama } from "../core/aama-graded";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { closestOnPolyline, dist, type Pt } from "../core/geometry";
 import {
@@ -977,6 +978,9 @@ export class App {
       <div class="table-actions">
         <button data-xall="aama">تصدير AAMA لكل المقاسات</button>
         <button data-xall="plt">تصدير PLT لكل المقاسات</button>
+      </div>
+      <div class="table-actions">
+        <button class="primary" data-graded title="المقاس الأساسي مع أرقام قواعد التدرج + ملف جدول القواعد RUL">تصدير AAMA مع قواعد التدرج + RUL</button>
       </div>`;
 
     let snapped = false;
@@ -1050,6 +1054,30 @@ export class App {
       this.evaluate();
       this.renderSizes();
       this.render();
+    });
+    box.querySelector("[data-graded]")?.addEventListener("click", () => {
+      if (!this.model.pieces?.length) {
+        this.toast("لا توجد قطع للتصدير");
+        return;
+      }
+      if (!this.model.sizes?.length) {
+        this.toast("أضف مقاسات أولاً: قواعد التدرج تحتاج أكثر من مقاس");
+        return;
+      }
+      const steps = [0, ...this.model.sizes.map((s) => s.step)];
+      if (new Set(steps).size !== steps.length) {
+        this.toast("لكل مقاس درجة مختلفة في جدول التدرج (والأساسي درجته 0). الزبائن لا تُصدَّر بقواعد التدرج");
+        return;
+      }
+      const r = toGradedAama(this.model);
+      const base = safeFileName(this.model.name);
+      download(`${base}.dxf`, r.dxf, "application/dxf");
+      setTimeout(() => download(`${base}.rul`, r.rul, "text/plain"), 300);
+      this.toast(
+        r.errors.length
+          ? `صُدّر مع أخطاء: ${r.errors[0]}`
+          : `صُدّر ${this.model.pieces.length} قطعة بـ ${r.rules} قاعدة تدرج للمقاسات ${r.sizes.join(" ")} (الأساسي ${r.sample})`,
+      );
     });
     box.querySelectorAll<HTMLElement>("[data-xall]").forEach((b) =>
       b.addEventListener("click", () => {

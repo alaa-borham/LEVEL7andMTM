@@ -24,6 +24,7 @@ export interface PieceGeo {
   id: number;
   sew: Pt[]; // sewing line (the construction outline), closed, counter-clockwise
   cut: Pt[]; // cutting line with seam allowance, closed
+  cutEdges: Pt[][]; // cutting line split per edge (same order as edges)
   edges: Pt[][]; // sewing line split per edge (counter-clockwise order)
   order: number[]; // for each of those, the index in Piece.edges
   notches: Notch[];
@@ -109,7 +110,7 @@ export function outline(edges: Pt[][], order?: number[]): { sew: Pt[]; parts: Pt
 }
 
 /** Cutting line: every edge moved outward by its allowance, corners mitred. */
-export function cutLine(parts: Pt[][], allowance: number[]): Pt[] {
+export function cutLine(parts: Pt[][], allowance: number[]): { pts: Pt[]; edges: Pt[][] } {
   const n = parts.length;
   // counter-clockwise outline: outward = right of travel = negative offset
   const off = parts.map((p, i) => (allowance[i] > 0 ? offsetPolyline(p, -allowance[i]) : [...p]));
@@ -135,12 +136,14 @@ export function cutLine(parts: Pt[][], allowance: number[]): Pt[] {
     corner.push(null); // too sharp or parallel: bevel (straight join of the two ends)
   }
   const out: Pt[] = [];
+  const edges: Pt[][] = [];
   for (let i = 0; i < n; i++) {
     const seg = subPolyline(off[i], startAt[i], endAt[i]);
+    edges.push(seg);
     out.push(...(out.length && dist(out[out.length - 1], seg[0]) < 1e-6 ? seg.slice(1) : seg));
   }
   if (dist(out[0], out[out.length - 1]) < 1e-6) out.pop();
-  return out;
+  return { pts: out, edges };
 }
 
 /** Outward unit normal of the sewing line near point x. */
@@ -172,7 +175,8 @@ export function buildPiece(inp: PieceInput): PieceGeo {
   const { sew, parts, order } = outline(inp.edges);
   // allowance follows the parts (outline() may have reversed the order)
   const allowance = order.map((k) => inp.allowance[k]);
-  const cut = allowance.some((a) => a > 0) ? cutLine(parts, allowance) : [...sew];
+  const cl = allowance.some((a) => a > 0) ? cutLine(parts, allowance) : { pts: [...sew], edges: parts };
+  const cut = cl.pts;
   const notches = inp.notchPoints.map((x) => {
     const { pt, n } = outwardAt(sew, x);
     const k = nearestPart(parts, pt);
@@ -190,7 +194,7 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     [centre[0] - Math.cos(ang) * half, centre[1] - Math.sin(ang) * half],
     [centre[0] + Math.cos(ang) * half, centre[1] + Math.sin(ang) * half],
   ];
-  return { id: inp.piece.id, sew, cut, edges: parts, order, notches, grain: g, centre };
+  return { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre };
 }
 
 function nearestPart(parts: Pt[][], x: Pt): number {
