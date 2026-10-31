@@ -337,6 +337,11 @@ export function stepFields(s: Step): Field[] {
       ];
     case "pointMove":
       return [{ key: "dist", label: "المسافة", value: s.dist }];
+    case "pointOffset":
+      return [
+        { key: "dx", label: "إزاحة س", value: s.dx },
+        { key: "dy", label: "إزاحة ص", value: s.dy },
+      ];
     case "lineAngle":
       return [
         { key: "angle", label: "الزاوية °", value: s.angle },

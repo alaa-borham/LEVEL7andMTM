@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.127
+
+LEVEL7 design mode: the curve tool works in one go: click its points (existing or in empty space), a rubber curve follows the mouse, and Enter / right click / ✓ creates it (end directions can be set later by double-clicking the curve). New point panel, as in GRAFIS, shown while a tool waits for a point: existing or free point (with a raster step), point on a line where clicked, intersection of two lines, % of a line, mm along a line (numbers or X/Z formulas, from the nearer end), and x/y offset from an existing point (new linked step "point offset"); the panel can be dragged anywhere.
+
 LEVEL7 and MTM 0.9.126
 
 Numbers always in English digits: every field in the program and in the LEVEL7 design engine is marked English, so values show as 480, not ٤٨٠, even with an Arabic Windows language; Arabic-Indic digits typed from the keyboard become 0-9 immediately.

@@ -45,6 +45,8 @@ export type Step =
   | { op: "pointOn"; id: number; on: number; dist: string; unit: "mm" | "%"; from: "start" | "end" }
   | { op: "intersect"; id: number; a: number; b: number; near: Pt }
   | { op: "pointMove"; id: number; from: PointRef; along: number; dist: string }
+  /** A point at a fixed offset (dx, dy) from another point; stays linked to it. */
+  | { op: "pointOffset"; id: number; from: PointRef; dx: string; dy: string }
   | { op: "line"; id: number; p1: PointRef; p2: PointRef }
   | { op: "lineAngle"; id: number; start: PointRef; angle: string; length: string }
   | { op: "parallel"; id: number; of: number; dist: string; side: 1 | -1 }
@@ -283,6 +285,11 @@ export function evaluateModel(model: Model): EvalResult {
           put(s.id, "point", [[p[0] + ux * d, p[1] + uy * d]], i);
           break;
         }
+        case "pointOffset": {
+          const p = pointOf(s.from);
+          put(s.id, "point", [[p[0] + vars.eval(s.dx), p[1] + vars.eval(s.dy)]], i);
+          break;
+        }
         case "line":
           put(s.id, "line", [pointOf(s.p1), pointOf(s.p2)], i);
           break;
@@ -450,6 +457,8 @@ export function usedIds(s: Step): number[] {
       return [s.a, s.b];
     case "pointMove":
       return [s.from.obj, s.along];
+    case "pointOffset":
+      return [s.from.obj];
     case "line":
       return [s.p1.obj, s.p2.obj];
     case "lineAngle":

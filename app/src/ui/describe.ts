@@ -19,6 +19,8 @@ export function describe(s: Step, m: Model): string {
       return `نقطة ${n(s.id)} تقاطع ${n(s.a)} و ${n(s.b)}`;
     case "pointMove":
       return `نقطة ${n(s.id)} = ${pr(s.from)} منقولة ${e(s.dist)} باتجاه ${n(s.along)}`;
+    case "pointOffset":
+      return `نقطة ${n(s.id)} = ${pr(s.from)} + (${e(s.dx)} ، ${e(s.dy)})`;
     case "line":
       return `خط ${n(s.id)} من ${pr(s.p1)} إلى ${pr(s.p2)}`;
     case "lineAngle":

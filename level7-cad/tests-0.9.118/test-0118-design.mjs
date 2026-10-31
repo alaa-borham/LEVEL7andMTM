@@ -87,8 +87,8 @@ try{
  const opts=await frame.locator('#tool-box .ref-pick').nth(1).locator('option').allTextContents();assert(opts.some(o=>o.startsWith('X91 = 1500')),opts.join('|'));
  await frame.locator('#tool-box .ref-pick').nth(1).selectOption('X91');assert.equal(await frame.locator('#tool-box input[data-key="length"]').inputValue(),'X91');
  await frame.locator('#tool-box input[data-key="length"]').fill('x91/٢');await frame.locator('#tool-box [data-ok]').click();
- await f.waitForFunction(()=>window.level7.model.steps.at(-1).length==='x91/٢');const L=await f.evaluate(()=>{const s=window.level7.model.steps.at(-1);const o=window.level7.res.objects.get(s.id);return Math.hypot(o.pts[1][0]-o.pts[0][0],o.pts[1][1]-o.pts[0][1]);});
- assert(Math.abs(L-750)<1e-6,String(L));pass('value box lists X (X91 = 1500); "x91/٢" is read as 750 mm');
+ await f.waitForFunction(()=>window.level7.model.steps.at(-1).length==='x91/2');const L=await f.evaluate(()=>{const s=window.level7.model.steps.at(-1);const o=window.level7.res.objects.get(s.id);return Math.hypot(o.pts[1][0]-o.pts[0][0],o.pts[1][1]-o.pts[0][1]);});
+ assert(Math.abs(L-750)<1e-6,String(L));pass('value box lists X (X91 = 1500); "x91/٢" (typed Arabic digit becomes 2) is read as 750 mm');
  await page.keyboard.press('Escape');
  // corner tools: round the corner between the angle line and the first line
  await (await tool(page,'cornerRound')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-cat="الزوايا"]').classList.contains('l7-active'));

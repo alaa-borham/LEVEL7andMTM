@@ -2,7 +2,7 @@ import { toGradedAama } from "../core/aama-graded";
 import { normalizeFormula } from "../core/formula";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
-import { closestOnPolyline, directionAt, dist, lineIntersection, polyLen, type Pt } from "../core/geometry";
+import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
   createdIds,
   nearerEnd,
@@ -75,6 +75,7 @@ export class App {
     this.bindTopbar();
     this.bindTabs();
     this.bindCanvas();
+    this.buildPointPanel();
     this.bindKeys();
     this.renderPanels();
     requestAnimationFrame(() => this.fit());
@@ -242,6 +243,14 @@ export class App {
       return `<text class="live-label" x="${x + 8}" y="${y - 8}" direction="ltr">\u2066${angle ? fmt(Math.round(deg * 10) / 10) + "° · " : ""}${fmt(Math.round(L * 10) / 10)} mm\u2069</text>`;
     };
     const objs = this.previewObjects();
+    if (this.currentPickKind() === "point" && this.ptMode !== "free") {
+      const [sx, sy] = this.toScreen(this.mouse);
+      const c = this.modeCandidate(this.mouse, sx, sy);
+      if (c) {
+        const [x, y] = this.toScreen(c.pt);
+        out.push(`<circle cx="${x}" cy="${y}" r="5.5" fill="none" stroke="var(--live)" stroke-width="2"/>`);
+      }
+    }
     for (const o of objs) {
       if (o.kind === "point") {
         const [x, y] = this.toScreen(o.pts[0]);
@@ -458,6 +467,7 @@ export class App {
   }
 
   private updatePrompt(): void {
+    if (this.pointPanel) this.pointPanel.hidden = this.currentPickKind() !== "point";
     let text = "اختر أداة من القائمة. اسحب بالزر الأيمن للتحريك، والعجلة للتكبير.";
     if (this.tool) {
       if (this.form) text = `${this.tool.name}: أدخل القيم ثم Enter`;
@@ -468,10 +478,144 @@ export class App {
     $("#prompt").textContent = text;
   }
 
+  // ---- point input panel (as GRAFIS): how a click makes the point a tool needs
+  ptMode: "free" | "online" | "intersect" | "pct" | "mm" | "xy" = "free";
+  ptPct = "50";
+  ptMm = "100";
+  ptDx = "0";
+  ptDy = "0";
+  ptRaster = 1;
+
+  /** Where the point of the current mode would be for a click at `at` (no step made). */
+  private modeCandidate(at: Pt, sx: number, sy: number): { pt: Pt; step: (id: number) => Step } | null {
+    const lineHit = this.hit("line", sx, sy);
+    const lineObj = lineHit?.kind === "line" ? this.res.objects.get(lineHit.obj) : undefined;
+    const vars = new Vars(withSize(this.model), undefined, this.res.z);
+    const num = (src: string) => {
+      try {
+        return vars.eval(src);
+      } catch {
+        return NaN;
+      }
+    };
+    switch (this.ptMode) {
+      case "online": {
+        if (!lineObj) return null;
+        const c = closestOnPolyline(lineObj.pts, at), d = String(Math.round(c.s * 10) / 10);
+        return { pt: pointAlong(lineObj.pts, Number(d)), step: (id) => ({ op: "pointOn", id, on: lineObj.id, dist: d, unit: "mm", from: "start" }) };
+      }
+      case "pct":
+      case "mm": {
+        if (!lineObj) return null;
+        const from = nearerEnd(lineObj, at), L = polyLen(lineObj.pts), raw = this.ptMode === "pct" ? this.ptPct : this.ptMm, v = num(raw);
+        if (!Number.isFinite(v)) return null;
+        const d = this.ptMode === "pct" ? (L * v) / 100 : v;
+        return { pt: pointAlong(lineObj.pts, d, from === "end"), step: (id) => ({ op: "pointOn", id, on: lineObj.id, dist: raw, unit: this.ptMode === "pct" ? "%" : "mm", from }) };
+      }
+      case "intersect": {
+        const tol = (PICK_PX * 2.5) / this.scale;
+        const near = [...this.res.objects.values()].filter((o) => o.kind === "line" && closestOnPolyline(o.pts, at).d <= tol);
+        let best: { pt: Pt; a: number; b: number; d: number } | null = null;
+        for (let i = 0; i < near.length; i++)
+          for (let j = i + 1; j < near.length; j++)
+            for (const c of crossings(near[i].pts, near[j].pts)) {
+              const d = dist(c.pt, at);
+              if (d <= tol && (!best || d < best.d)) best = { pt: c.pt, a: near[i].id, b: near[j].id, d };
+            }
+        if (!best) return null;
+        const b = best;
+        return { pt: b.pt, step: (id) => ({ op: "intersect", id, a: b.a, b: b.b, near: [Math.round(b.pt[0] * 10) / 10, Math.round(b.pt[1] * 10) / 10] }) };
+      }
+      case "xy": {
+        const h = this.hit("point", sx, sy);
+        if (h?.kind !== "point") return null;
+        const p = this.pointOf(h.ref), dx = num(this.ptDx), dy = num(this.ptDy);
+        if (!Number.isFinite(dx) || !Number.isFinite(dy)) return null;
+        const dxs = this.ptDx, dys = this.ptDy;
+        return { pt: [p[0] + dx, p[1] + dy], step: (id) => ({ op: "pointOffset", id, from: h.ref, dx: dxs, dy: dys }) };
+      }
+      default:
+        return null;
+    }
+  }
+
+  /** A click in a point mode: make that point as a linked step and return it as a pick. */
+  private modePoint(at: Pt, sx: number, sy: number): Pick | null {
+    const c = this.modeCandidate(at, sx, sy);
+    if (!c) {
+      this.toast(this.ptMode === "xy" ? "انقر على نقطة موجودة" : this.ptMode === "intersect" ? "انقر قرب تقاطع خطين" : "انقر على خط");
+      return null;
+    }
+    this.snapshot();
+    const id = newId(this.model, "point");
+    this.model.steps.push(c.step(id));
+    this.changed();
+    this.autoPoint = id;
+    return { kind: "point", ref: { obj: id }, at: c.pt };
+  }
+
+  /** Small floating panel shown while a tool waits for a point. */
+  private buildPointPanel(): void {
+    const wrap = document.querySelector(".canvas-wrap") as HTMLElement;
+    const box = document.createElement("div");
+    box.className = "pt-modes";
+    box.hidden = true;
+    box.innerHTML = `<div class="pt-head" title="اسحب لتحريك اللوحة">▼</div>
+      <button data-pm="free" title="نقطة موجودة أو حرة بالنقر"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6"/></svg></button>
+      <button data-pm="online" title="نقطة على خط حيث تنقر"><svg viewBox="0 0 24 24"><path d="M4 16L20 8"/><circle cx="12" cy="12" r="2.2"/></svg></button>
+      <button data-pm="intersect" title="نقطة تقاطع خطين"><svg viewBox="0 0 24 24"><path d="M5 5L19 19M19 5L5 19"/></svg></button>
+      <label data-pm-row="pct"><button data-pm="pct" title="نقطة بنسبة من طول الخط، من الطرف الأقرب">%</button><input data-pv="ptPct" class="expr" value="${this.ptPct}"/></label>
+      <label data-pm-row="mm"><button data-pm="mm" title="نقطة على الخط بمسافة من الطرف الأقرب">mm</button><input data-pv="ptMm" class="expr" value="${this.ptMm}"/></label>
+      <label data-pm-row="xy" class="pt-xy"><button data-pm="xy" title="نقطة بإزاحة س/ص من نقطة موجودة"><svg viewBox="0 0 24 24"><path d="M6 4V18H20M6 4L3.5 7M6 4L8.5 7M20 18L17 15.5M20 18L17 20.5"/></svg></button><span><input data-pv="ptDx" class="expr" value="${this.ptDx}" title="إزاحة س"/><input data-pv="ptDy" class="expr" value="${this.ptDy}" title="إزاحة ص"/></span></label>
+      <label class="pt-raster" title="خطوة تقريب النقطة الحرة (مم)"><svg viewBox="0 0 24 24"><path d="M4 20V8M8 20V12M12 20V8M16 20V12M20 20V8M3 20H21"/></svg><select data-raster>${[0.1, 1, 5, 10].map((v) => `<option value="${v}"${v === this.ptRaster ? " selected" : ""}>${v}</option>`).join("")}</select></label>`;
+    wrap.append(box);
+    try {
+      const g = JSON.parse(localStorage.getItem("level7.pointPanel") || "null");
+      if (g) Object.assign(box.style, { left: g.left, top: g.top, right: "auto" });
+    } catch {}
+    const mark = () => box.querySelectorAll<HTMLElement>("[data-pm]").forEach((b) => b.classList.toggle("on", b.dataset.pm === this.ptMode));
+    mark();
+    box.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest("[data-pm]") as HTMLElement | null;
+      if (!b) return;
+      this.ptMode = b.dataset.pm as App["ptMode"];
+      mark();
+      this.updatePrompt();
+      this.render();
+    });
+    box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) =>
+      inp.addEventListener("input", () => {
+        (this as unknown as Record<string, string>)[inp.dataset.pv as string] = inp.value.trim();
+        const row = inp.closest("[data-pm-row]") as HTMLElement | null;
+        if (row) (this.ptMode = row.dataset.pmRow as App["ptMode"]), mark();
+      }),
+    );
+    (box.querySelector("[data-raster]") as HTMLSelectElement).addEventListener("change", (e) => (this.ptRaster = Number((e.target as HTMLSelectElement).value)));
+    const head = box.querySelector(".pt-head") as HTMLElement;
+    head.addEventListener("pointerdown", (e) => {
+      const r = box.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      head.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => Object.assign(box.style, { right: "auto", left: Math.max(0, ev.clientX - wr.left - dx) + "px", top: Math.max(0, ev.clientY - wr.top - dy) + "px" });
+      const up = () => {
+        head.removeEventListener("pointermove", move);
+        head.removeEventListener("pointerup", up);
+        try {
+          localStorage.setItem("level7.pointPanel", JSON.stringify({ left: box.style.left, top: box.style.top }));
+        } catch {}
+      };
+      head.addEventListener("pointermove", move);
+      head.addEventListener("pointerup", up);
+    });
+    this.pointPanel = box;
+  }
+
+  private pointPanel: HTMLElement | null = null;
+
   /** A click on empty space where a point is expected creates a free point there
    * (as in GRAFIS), so lines can be drawn on a blank page. */
   private freePointAt(at: Pt): Pick {
-    const x = Math.round(at[0] * 10) / 10, y = Math.round(at[1] * 10) / 10;
+    const q = this.ptRaster > 0 ? this.ptRaster : 0.1;
+    const x = Math.round(Math.round(at[0] / q) * q * 10) / 10, y = Math.round(Math.round(at[1] / q) * q * 10) / 10;
     this.snapshot();
     const id = newId(this.model, "point");
     this.model.steps.push({ op: "point", id, x: String(x), y: String(y) } as Step);
@@ -521,6 +665,12 @@ export class App {
     }
     const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
     const fields = t.fields?.(ctx) ?? [];
+    // a multi-pick whose fields are all optional (curve end directions) is created at once;
+    // the values can be set later by double-clicking the result
+    if (t.multi && fields.length && fields.every((f) => f.optional)) {
+      this.commit(Object.fromEntries(fields.map((f) => [f.key, f.value])));
+      return;
+    }
     if (!fields.length) {
       this.commit({});
       return;
@@ -629,10 +779,22 @@ export class App {
       $("#tool-box").querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => ((values as Record<string, string>)[el.dataset.key as string] = el.value.trim()));
     } else if (!t.multi && !this.collecting && this.hover && picks.length === t.picks.length - 1 && t.picks[picks.length].kind === this.hover.kind) {
       picks = [...picks, this.hover];
-    } else return [];
+    } else if (!(this.collecting && t.multi?.kind === "point" && this.extra.length)) return [];
     try {
       const model = parseModel(JSON.stringify(this.model));
-      const ctx = { model, res: this.res, picks, extra: this.extra };
+      let extra = this.extra;
+      if (this.collecting && t.multi?.kind === "point") {
+        // rubber curve: the points so far plus the mouse (or the point under it)
+        let ref: PointRef;
+        if (this.hover?.kind === "point") ref = this.hover.ref;
+        else {
+          const id = model.nextId++;
+          model.steps.push({ op: "point", id, x: String(this.mouse[0]), y: String(this.mouse[1]) });
+          ref = { obj: id };
+        }
+        extra = [...extra, { kind: "point", ref, at: this.mouse }];
+      }
+      const ctx = { model, res: this.res, picks, extra };
       if (!values) {
         values = {};
         for (const f of t.fields?.(ctx) ?? []) values[f.key] = f.value;
@@ -945,8 +1107,13 @@ export class App {
       if (!kind) return;
       const r = svg.getBoundingClientRect();
       const h = this.hit(kind, e.clientX - r.left, e.clientY - r.top);
+      if (kind === "point" && this.ptMode !== "free") {
+        const made = this.modePoint(this.toWorld(e.clientX - r.left, e.clientY - r.top), e.clientX - r.left, e.clientY - r.top);
+        if (made) this.onPick(made);
+        return;
+      }
       if (h) this.onPick(h);
-      else if (kind === "point" && this.tool && !this.collecting) this.onPick(this.freePointAt(this.toWorld(e.clientX - r.left, e.clientY - r.top)));
+      else if (kind === "point" && this.tool && (!this.collecting || this.tool.multi?.kind === "point")) this.onPick(this.freePointAt(this.toWorld(e.clientX - r.left, e.clientY - r.top)));
       else if (kind !== "canvas") this.toast(kind === "line" ? "انقر على خط" : "انقر على نقطة أو طرف خط");
     });
     window.addEventListener("mouseup", (e) => {
@@ -973,12 +1140,14 @@ export class App {
         return;
       }
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
-      const kind = this.currentPickKind();
+      const kind0 = this.currentPickKind();
+      const kind: PickKind | null = kind0 === "point" && this.ptMode !== "free" && this.ptMode !== "xy" ? "line" : kind0;
       const h = kind ? this.hit(kind, sx, sy) : null;
+      if (kind0 === "point" && this.ptMode !== "free") this.render();
       if (JSON.stringify(h && { ...h, at: 0 }) !== JSON.stringify(this.hover && { ...this.hover, at: 0 })) {
         this.hover = h;
         this.render();
-      } else if (this.tool?.key === "line" && this.picks.length === 1) this.render(); // rubber band
+      } else if ((this.tool?.key === "line" && this.picks.length === 1) || (this.collecting && this.tool?.multi?.kind === "point" && this.extra.length)) this.render(); // rubber band / curve
     });
     svg.addEventListener(
       "wheel",
@@ -1212,7 +1381,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", pointOffset: "Point offset",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;
