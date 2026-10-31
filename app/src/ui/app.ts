@@ -126,11 +126,25 @@ export class App {
     // other parts shown faded behind the active one
     const parts = this.model.parts ?? [];
     this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
-    this.nest = this.showNest ? this.nestResults() : [];
+    this.nest = this.gradeView !== "off" ? this.nestResults() : [];
   }
 
   // ------------------------------------------------------------ sizes
-  private showNest = false;
+  /** Grading view (as GRAFIS): off, all sizes stacked on each other, or side by side. */
+  private gradeView: "off" | "stack" | "side" = "off";
+  private get showNest(): boolean {
+    return this.gradeView !== "off";
+  }
+  /** Command bar: off → stacked → side by side → off. */
+  cycleGradeView(): void {
+    if (!(this.model.sizes ?? []).length) return this.toast("لا توجد مقاسات: أضفها من جدول X أو صفحة المقاسات (Ctrl+G)");
+    this.gradeView = this.gradeView === "off" ? "stack" : this.gradeView === "stack" ? "side" : "off";
+    this.evaluate();
+    this.renderPanels();
+    this.render();
+    if (this.gradeView === "side") this.fitAll();
+    this.toast(this.gradeView === "stack" ? "المقاسات فوق بعض (Stack)" : this.gradeView === "side" ? "المقاسات جنباً إلى جنب" : "عرض المقاس الحالي فقط");
+  }
   private nest: { name: string; color: string; res: EvalResult }[] = [];
 
   private nestResults() {
@@ -3234,18 +3248,99 @@ export class App {
     });
   }
 
+  /** World box of a size's drawing. */
+  private boxOf(res: EvalResult): [number, number, number, number] | null {
+    const all = [...res.objects.values()].flatMap((o) => o.pts);
+    if (!all.length) return null;
+    const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  }
+
+  /** Side by side: where each size goes (x / y shift in mm), in rows and columns chosen to show
+   * them as large as the screen allows; the active size stays where it is drawn (first place). */
+  private sideShifts(): Pt[] {
+    const boxes = this.nest.map((n) => this.boxOf(n.res));
+    const w = Math.max(1, ...boxes.map((b) => (b ? b[2] - b[0] : 0)));
+    const h = Math.max(1, ...boxes.map((b) => (b ? b[3] - b[1] : 0)));
+    const r = this.svg.getBoundingClientRect(), n = this.nest.length;
+    let gx = Math.max(40, w * 0.15), gy = Math.max(60, h * 0.25), cols = n, best = 0;
+    const choose = () => {
+      best = 0;
+      for (let c = 1; c <= n; c++) {
+        const rows = Math.ceil(n / c), sc = Math.min((r.width || 1000) / (c * (w + gx)), (r.height || 700) / (rows * (h + gy)));
+        if (sc > best) (best = sc), (cols = c);
+      }
+    };
+    choose();
+    // room on screen between rows for the size name (below) and the measures (above): about 84 px
+    if (gy * best < 84 || gx * best < 24) {
+      gy = Math.max(gy, 84 / best);
+      gx = Math.max(gx, 24 / best);
+      choose();
+      gy = Math.max(gy, 84 / best);
+    }
+    const active = (this.model.activeSize ?? -1) + 1;
+    let k = 0;
+    return this.nest.map((_n, i) => {
+      const p = i === active ? 0 : ++k;
+      return [(p % cols) * (w + gx), -Math.floor(p / cols) * (h + gy)];
+    });
+  }
+
+  /** Fit the view to every size laid side by side. */
+  private fitAll(): void {
+    const sh = this.sideShifts();
+    const boxes = this.nest.map((n, i) => {
+      const b = this.boxOf(n.res);
+      return b ? [b[0] + sh[i][0], b[1] + sh[i][1], b[2] + sh[i][0], b[3] + sh[i][1]] : null;
+    }).filter((b): b is number[] => !!b);
+    if (!boxes.length) return;
+    const x0 = Math.min(...boxes.map((b) => b[0])), x1 = Math.max(...boxes.map((b) => b[2])), y0 = Math.min(...boxes.map((b) => b[1])), y1 = Math.max(...boxes.map((b) => b[3]));
+    const r = this.svg.getBoundingClientRect();
+    // same room as Fit: the tool card on the right, the parts strip on the left
+    const side = document.body.classList.contains("embedded") ? Math.min(240, r.width * 0.25) : 0;
+    const ps = document.querySelector<HTMLElement>(".part-strip"), left = ps && ps.offsetWidth && this.stripMode === "permanent" ? ps.offsetWidth : 0;
+    this.cx = (x0 + x1) / 2;
+    this.cy = (y0 + y1) / 2;
+    this.scale = Math.min((r.width - 120 - side - left) / Math.max(x1 - x0, 50), (r.height - 160) / Math.max(y1 - y0, 50));
+    this.cx += (side - left) / 2 / this.scale;
+    this.render();
+  }
+
   private nestSvg(): string {
     const out: string[] = [];
-    const pts = (p: Pt[]) => p.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ");
-    for (const n of this.nest) {
+    const side = this.gradeView === "side";
+    const sh: Pt[] = side ? this.sideShifts() : this.nest.map(() => [0, 0] as Pt);
+    const active = (this.model.activeSize ?? -1) + 1;
+    this.nest.forEach((n, i) => {
+      // side by side: the active size is the normal drawing; the others are copies to its right
+      if (side && i === active) {
+        const b = this.boxOf(n.res);
+        if (b) out.push(this.sizeLabel(n.name, n.color, b, [0, 0], true));
+        return;
+      }
+      const pts = (p: Pt[]) => p.map((q) => this.toScreen([q[0] + sh[i][0], q[1] + sh[i][1]]).map((v) => v.toFixed(1)).join(",")).join(" ");
+      const wid = side ? 1.4 : 1.2;
       if (n.res.pieces.size) {
-        for (const g of n.res.pieces.values()) out.push(`<polygon points="${pts(g.cut)}" fill="none" stroke="${n.color}" stroke-width="1.2" opacity="0.9"/>`);
+        for (const g of n.res.pieces.values()) out.push(`<polygon points="${pts(g.cut)}" fill="none" stroke="${n.color}" stroke-width="${wid}" opacity="0.95"/>`);
+        if (side) for (const o of n.res.objects.values()) if (o.kind === "line") out.push(`<polyline points="${pts(o.pts)}" fill="none" stroke="${n.color}" stroke-width="0.8" opacity="0.45"/>`);
       } else {
         for (const o of n.res.objects.values())
-          if (o.kind === "line") out.push(`<polyline points="${pts(o.pts)}" fill="none" stroke="${n.color}" stroke-width="1" opacity="0.8"/>`);
+          if (o.kind === "line") out.push(`<polyline points="${pts(o.pts)}" fill="none" stroke="${n.color}" stroke-width="${side ? 1.3 : 1}" opacity="${side ? 0.95 : 0.8}"/>`);
       }
-    }
+      const b = this.boxOf(n.res);
+      if (side && b) out.push(this.sizeLabel(n.name, n.color, b, sh[i], false));
+    });
     return out.join("");
+  }
+
+  /** Under each size: its name; above it: its width and height (mm, in the display unit). */
+  private sizeLabel(name: string, color: string, b: [number, number, number, number], d: Pt, active: boolean): string {
+    const [l, t] = this.toScreen([b[0] + d[0], b[3] + d[1]]), [r, btm] = this.toScreen([b[2] + d[0], b[1] + d[1]]);
+    const cx = ((l + r) / 2).toFixed(1);
+    const u = this.model.unit === "in" ? (v: number) => (v / 25.4).toFixed(2) + "″" : (v: number) => v.toFixed(1);
+    return `<text x="${cx}" y="${(btm + 22).toFixed(1)}" text-anchor="middle" fill="${color}" font-size="15" font-weight="700" style="pointer-events:none">\u2068${esc(name)}\u2069${active ? " ✎" : ""}</text>` +
+      `<text x="${cx}" y="${(t - 8).toFixed(1)}" text-anchor="middle" fill="${color}" font-size="12" direction="ltr" style="pointer-events:none">\u2066${u(b[2] - b[0])} × ${u(b[3] - b[1])}\u2069</text>`;
   }
 
   private renderSizeSelect(): void {
@@ -3310,7 +3405,7 @@ export class App {
         <button data-cimport title="CSV: سطر لكل زبون، أو JSON: طلب أو قائمة طلبات">استيراد زبائن (CSV / JSON)</button>
         <label class="field-inline">وحدة الملف <select data-cunit><option value="mm">مم</option><option value="cm">سم</option><option value="in">إنش</option></select></label>
       </div>
-      <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات فوق بعض</label>
+      <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات (فوق بعض أو جنباً إلى جنب من زر «Grading» في الشريط)</label>
       ${this.showNest ? `<div class="legend">${this.nest.map((n) => `<span><i style="background:${n.color}"></i>${esc(n.name)}</span>`).join("")}</div>` : ""}
       <div class="size-table"><table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>${esc(sizeName(this.model, -1))}</th><th>التدرج</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
       <div class="table-actions">
@@ -3398,7 +3493,7 @@ export class App {
       this.changed();
     });
     box.querySelector<HTMLInputElement>("[data-nest]")?.addEventListener("change", (e) => {
-      this.showNest = (e.target as HTMLInputElement).checked;
+      this.gradeView = (e.target as HTMLInputElement).checked ? "stack" : "off";
       this.evaluate();
       this.renderSizes();
       this.render();

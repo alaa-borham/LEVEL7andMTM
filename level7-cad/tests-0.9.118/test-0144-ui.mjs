@@ -26,8 +26,9 @@ try{
  await page.keyboard.press('Escape');
  await page.locator('[data-l7d-command="tab-x"]').click();const win=fr.locator('.panel.open').first();await win.waitFor();
  const b0=await win.boundingBox();const g=await fr.locator('.panel.open .float-grip.g-e').first().boundingBox();
- await page.mouse.move(g.x+g.width/2,g.y+g.height/2);await page.mouse.down();await page.mouse.move(g.x+g.width/2-150,g.y+g.height/2,{steps:5});await page.mouse.up();
- const b1=await win.boundingBox();assert(Math.abs(b0.width-b1.width-150)<4,JSON.stringify([b0,b1]));
+ const d=b0.width<600?150:-150; // grow a narrow window, shrink a wide one
+ await page.mouse.move(g.x+g.width/2,g.y+g.height/2);await page.mouse.down();await page.mouse.move(g.x+g.width/2+d,g.y+g.height/2,{steps:5});await page.mouse.up();
+ const b1=await win.boundingBox();assert(Math.abs(b1.width-b0.width-d)<4,JSON.stringify([b0,b1]));
  await fr.locator('.panel.open .float-max').first().click();const b2=await win.boundingBox();assert(b2.width>cb.width-30&&b2.height>cb.height-30,JSON.stringify([b2,cb]));
  await fr.locator('.panel.open .float-max').first().click();const b3=await win.boundingBox();assert(Math.abs(b3.width-b1.width)<2,JSON.stringify([b1,b3]));
  pass(`the X window resizes from its edge (150 px) and ▢ fills the screen and restores`);

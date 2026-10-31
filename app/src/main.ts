@@ -195,6 +195,7 @@ if (embedded && window.parent !== window) {
     else if (action === "lengths") app.setVis("lengths", !app.vis.lengths);
     else if (action === "arrange") app.openArrange();
     else if (action === "marker") app.exportMarker();
+    else if (action === "gradeview") app.cycleGradeView();
     else if (action === "iso") app.openMarkerForIso();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);

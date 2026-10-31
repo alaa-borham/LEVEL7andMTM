@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.146
+
+LEVEL7 design: grading view as GRAFIS (command bar "Grading"): each click goes from all sizes stacked on each other (Stack) to all sizes side by side, in the rows and columns that show them largest, each in its colour with its name and width x height, then back to the current size. The current size stays editable in its place.
+
 LEVEL7 and MTM 0.9.145
 
 LEVEL7 design screen: the cursor coordinates are no longer shown over the drawing.

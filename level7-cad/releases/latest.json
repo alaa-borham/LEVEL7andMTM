@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.145",
- "notes": "إخفاء إحداثيات المؤشر",
+ "version": "0.9.146",
+ "notes": "عرض التدريج: فوق بعض أو جنباً إلى جنب",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "bb33cd480c443a69784a10584ff4c413087f38afa1cb09d9961f9934ad2ec0fe",
-   "size": 133686
+   "sha256": "511a4ec0e08db0b660a2c3c0a2793c4f44dca9005309e1b39aae27ae41043814",
+   "size": 134040
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 31298
   },
   {
-   "path": "assets/l7design/assets/index-EyUN7Rp9.js",
-   "sha256": "0f648fde5b74553ac72fd67f932449bfe242930e0808015762c5d7a4be2fe3b4",
-   "size": 230176
+   "path": "assets/l7design/assets/index-B2-zPz2T.js",
+   "sha256": "ef88cd28cd39dc9035217a588b26e17c90c74fcfe20713031079f2013b71d1c9",
+   "size": 233462
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "a0bfa9d088b28b814d0a5b34a3494c03bf9808ddf421db3218e984ef865c63b0",
+   "sha256": "33f0fc90436342a66e5b4512e85973e83e1803ee4f07dea254d11a27ac675793",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "7de3d6c61775e90ead58dc2a99c21db4a248e9200523a04e191c9fa4038d4c57",
+   "sha256": "87f1dde9e4ee0b8b80cdbad2dbf6496beba4fe931a7d60ea42c008c63dd8ceeb",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "fec6df50eabf635fa285c082a08007ff25a301322ac6bb5f18359433e7995495",
-   "size": 35917
+   "sha256": "0493895093f711d4744041503dbcc8a0216f0f3f76a96a385e4414eddca1aeb4",
+   "size": 36249
   },
   {
    "path": "src/l7-icons.js",
@@ -1510,8 +1510,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "57dd42e45d94625ffd1df682f035178cec5a01636c68322c91c93e60aa4b382b",
-   "size": 17851
+   "sha256": "7301c3841ca9b896cd963f67a69ba5408cc56493a228e143cbe2437bc8b4460f",
+   "size": 18057
   },
   {
    "path": "src/ui-guide-0113.js",

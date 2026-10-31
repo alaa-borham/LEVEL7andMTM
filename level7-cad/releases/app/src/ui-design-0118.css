@@ -188,3 +188,6 @@ body.ui-dark .l7-size-menu button:hover{background:#26364a}
 body.ui-dark .l7-size-menu button[aria-checked="true"]{color:#4aa8ff}
 /* the tool card does not block the drawing under it (drags pass through); only its buttons take clicks */
 .l7-design-guide{pointer-events:none}.l7-design-guide button{pointer-events:auto}
+/* 0.9.146: a little tighter so every command, the grading button and the size button stay on one row */
+.l7-design-bar .palette-command{min-width:36px;padding:2px 3px}
+.l7-design-bar .palette-group{gap:0}
