@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.127",
- "notes": "إصلاح أداة الكيرف؛ لوحة نقاط مثل GRAFIS: حرة، على خط، تقاطع، نسبة، مم، إزاحة س/ص",
+ "version": "0.9.128",
+ "notes": "جدول X بدون صفر زائد وEnter يحفظ؛ كليك على الأيقونة = آخر أداة، كليك يمين = القائمة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "4e905bb51ca2a56db5b50cd602b717dbc9cea55918020823888bfcea13ad315d",
-   "size": 123518
+   "sha256": "867986981fe99828941f34c476ca5805126cde11bf4f201ba3e4c7f97ac42d3d",
+   "size": 123968
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 13382
   },
   {
-   "path": "assets/l7design/assets/index-kogf7fJT.js",
-   "sha256": "ef5a9d35efdbc433c3d027d35150893006935c5a1a1c0592495925d42b3a3b79",
-   "size": 105971
+   "path": "assets/l7design/assets/index-BlbGsllC.js",
+   "sha256": "02e98ff6cee1034c8f46aa9d9dab4f0c1e0211c55de56fa590952767599ed92e",
+   "size": 106627
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "c918805c0cf9e02201a969204c338fc8e409a76310839e4864564c7041574bb5",
+   "sha256": "3990569b0ed63ddf4bf6aebca5112433667608b8be13d8039b632674a8ce2d66",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "e3232dd98d7ee7dd5ea3ccebcd2de17c839123f66472a45a06ce5e88799bd6f6",
+   "sha256": "3bcb4e942c1d4e1a8b45d3325d5092b5000229529906d853c7e9495eeb428ae4",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "ac7f5dc8a5d98e29415d311fa2bebcf1ec5305f7911fbeb8fbe238e888ed678a",
-   "size": 19113
+   "sha256": "8a4a33257e10b857f9cffa69cfbdb34866af2c71b4a18e28e820a12d666994be",
+   "size": 19951
   },
   {
    "path": "src/line-transform-ui.js",

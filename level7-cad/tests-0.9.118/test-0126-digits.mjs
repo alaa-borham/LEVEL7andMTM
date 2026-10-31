@@ -13,6 +13,15 @@ try{
  const inp=page.frameLocator('#l7-design-frame').locator('#tab-x input[data-f="name"]').first();await inp.fill('');await inp.type('X ١٢٣');
  assert.equal(await inp.inputValue(),'X 123');
  const host=await page.evaluate(()=>[...document.querySelectorAll('input')].every(i=>i.lang==='en'));assert(host);
+ // 0.9.128: a new X row: its value field gets the focus with 0 selected, typing replaces it, Enter saves and moves on
+ const fr=page.frameLocator('#l7-design-frame');await fr.locator('#tab-x [data-add]').click();
+ await page.keyboard.type('1500');await page.keyboard.press('Enter');
+ const v=await f.evaluate(()=>{const m=window.level7.model.measurements;return{last:m.at(-1).value,shown:document.querySelector(`#tab-x input[data-f="value"][data-i="${m.length-1}"]`).value};});
+ assert.equal(v.last,1500);assert.equal(v.shown,'1500');
+ await fr.locator('#tab-x input[data-f="value"][data-i="0"]').click();await page.keyboard.type('480');await page.keyboard.press('Enter');
+ assert.equal(await f.evaluate(()=>window.level7.model.measurements[0].value),480);
+ assert.equal(await f.evaluate(()=>document.activeElement?.dataset.i),'1');
+ console.log('PASS X table: new value replaces the 0 (1500, not 01500); Enter saves and moves to the next row');
  await page.screenshot({path:'shot-0126-digits.png'});
  console.log('PASS every field is English-digit (lang=en) with an Arabic system language; typed ١٢٣ becomes 123');
 }catch(e){failed=1;console.error(e);}

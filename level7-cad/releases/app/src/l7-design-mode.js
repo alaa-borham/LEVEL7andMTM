@@ -122,7 +122,7 @@ export function installDesignMode() {
     for (const c of cats) {
       const wrap = document.createElement('div'); wrap.className = 'l7-cat';
       const head = document.createElement('button'); head.type = 'button'; head.className = 'l7-design-cat'; head.dataset.l7dCat = c.name;
-      head.setAttribute('aria-expanded', 'false'); head.setAttribute('aria-haspopup', 'menu'); head.title = c.name; head.setAttribute('aria-label', c.name);
+      head.setAttribute('aria-expanded', 'false'); head.setAttribute('aria-haspopup', 'menu'); head.title = c.name + ' · كليك: آخر أداة، كليك يمين: باقي الأدوات'; head.setAttribute('aria-label', c.name);
       head.innerHTML = stripIcon(c);
       const panel = document.createElement('div'); panel.className = 'l7-design-flyout'; panel.hidden = true; panel.dataset.l7dCatPanel = c.name; panel.setAttribute('role', 'menu');
       panel.innerHTML = `<header>${c.name}</header>`;
@@ -145,6 +145,13 @@ export function installDesignMode() {
     }
   };
   document.addEventListener('pointerdown', e => { if (openCat !== null && !e.target.closest?.('.l7-cat')) showCat(null); }, true);
+  // right click on a group icon opens its menu to choose another tool
+  toolsBox.addEventListener('contextmenu', e => {
+    const cat = e.target.closest('[data-l7d-cat]');
+    if (!cat) return;
+    e.preventDefault();
+    showCat(cat.dataset.l7dCat === openCat ? null : cat.dataset.l7dCat);
+  });
   // Closed outlines get the fabric/sky fill used by the host icons.
   const decorate = root => { for (const p of root.querySelectorAll('svg :is(path,rect,circle)')) { if (p.hasAttribute('stroke-dasharray')) continue; if (p.tagName === 'path' && !/[Zz]\s*$/.test(p.getAttribute('d') || '')) continue; if (p.classList.contains('ink')) p.classList.add('l7-fill-fabric'); else if (p.classList.contains('blue')) p.classList.add('l7-fill-sky'); } };
   const markActive = () => {
@@ -199,7 +206,13 @@ export function installDesignMode() {
     const step = e.target.closest('[data-l7d-step]');
     if (step) { send({ type: 'l7:action', action: step.dataset.l7dStep }); frame?.focus(); }
     else if (e.target.closest('[data-l7d="close"]')) close();
-    else if (cat) showCat(cat.dataset.l7dCat === openCat ? null : cat.dataset.l7dCat);
+    else if (cat) {
+      // left click: the last tool used in this group (or its first one) starts at once;
+      // the export group has no tool, so it opens its menu
+      const c = cats.find(x => x.name === cat.dataset.l7dCat), it = c && (c.items.find(x => x.tool && x.tool === last[c.name]) || c.items.find(x => x.tool));
+      if (it) { showCat(null); send(it.tool === active ? { type: 'l7:cancel' } : { type: 'l7:tool', key: it.tool }); frame?.focus(); }
+      else showCat(cat.dataset.l7dCat === openCat ? null : cat.dataset.l7dCat);
+    }
     else if (tool) { showCat(null); send(tool.dataset.l7dTool === active ? { type: 'l7:cancel' } : { type: 'l7:tool', key: tool.dataset.l7dTool }); frame?.focus(); }
     else if (cmd) { showCat(null); run(cmd.dataset.l7dCommand); }
   });

@@ -1777,7 +1777,7 @@ export class App {
           <td class="id">X${m.id}</td>
           <td><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="اسم القياس"/></td>
           <td style="width:90px"><input class="expr" data-i="${i}" data-f="code" value="${esc(m.code ?? "")}" placeholder="—" title="اسم هذا القياس في نظام MTM أو ملف الاستيراد"/></td>
-          <td style="width:90px"><input class="expr" type="number" step="any" data-i="${i}" data-f="value" value="${m.value}"/></td>
+          <td style="width:90px"><input class="expr num" type="text" inputmode="decimal" dir="ltr" lang="en" data-i="${i}" data-f="value" value="${m.value}"/></td>
           <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
         </tr>`,
       )
@@ -1832,7 +1832,22 @@ export class App {
       });
       inp.addEventListener("change", () => {
         snapped = false;
+        // show the stored number cleanly (no leading zeros or stray characters)
+        if (inp.dataset.f === "value") inp.value = String((this.model[key][Number(inp.dataset.i)] as unknown as { value: number }).value);
         this.renderSteps();
+      });
+      // a field opens with its text selected, so typing replaces the old value (0)
+      inp.addEventListener("focus", () => setTimeout(() => inp.select(), 0));
+      // Enter saves the value at once and moves to the same field of the next row
+      inp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        inp.dispatchEvent(new Event("change"));
+        const next = box.querySelector<HTMLInputElement>(`input[data-f="${inp.dataset.f}"][data-i="${Number(inp.dataset.i) + 1}"]`);
+        if (next) next.focus();
+        else inp.blur();
+        const label = key === "measurements" ? `X${this.model.measurements[Number(inp.dataset.i)]?.id}` : `Z${this.model.variables[Number(inp.dataset.i)]?.id}`;
+        this.toast(`حُفظت ${label}`);
       });
     });
     box.querySelectorAll<HTMLElement>("[data-del]").forEach((b) =>
@@ -1849,7 +1864,8 @@ export class App {
       if (key === "measurements") this.model.measurements.push({ id, name: "", value: 0 });
       else this.model.variables.push({ id, name: "", expr: "0" });
       this.changed();
-      const inputs = box.querySelectorAll<HTMLInputElement>("input[data-f='name']");
+      // the new row's value field gets the focus (its 0 is selected and replaced by typing)
+      const inputs = box.querySelectorAll<HTMLInputElement>(key === "measurements" ? "input[data-f='value']" : "input[data-f='name']");
       inputs[inputs.length - 1]?.focus();
     });
   }
