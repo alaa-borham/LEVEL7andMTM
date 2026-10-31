@@ -35,6 +35,15 @@ describe("marker export", () => {
     expect(r.items[1].geo.sew.map((p) => Math.round(2 * c - p[0])).sort()).toEqual(r.items[0].geo.sew.map((p) => Math.round(p[0])).sort());
     expect(toAamaDxf(r.items, { style: "thobe", size: "" })).toContain("Quantity: 1");
   });
+  it("a size switched off stays out of the marker until switched on again", () => {
+    const m = design();
+    m.sizes![0].off = true;
+    expect(markerItems(m).items.map((i) => i.size)).toEqual(["الأساسي", "الأساسي"]);
+    m.baseOff = true;
+    expect(markerItems(m).items).toEqual([]);
+    m.sizes![0].off = undefined;
+    expect([...new Set(markerItems(m).items.map((i) => i.size))]).toEqual(["L"]);
+  });
   it("a production part without pieces is reported", () => {
     const m = design();
     m.parts![0].pieces = [];

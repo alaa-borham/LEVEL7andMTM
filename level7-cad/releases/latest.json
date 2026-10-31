@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.146",
- "notes": "عرض التدريج: فوق بعض أو جنباً إلى جنب",
+ "version": "0.9.147",
+ "notes": "أيقونات جديدة، مكتبة القياسات، Run، تفعيل المقاسات، التراجع للرسم فقط",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "511a4ec0e08db0b660a2c3c0a2793c4f44dca9005309e1b39aae27ae41043814",
-   "size": 134040
+   "sha256": "5e6120236efc8b70bff6d31292987181137c8b8e7581d01e25de6ecffb338757",
+   "size": 135109
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-6gX5kpVi.css",
-   "sha256": "633cf09776ece5a5b3ec79df79115d782deadc6f1f2d725c83cc7c8dc6648cec",
-   "size": 31298
+   "path": "assets/l7design/assets/index-BnMT9hAW.css",
+   "sha256": "542df99c89281710e107c317fb8ef35ec3e7926ae5a3b0995ad2ec3bff59eed8",
+   "size": 32761
   },
   {
-   "path": "assets/l7design/assets/index-B2-zPz2T.js",
-   "sha256": "ef88cd28cd39dc9035217a588b26e17c90c74fcfe20713031079f2013b71d1c9",
-   "size": 233462
+   "path": "assets/l7design/assets/index-thQIpzw-.js",
+   "sha256": "f2b8b0901efac8b72b6292be6b4e3ee37b032e9118e3835222de30768498a628",
+   "size": 243934
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "33f0fc90436342a66e5b4512e85973e83e1803ee4f07dea254d11a27ac675793",
+   "sha256": "61a9455a5c204b7e759a997919f2ddd0a18e3bbe40005507bda6bd93c93099b4",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "87f1dde9e4ee0b8b80cdbad2dbf6496beba4fe931a7d60ea42c008c63dd8ceeb",
+   "sha256": "48b380618f0a95593faab2b7388f245b5938bb2c9cabb586c0191a0b10462806",
    "size": 301
   },
   {
@@ -370,13 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "0493895093f711d4744041503dbcc8a0216f0f3f76a96a385e4414eddca1aeb4",
-   "size": 36249
+   "sha256": "e0dd457fca4924188629f6169124992cb898d6dc574cd44b174590168040e8d9",
+   "size": 39230
   },
   {
    "path": "src/l7-icons.js",
-   "sha256": "13b3ad51ec9bd3de4316da97da77a2aaf54e2e1118de678fdd514ef57767f18e",
-   "size": 9752
+   "sha256": "de6e6885d08423e3832bdcbb8ce7ef6ff9038f8d69cdab9b4df7130512056eaa",
+   "size": 7889
   },
   {
    "path": "src/line-transform-ui.js",
@@ -1510,8 +1510,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "7301c3841ca9b896cd963f67a69ba5408cc56493a228e143cbe2437bc8b4460f",
-   "size": 18057
+   "sha256": "6731780096ac0dab0d733be771e3aa8a3f8bd84242cdf5358ecf588de32a4528",
+   "size": 19447
   },
   {
    "path": "src/ui-guide-0113.js",

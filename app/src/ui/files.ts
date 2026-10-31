@@ -42,8 +42,12 @@ export function hasUnsaved(): boolean {
 }
 
 /** Undo copies without repeating picture data: each picture is stored once in `blobs`. */
+/** The tables (X, Z, sizes, unit, product info, name) are not part of the drawing history:
+ * undo / redo change the drawing only. */
+export const TABLE_KEYS = ["name", "measurements", "variables", "size", "sizes", "grading", "activeSize", "baseOff", "unit", "product", "mlibFrom"] as const;
 export function packModel(m: Model, blobs: Map<string, string>, keys: Map<string, string>): string {
-  return JSON.stringify(m, (_k, v) => {
+  const drawing = Object.fromEntries(Object.entries(m).filter(([k]) => !(TABLE_KEYS as readonly string[]).includes(k)));
+  return JSON.stringify(drawing, (_k, v) => {
     if (typeof v !== "string" || v.length <= BIG || !v.startsWith("data:")) return v;
     let key = keys.get(v);
     if (!key) {
@@ -54,8 +58,11 @@ export function packModel(m: Model, blobs: Map<string, string>, keys: Map<string
     return key;
   });
 }
-export function unpackModel(raw: string, blobs: Map<string, string>): Model {
-  return checkModel(JSON.parse(raw, (_k, v) => (typeof v === "string" && v.startsWith("\u0000blob:") ? blobs.get(v) ?? "" : v)) as Model);
+/** A drawing from the history, with the current tables kept. */
+export function unpackModel(raw: string, blobs: Map<string, string>, current: Model): Model {
+  const drawing = JSON.parse(raw, (_k, v) => (typeof v === "string" && v.startsWith("\u0000blob:") ? blobs.get(v) ?? "" : v)) as Partial<Model>;
+  const tables = Object.fromEntries(TABLE_KEYS.filter((k) => k in current).map((k) => [k, current[k]]));
+  return checkModel({ ...drawing, ...tables } as Model);
 }
 
 export function restore(): Model | null {

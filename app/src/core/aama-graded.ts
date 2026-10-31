@@ -6,7 +6,7 @@
 // along the edge, so they correspond even when sizes differ in shape.
 
 import { dist, pointAlong, polyLen, type Pt } from "./geometry";
-import { evaluateModel, sizeName, withSize, type Model } from "./model";
+import { evaluateModel, sizeActive, sizeName, withSize, type Model } from "./model";
 import type { PieceGeo } from "./piece";
 
 const AAMA_LAYER = { boundary: 1, turn: 2, curve: 3, notch: 4, grain: 7, sew: 14 } as const;
@@ -50,7 +50,7 @@ export function toGradedAama(model: Model, date = new Date()): GradedResult {
   const errors: string[] = [];
   // sizes in grading order (by step); the base size has step 0
   // customers (made to measure) are not part of a grade rule table
-  const idx = [-1, ...(model.sizes ?? []).flatMap((s, i) => (s.kind === "customer" ? [] : [i]))];
+  const idx = [-1, ...(model.sizes ?? []).flatMap((s, i) => (s.kind === "customer" ? [] : [i]))].filter((i) => sizeActive(model, i)); // switched-off sizes stay out
   const stepOf = (i: number) => (i < 0 ? 0 : (model.sizes as NonNullable<Model["sizes"]>)[i].step);
   idx.sort((a, b) => stepOf(a) - stepOf(b) || a - b);
   const names = sizeTokens(

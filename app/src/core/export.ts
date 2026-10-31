@@ -3,13 +3,14 @@
 
 import type { Pt } from "./geometry";
 import type { Piece, PieceGeo } from "./piece";
-import { evaluateModel, sizeName, withSize, type Model } from "./model";
+import { evaluateModel, sizeActive, sizeName, withSize, type Model } from "./model";
 
 /** Pieces of every size (base first), each re-evaluated with that size's measurements. */
 export function allSizeItems(model: Model): { items: ExportItem[]; errors: string[] } {
   const items: ExportItem[] = [];
   const errors: string[] = [];
   for (let i = -1; i < (model.sizes?.length ?? 0); i++) {
+    if (!sizeActive(model, i)) continue; // switched off in the size table
     const r = evaluateModel(withSize(model, i));
     const size = sizeName(model, i);
     for (const piece of model.pieces ?? []) {
@@ -40,6 +41,7 @@ export function markerItems(model: Model): { items: ExportItem[]; errors: string
     }
     const amount = p.amount ?? 1, mirrored = p.mirrored ?? 0;
     for (let i = -1; i < (model.sizes?.length ?? 0); i++) {
+    if (!sizeActive(model, i)) continue; // switched off in the size table
       const r = evaluateModel(withSize({ ...model, steps, names: live ? model.names : p.names, pieces, activePart: model.parts?.length ? k : model.activePart }, i));
       const size = sizeName(model, i);
       for (const piece of pieces) {

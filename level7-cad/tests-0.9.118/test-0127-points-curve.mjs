@@ -36,7 +36,7 @@ try{
  assert.deepEqual(t.ops,['pointOffset','pointOn','line']);assert.equal(t.dist,'X1+5');assert.deepEqual(t.pts,[[10,180],[0,50]]);
  pass('point panel: x/y offset (P3 + 10, −20) and mm along a line (X1+5 = 50 mm from the nearer end), linked to X');
  // X / Z list in the point panel
- await frame.locator('.pt-modes [data-pm-row="pct"] .pt-ref').focus();await frame.locator('.pt-modes [data-pm-row="pct"] .pt-ref').selectOption('X1');
+ await frame.locator('.pt-modes [data-pm-row="pct"] .ref-x').focus();await frame.locator('.pt-modes [data-pm-row="pct"] .ref-x').selectOption('X1');
  assert.equal(await frame.locator('.pt-modes [data-pv="ptPct"]').inputValue(),'X1');pass('point panel: X / Z list fills the value (X1)');
  await frame.locator('.pt-modes [data-pm="free"]').click();await page.mouse.click(...await at(0,0),{button:'right'});
  assert(await frame.locator('.pt-modes').isHidden());pass('point panel hides when no point is expected');

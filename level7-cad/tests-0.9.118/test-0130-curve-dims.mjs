@@ -12,7 +12,7 @@ try{
  const box=await fr.locator('#canvas').boundingBox();const at=async(x,y)=>{const[sx,sy]=await f.evaluate(([x,y])=>window.level7.toScreen([x,y]),[x,y]);return[box.x+sx,box.y+sy];};
  const tool=async key=>{const b=page.locator(`[data-l7d-tool="${key}"]`);if(!await b.isVisible()){const cat=await b.evaluate(e=>e.closest('[data-l7d-cat-panel]').dataset.l7dCatPanel);await page.locator(`[data-l7d-cat="${cat}"]`).click({button:"right"});}await b.click();await page.waitForFunction(k=>document.querySelector(`[data-l7d-tool="${k}"]`).getAttribute('aria-pressed')==='true',key);};
  // icons of every tool are real drawings (0.9.122 regression)
- assert.equal(await page.locator('[data-l7d-tool="cornerSharp"] svg').getAttribute('data-tool-icon'),'corners');assert.equal(await page.locator('[data-l7d-tool="mirrorCopy"] svg').getAttribute('data-tool-icon'),'mirror');
+ assert.equal(await page.locator('[data-l7d-tool="cornerSharp"] svg').getAttribute('data-l7-icon'),'cornerSharp');assert.equal(await page.locator('[data-l7d-tool="mirrorCopy"] svg').getAttribute('data-l7-icon'),'mirrorCopy');
  pass('sharp corner and mirror copy show their own icons again');
  // no letters, name on hover
  assert.equal(await f.evaluate(()=>[...document.querySelectorAll('#canvas text')].filter(t=>/^[PLC]\d+$/.test(t.textContent)).length),0);

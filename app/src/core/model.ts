@@ -88,6 +88,9 @@ export interface Model {
   sizes?: Size[]; // further sizes or customers
   grading?: Record<number, number>; // grading step per X id, used to fill the size table
   activeSize?: number; // index in sizes, or -1 / undefined for the base size
+  baseOff?: boolean; // the base size is switched off (not in the marker / all-size exports)
+  /** The library table this design's X table was copied from (edits stay in the file). */
+  mlibFrom?: { id: string; name: string };
   nextId: number;
   names: Record<number, string>; // object display names (P1, L3, ...)
   unit?: "mm" | "in"; // how dimensions show their values (geometry is always mm)
@@ -123,6 +126,13 @@ export interface Size {
   kind?: "size" | "customer"; // customers (made to measure) are not graded
   step: number; // grading steps from the base size (-2, -1, 1, 2 ...)
   values: Record<number, number>; // X id -> value; missing = base value
+  /** Switched off: left out of the marker and the exports of all sizes until switched on again. */
+  off?: boolean;
+}
+
+/** Whether size i (-1 = base) is active (goes to the marker and the all-size exports). */
+export function sizeActive(m: Model, i: number): boolean {
+  return i < 0 ? !m.baseOff : !m.sizes?.[i]?.off;
 }
 
 export interface GObj {

@@ -5,6 +5,8 @@ import { TOOLS } from "./ui/tools";
 /** Command-bar shortcuts, as in the program's own toolbox. */
 function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  // GRAFIS: Ctrl+6 grade all parts, Ctrl+Shift+6 test run all parts
+  if (ctrl && !e.altKey && e.code === "Digit6") return e.shiftKey ? "testAll" : "gradeAll";
   if (ctrl && !e.shiftKey && !e.altKey) {
     const map: Record<string, string> = { s: "save", n: "new", o: "open", e: "aama", g: "tab-sizes", t: "tab-partlist" };
     if (map[k]) return map[k];
@@ -196,6 +198,10 @@ if (embedded && window.parent !== window) {
     else if (action === "arrange") app.openArrange();
     else if (action === "marker") app.exportMarker();
     else if (action === "gradeview") app.cycleGradeView();
+    else if (action === "testPart") app.runCheck(false, false);
+    else if (action === "gradePart") app.runCheck(false, true);
+    else if (action === "testAll") app.runCheck(true, false);
+    else if (action === "gradeAll") app.runCheck(true, true);
     else if (action === "iso") app.openMarkerForIso();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
@@ -225,7 +231,7 @@ if (embedded && window.parent !== window) {
       }
       case "l7:theme": document.body.classList.toggle("dark", (d as { dark?: boolean }).dark === true); break;
       case "l7:cancel": app.cancelTool(); break;
-      case "l7:json": if ((d as unknown as { purpose?: string }).purpose === "library" && typeof d.text === "string") app.importLibrary(d.text); break;
+      case "l7:json": if (typeof d.text === "string") { const pu = (d as unknown as { purpose?: string }).purpose; if (pu === "library") app.importLibrary(d.text); else if (pu === "mlib") app.importMLib(d.text); } break;
       case "l7:marker": if (typeof d.text === "string") app.isoFromMarker(String(d.name ?? ""), d.text); break;
       case "l7:table": void app.importXFile(String(d.name ?? ""), { text: typeof d.text === "string" ? d.text : undefined, base64: (d as unknown as { base64?: unknown }).base64 as string | undefined }); break;
       case "l7:new": app.newDesign(); break;

@@ -8,8 +8,8 @@
 import { toolIcon } from './grouped-tool-palette.js';
 import { l7Icon } from './l7-icons.js';
 /** 0.9.144: the LEVEL7 icon set first; the shared program drawings only as a fallback. */
-// the LEVEL7 icon set (l7-icons.js) is kept for a later redesign; the program drawings are used
-const USE_L7_ICONS = false;
+// 0.9.147: the LEVEL7 icon set «linen + CAD» (approved); program drawings only as a fallback
+const USE_L7_ICONS = true;
 const iconOf = it => (USE_L7_ICONS && l7Icon(it.tool || it.command)) || toolIcon(it.glyph) || toolIcon('point');
 
 // Engine tool key -> host icon drawing.
@@ -71,6 +71,7 @@ const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'cs
 /** Same shortcuts as the program's toolbox (and the engine frame, which forwards them). */
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && !e.altKey && e.code === 'Digit6') return e.shiftKey ? 'testAll' : 'gradeAll';
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
   if (e.key === 'F4') return 'dup';
   if (e.key === 'F7') return 'dims';
@@ -124,10 +125,19 @@ export function installDesignMode() {
     barBox.append(g);
   }
   const cmdBox = barBox;
+  // 0.9.147: test run / grade (as GRAFIS) in one button with a short list; Ctrl+6, Ctrl+Shift+6
+  const runBox = document.createElement('div'); runBox.className = 'palette-group l7-design-run';
+  runBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-run-btn" data-l7d-runbtn title="تشغيل تجريبي وتدريج البارتات (مثل GRAFIS)" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 3v9M5 8l4 4 4-4M15 3v9M11 8l4 4 4-4M4 16h16M4 20h16"/></svg><small>Run</small></button><div class="l7-size-menu l7-run-menu" role="menu" hidden><header>تشغيل وتدريج</header><button type="button" role="menuitem" data-l7d-command="testPart" title="Test run current part"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12M8 12l4 4 4-4M6 20h12"/></svg><span>تشغيل تجريبي للبارت الحالي</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="gradePart" title="Grade current part"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 4v12M5 12l4 4 4-4M15 4v12M11 12l4 4 4-4M5 20h14"/></svg><span>تدريج البارت الحالي</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="testAll" title="Test run all parts · Ctrl+Shift+6"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 3v9M8 8l4 4 4-4M5 16h14M5 20h14"/></svg><span>تشغيل تجريبي لكل البارتات</span><kbd>Ctrl+Shift+6</kbd></button><button type="button" role="menuitem" data-l7d-command="gradeAll" title="Grade all parts · Ctrl+6"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 3v9M5 8l4 4 4-4M15 3v9M11 8l4 4 4-4M4 16h16M4 20h16"/></svg><span>تدريج كل البارتات</span><kbd>Ctrl+6</kbd></button></div>';
+  barBox.append(runBox);
+  const runMenu = runBox.querySelector('.l7-run-menu');
+  runBox.querySelector('[data-l7d-runbtn]').addEventListener('click', () => { runMenu.hidden = !runMenu.hidden; });
+  runMenu.addEventListener('click', () => { runMenu.hidden = true; });
+  document.addEventListener('pointerdown', e => { if (!runMenu.hidden && !e.target.closest?.('.l7-design-run')) runMenu.hidden = true; }, true);
+  window.addEventListener('blur', () => { runMenu.hidden = true; });
   // 0.9.144: size and unit of the design: one button in the command bar (current size, unit
   // underneath) that opens a short list; nothing over the drawing.
   const sizeBox = document.createElement('div'); sizeBox.className = 'palette-group l7-design-size';
-  sizeBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-size-btn" data-l7d-sizebtn title="المقاس والوحدة" aria-haspopup="menu"><b class="l7-size-name">الأساسي</b><small class="l7-size-unit">mm</small></button><div class="l7-size-menu" role="menu" hidden></div>';
+  sizeBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-size-btn" data-l7d-sizebtn title="المقاس المعروض ووحدة القياس (انقر للتغيير)" aria-haspopup="menu"><b class="l7-size-role">Size</b><small><span class="l7-size-name">الأساسي</span> · <span class="l7-size-unit">mm</span></small></button><div class="l7-size-menu" role="menu" hidden></div>';
   barBox.append(sizeBox);
   let sizeState = { sizes: [], active: -1, unit: 'mm' };
   const sizeBtn = sizeBox.querySelector('[data-l7d-sizebtn]'), sizeMenu = sizeBox.querySelector('.l7-size-menu');
@@ -312,9 +322,9 @@ export function installDesignMode() {
       n.textContent = typeof d.text === 'string' ? d.text.replace(/^[^:]*:\s*/, '') : '';
       n.hidden = !n.textContent; t.hidden = !n.hidden; guide.title = t.textContent;
     }
-    else if (d.type === 'l7:open-json' && d.purpose === 'library') void (async () => {
+    else if (d.type === 'l7:open-json' && (d.purpose === 'library' || d.purpose === 'mlib')) void (async () => {
       if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
-      try { const file = await desktop.openFile({ design: true }); if (file) send({ type: 'l7:json', purpose: 'library', text: file.text, name: file.name }); }
+      try { const file = await desktop.openFile({ design: true }); if (file) send({ type: 'l7:json', purpose: d.purpose, text: file.text, name: file.name }); }
       catch (e) { status('تعذر فتح الملف: ' + e.message); }
     })();
     else if (d.type === 'l7:print' && typeof d.html === 'string') void (async () => {

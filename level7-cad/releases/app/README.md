@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.147
+
+LEVEL7 design: new tool icons («linen + CAD»: linen tiles, red pins = points, blue thread = what the tool makes, blue cloth = pieces, red stitches, orange = measures, red cross = delete). Undo / redo and the history count are the drawing only; X / Z / sizes / unit are never changed by undo and add nothing to the count. Value fields have two lists, X and Z, instead of one mixed list. A tick above every size column (X table and size page) switches the size off: it stays out of the marker and the all-size exports until switched on. Command bar "Run": test run / grade the current part or all parts (Ctrl+Shift+6 / Ctrl+6), listing what fails per part and size. Measurement library (X window): the X tables of every model on this computer; a table is copied into the design, edits stay in the file, the library entry changes only with "update library"; a new design opens the library; export / import as a file. Command bar "Size" shows its role, with the current size and unit under it. Numbers in the size page are always English digits.
+
 LEVEL7 and MTM 0.9.146
 
 LEVEL7 design: grading view as GRAFIS (command bar "Grading"): each click goes from all sizes stacked on each other (Stack) to all sizes side by side, in the rows and columns that show them largest, each in its colour with its name and width x height, then back to the current size. The current size stays editable in its place.

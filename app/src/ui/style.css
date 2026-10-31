@@ -542,8 +542,8 @@ body.embedded .panel .tabs{display:none}
 body.dark { --live: #8fd14f; }
 
 /* X / Z picker beside formula fields */
-.tool-box .field:has(.ref-pick) { grid-template-columns: 110px 1fr auto; }
-.tool-box .ref-pick { width: 64px; padding: 3px 2px; font-size: 12px; }
+.tool-box .field:has(.ref-picks) { grid-template-columns: 96px 1fr auto; }
+.ref-picks { display: inline-flex; gap: 3px; } .ref-picks .ref-pick { width: 44px; padding: 3px 2px; font-size: 12px; font-weight: 600; } .ref-picks .ref-x { color: #f5c400; } .ref-picks .ref-z { color: #4aa8ff; } .ref-picks.compact .ref-pick { width: 34px; font: 600 10px Arial, sans-serif; padding: 1px 0; } .ref-picks option { color: var(--text); font-weight: normal; }
 
 /* 0.9.124 embedded: the page panel is a floating window, hidden until opened */
 body.embedded .layout { grid-template-columns: 1fr; }
@@ -902,3 +902,24 @@ body.embedded .panel { overflow: visible; }
 .xg-table td.xn { min-width: 150px; }
 .ztable textarea.zdesc { field-sizing: content; height: auto; min-height: 28px; }
 .hist-bar.ghost { opacity: .3; } .hist-bar.ghost > button { pointer-events: none; }
+/* size on / off tick above every size column; a switched-off size is shown faded */
+.sz-on { display: block; line-height: 1; margin-bottom: 2px; }
+.sz-on input { width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: #2fbf71; }
+th.sz-off { opacity: .45; text-decoration: line-through; }
+.xg-table th.sz, .xg-table th.xv { vertical-align: bottom; }
+/* measurement library window */
+.mlib-win { width: 560px; }
+.xg-bar .xg-lib { width: auto; padding: 0 10px; font-size: 13px; margin-inline-start: 6px; }
+.ml-note { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+.ml-search input { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+.ml-list { list-style: none; margin: 0 0 10px; padding: 0; max-height: 46vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.ml-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.ml-list li:last-child { border-bottom: 0; }
+.ml-list li.cur { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.ml-list li.empty { color: var(--muted); justify-content: center; }
+.ml-list li div { display: flex; flex-direction: column; min-width: 0; }
+.ml-list li small { color: var(--muted); }
+.ml-list li span { display: flex; gap: 4px; flex: none; }
+.ml-list li button { height: 28px; padding: 0 10px; }
+.ml-save { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ml-save input { flex: 1; min-width: 140px; }

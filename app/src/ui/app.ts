@@ -4,6 +4,8 @@ import { fromBase64, readCsv, readXlsx, writeXlsx } from "../core/xlsx";
 import { importXTable, xTableRows } from "../core/xtable";
 import { allSizeItems, markerItems, toAamaDxf, toPlt } from "../core/export";
 import { parseMarker, toIsoCut, toMarkerPlt, type Marker } from "../core/iso";
+import { checkParts } from "../core/check";
+import { applyEntry, libraryFile, mergeLibrary, tableOf, type MEntry } from "../core/mlib";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
@@ -14,6 +16,7 @@ import {
   newId,
   fillGrading,
   sizeName,
+  sizeActive,
   withSize,
   usedIds,
   evaluateModel,
@@ -73,6 +76,7 @@ export class App {
   res!: EvalResult;
   private undoStack: string[] = [];
   private redoStack: string[] = [];
+  private redoKept: string[] = [];
   /** Picture data shared by all undo copies (stored once). */
   private blobs = new Map<string, string>();
   private blobKeys = new Map<string, string>();
@@ -106,6 +110,11 @@ export class App {
     this.model = restored ?? emptyModel();
     this.fromRestore = !!restored && this.unsaved;
     this.evaluate();
+    // size on / off ticks (X table and size page): one listener for both windows
+    document.addEventListener("change", (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.matches?.("input[data-son]")) this.setSizeActive(Number(t.dataset.son), t.checked);
+    });
     this.buildTools();
     this.bindTopbar();
     this.bindTabs();
@@ -624,14 +633,25 @@ export class App {
   private snapshot(): void {
     const ap = this.model.parts?.[this.model.activePart ?? 0];
     if (ap) ap.edited = new Date().toISOString();
-    this.undoStack.push(this.pack());
+    // only drawing changes enter the history: a table edit (X, Z, sizes) leaves the drawing as the
+    // last entry already has it, so nothing is added and the count stays the number of drawing actions
+    const now = this.pack();
+    if (this.undoStack[this.undoStack.length - 1] === now) return;
+    this.undoStack.push(now);
     if (this.undoStack.length > 200) this.undoStack.shift();
+    this.redoKept = this.redoStack;
     this.redoStack = [];
   }
 
   private changed(panels = true): void {
     this.evaluate();
     this.syncPart();
+    // a change that left the drawing as it was (X, Z, sizes, unit...) takes its history entry back
+    if (this.undoStack.length && this.undoStack[this.undoStack.length - 1] === this.pack()) {
+      this.undoStack.pop();
+      if (!this.redoStack.length && this.redoKept.length) this.redoStack = this.redoKept; // redo stays possible
+    }
+    this.redoKept = [];
     const kept = autosave(this.model);
     if (kept !== "ok" && this.autosaveWarned !== kept) {
       this.autosaveWarned = kept;
@@ -665,6 +685,8 @@ export class App {
     if (!this.keepOrSave()) return;
     this.load(emptyModel());
     setUnsaved((this.unsaved = false));
+    // a new model starts by choosing its measurements from the library (when there is one)
+    if (this.mlib().length) this.openMLib();
   }
 
   /** Before another design replaces this one: unsaved work (also from before a restart or a
@@ -695,19 +717,24 @@ export class App {
   }
 
   private undo(): void {
-    const prev = this.undoStack.pop();
+    // entries that would not change the drawing (left by table edits) are skipped
+    const cur = this.pack();
+    let prev = this.undoStack.pop();
+    while (prev !== undefined && prev === cur) prev = this.undoStack.pop();
     if (!prev) return;
     this.redoStack.push(this.pack());
-    this.model = unpackModel(prev, this.blobs);
+    this.model = unpackModel(prev, this.blobs, this.model);
     this.cancelTool();
     this.changed();
   }
 
   private redo(): void {
-    const next = this.redoStack.pop();
+    const cur = this.pack();
+    let next = this.redoStack.pop();
+    while (next !== undefined && next === cur) next = this.redoStack.pop();
     if (!next) return;
     this.undoStack.push(this.pack());
-    this.model = unpackModel(next, this.blobs);
+    this.model = unpackModel(next, this.blobs, this.model);
     this.cancelTool();
     this.changed();
   }
@@ -1392,6 +1419,185 @@ export class App {
   }
   private lastPrompt = "";
 
+  // ---- measurement library (X tables of every model, on this computer)
+  private mlib(): MEntry[] {
+    try {
+      const v = JSON.parse(localStorage.getItem("level7.mlib") || "[]");
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+  private setMLib(list: MEntry[]): boolean {
+    try {
+      localStorage.setItem("level7.mlib", JSON.stringify(list));
+      return true;
+    } catch {
+      this.toast("تعذر حفظ مكتبة القياسات (مساحة التخزين ممتلئة)");
+      return false;
+    }
+  }
+
+  /** The library window: use a table in this design (a copy), save this design's table, update
+   * an entry from this design (only on request), delete, export / import the library file. */
+  openMLib(): void {
+    document.querySelector(".mlib-win")?.remove();
+    const el = document.createElement("section");
+    el.className = "z-assistant marker-win mlib-win";
+    el.dir = "rtl";
+    const draw = () => {
+      const lib = this.mlib(), from = this.model.mlibFrom;
+      const day = (iso: string) => iso.slice(0, 10);
+      el.innerHTML = `<div class="za-head"><b>📚 مكتبة القياسات · ${lib.length}</b><button data-ml="close">×</button></div>
+        <div class="za-body">
+          <p class="ml-note">${from ? `جدول هذا التصميم نسخة من «<b>${esc(from.name)}</b>». تعديلاتك عليه تُحفظ في ملف التصميم فقط، ولا تتغير المكتبة إلا بزر «تحديث المكتبة».` : "اختر جدولاً فتُنسخ قياساته ومقاساته إلى هذا التصميم. التعديل بعدها يكون في الملف فقط."}</p>
+          <div class="ml-search"><input data-ml="q" placeholder="بحث باسم الموديل"/></div>
+          <ul class="ml-list">${
+            lib.length
+              ? lib
+                  .map(
+                    (e) => `<li data-id="${esc(e.id)}"${from?.id === e.id ? ' class="cur"' : ""}><div><b>${esc(e.name)}</b><small dir="ltr">${e.measurements.length} X · ${(e.sizes?.length ?? 0) + 1} sizes · ${day(e.saved)}</small></div>
+                <span><button class="primary" data-ml="use" title="نسخ هذا الجدول إلى التصميم (يستبدل قياسات X والمقاسات؛ Z والرسم لا يتغيران)">استخدام</button><button data-ml="update" title="استبدال جدول المكتبة بجدول هذا التصميم">تحديث المكتبة</button><button class="danger" data-ml="del" title="حذف من المكتبة">×</button></span></li>`,
+                  )
+                  .join("")
+              : `<li class="empty">المكتبة فارغة: احفظ جدول هذا التصميم فيها، أو استورد ملف مكتبة.</li>`
+          }</ul>
+          <div class="za-row ml-save"><span>حفظ جدول هذا التصميم باسم</span><input data-ml="name" value="${esc(from?.name ?? this.model.name)}"/><button class="primary" data-ml="save">＋ حفظ كجدول جديد</button></div>
+          <div class="za-foot"><button data-ml="export">⤒ تصدير المكتبة (ملف)</button><button data-ml="import">⤓ استيراد مكتبة</button></div>
+        </div>`;
+    };
+    draw();
+    document.body.append(el);
+    el.addEventListener("input", (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.ml !== "q") return;
+      const q = t.value.trim().toLowerCase();
+      el.querySelectorAll<HTMLElement>(".ml-list li[data-id]").forEach((li) => (li.hidden = !!q && !(li.textContent ?? "").toLowerCase().includes(q)));
+    });
+    el.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-ml]");
+      if (!b) return;
+      const act = b.dataset.ml, id = b.closest<HTMLElement>("li[data-id]")?.dataset.id;
+      const lib = this.mlib(), entry = lib.find((x) => x.id === id);
+      if (act === "close") return el.remove();
+      if (act === "use" && entry) {
+        if (this.model.measurements.length && !confirm(`استبدال قياسات X والمقاسات في هذا التصميم بجدول «${entry.name}»؟\n(المعادلات Z والرسم لا يتغيران؛ يمكن التراجع بإعادة الاختيار)`)) return;
+        this.syncPart();
+        applyEntry(this.model, entry);
+        this.changed();
+        this.toast(`نُسخ جدول «${entry.name}»: ${entry.measurements.length} X و${(entry.sizes?.length ?? 0) + 1} مقاس`);
+        return el.remove();
+      }
+      if (act === "update" && entry) {
+        if (!confirm(`تحديث جدول المكتبة «${entry.name}» بقياسات هذا التصميم؟ الجدول القديم في المكتبة يُستبدل.`)) return;
+        const k = lib.indexOf(entry);
+        lib[k] = tableOf(this.model, entry.name, entry.id);
+        if (this.setMLib(lib)) this.toast(`حُدّث «${entry.name}» في المكتبة`);
+        return draw();
+      }
+      if (act === "del" && entry) {
+        if (!confirm(`حذف «${entry.name}» من مكتبة القياسات؟ (التصاميم التي نُسخ إليها لا تتأثر)`)) return;
+        this.setMLib(lib.filter((x) => x !== entry));
+        return draw();
+      }
+      if (act === "save") {
+        if (!this.model.measurements.length) return this.toast("جدول X فارغ");
+        const name = (el.querySelector('[data-ml="name"]') as HTMLInputElement).value;
+        const e2 = tableOf(this.model, name);
+        if (lib.some((x) => x.name.trim() === e2.name) && !confirm(`يوجد في المكتبة جدول باسم «${e2.name}». حفظ جدول جديد بنفس الاسم؟ (لاستبدال القديم استخدم «تحديث المكتبة»)`)) return;
+        if (this.setMLib([...lib, e2])) {
+          this.model.mlibFrom = { id: e2.id, name: e2.name };
+          this.changed();
+          this.toast(`حُفظ «${e2.name}» في مكتبة القياسات`);
+        }
+        return draw();
+      }
+      if (act === "export") return download("LEVEL7 measurement library.json", libraryFile(lib), "application/json");
+      if (act === "import") {
+        if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:open-json", purpose: "mlib" }, "*");
+        else {
+          const inp = document.createElement("input");
+          inp.type = "file";
+          inp.accept = ".json,application/json";
+          inp.onchange = async () => inp.files?.[0] && this.importMLib(await inp.files[0].text());
+          inp.click();
+        }
+      }
+    });
+  }
+
+  importMLib(text: string): void {
+    try {
+      const r = mergeLibrary(this.mlib(), text);
+      if (this.setMLib(r.lib)) this.toast(`مكتبة القياسات: ${r.added} جديد، ${r.replaced} مُستبدَل`);
+      if (document.querySelector(".mlib-win")) this.openMLib();
+    } catch (e) {
+      this.toast("تعذر استيراد المكتبة: " + (e as Error).message);
+    }
+  }
+
+  /** Test run / grade (as GRAFIS): the current part or all parts, in the base size or every
+   * active size; shows what fails. Nothing is changed. */
+  runCheck(all: boolean, grade: boolean): void {
+    this.syncPart();
+    const r = checkParts(this.model, { all, grade });
+    const title = `${grade ? "تدريج" : "تشغيل تجريبي"} ${all ? "كل البارتات" : "البارت الحالي"}`;
+    document.querySelector(".check-win")?.remove();
+    if (!r.failed) return this.toast(`✓ ${title}: ${r.parts} بارت × ${r.sizes} مقاس بلا أخطاء`);
+    const el = document.createElement("section");
+    el.className = "z-assistant marker-win check-win";
+    el.dir = "rtl";
+    const rows = r.rows.filter((x) => x.errors.length);
+    el.innerHTML = `<div class="za-head"><b>${title}: ${r.failed} من ${r.rows.length} فيها أخطاء</b><button data-ck="close">×</button></div><div class="za-body"><ul class="mk-list">${rows
+      .map((x) => `<li><b>${esc(x.part)}</b> · <span dir="ltr">${esc(x.size)}</span><ul>${x.errors.slice(0, 8).map((e) => `<li>${esc(e)}</li>`).join("")}${x.errors.length > 8 ? `<li>… و${x.errors.length - 8} غيرها</li>` : ""}</ul></li>`)
+      .join("")}</ul></div>`;
+    document.body.append(el);
+    el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-ck="close"]') && el.remove());
+  }
+
+  /** Switch a size on / off (-1 = base). Not part of the drawing history. */
+  setSizeActive(i: number, on: boolean): void {
+    if (i < 0) this.model.baseOff = !on || undefined;
+    else if (this.model.sizes?.[i]) this.model.sizes[i].off = !on || undefined;
+    this.changed();
+    this.toast(`${sizeName(this.model, i)}: ${on ? "مفعّل" : "غير مفعّل — لا يدخل في التعشيق والتصدير"}`);
+  }
+
+  /** Two lists beside a value field: one with the X measurements, one with the Z values
+   * (not mixed). Choosing an entry hands its name (X3 / Z2) to onPick. */
+  private refPicks(onPick: (ref: string) => void, compact = false): HTMLElement {
+    const box = document.createElement("span");
+    box.className = "ref-picks" + (compact ? " compact" : "");
+    const make = (kind: "X" | "Z") => {
+      const sel = document.createElement("select");
+      sel.className = `ref-pick ref-${kind.toLowerCase()}`;
+      sel.title = kind === "X" ? "اختر قياس X" : "اختر قيمة Z";
+      sel.setAttribute("aria-label", sel.title);
+      const fill = () => {
+        const sized = withSize(this.model);
+        const rows: [string, string][] =
+          kind === "X"
+            ? sized.measurements.map((m) => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`])
+            : this.model.variables.map((v) => {
+                const val = this.res.z.get(v.id);
+                return [`Z${v.id}`, `Z${v.id}${val !== undefined ? " = " + fmt(val) : ""}${v.name ? " · " + v.name : ""}`];
+              });
+        sel.innerHTML = `<option value="">${kind}</option>` + (rows.length ? rows.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("") : `<option value="" disabled>${kind === "X" ? "لا توجد قياسات X" : "لا توجد قيم Z"}</option>`);
+      };
+      fill();
+      sel.addEventListener("focus", fill);
+      sel.addEventListener("mousedown", fill);
+      sel.addEventListener("change", () => {
+        const ref = sel.value;
+        sel.value = "";
+        if (ref) onPick(ref);
+      });
+      return sel;
+    };
+    box.append(make("X"), make("Z"));
+    return box;
+  }
+
   // ---- point input panel (as GRAFIS): how a click makes the point a tool needs
   ptMode: "free" | "online" | "intersect" | "pct" | "mm" | "xy" = "free";
   ptPct = "50";
@@ -1506,19 +1712,10 @@ export class App {
     });
     // X / Z list beside every value of the panel (the value stays linked to the measurement)
     box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) => {
-      const pick = document.createElement("select");
-      pick.className = "pt-ref";
-      pick.title = "اختر X أو Z";
-      pick.innerHTML = `<option value="">XZ</option>`;
-      pick.addEventListener("focus", () => (pick.innerHTML = `<option value="">XZ</option>` + this.refOptions().map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")));
-      pick.addEventListener("mousedown", () => pick.dispatchEvent(new Event("focus")));
-      pick.addEventListener("change", () => {
-        if (!pick.value) return;
-        inp.value = pick.value;
-        pick.value = "";
+      inp.after(this.refPicks((ref) => {
+        inp.value = ref;
         inp.dispatchEvent(new Event("input"));
-      });
-      inp.after(pick);
+      }, true));
     });
     box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) =>
       inp.addEventListener("input", () => {
@@ -1618,7 +1815,7 @@ export class App {
   private updateHistoryBar(): void {
     const bar = this.histBar;
     if (!bar) return;
-    const u = this.undoStack.length, r = this.redoStack.length;
+    const cur = this.pack(), u = this.undoStack.filter((x) => x !== cur).length, r = this.redoStack.length; // drawing actions only
     (bar.querySelector('[data-h="undo"]') as HTMLButtonElement).disabled = !u;
     (bar.querySelector('[data-h="undo-list"]') as HTMLButtonElement).disabled = u < 2;
     (bar.querySelector('[data-h="undo"] b') as HTMLElement).textContent = u ? String(u) : "";
@@ -1626,15 +1823,6 @@ export class App {
     for (const sel of ['[data-h="redo"]', '[data-h="redo-list"]']) (bar.querySelector(sel) as HTMLElement).hidden = !r;
     (bar.querySelector('[data-h="redo"] b') as HTMLElement).textContent = r ? String(r) : "";
     (bar.querySelector(".hist-menu") as HTMLElement).hidden = true;
-  }
-
-  /** X and Z values with their current numbers and names, for pick lists. */
-  private refOptions(): [string, string][] {
-    const sized = withSize(this.model);
-    return [
-      ...sized.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
-      ...this.model.variables.map((v): [string, string] => [`Z${v.id}`, `Z${v.id}${this.res.z.has(v.id) ? " = " + fmt(this.res.z.get(v.id) as number) : ""}${v.name ? " · " + v.name : ""}`]),
-    ];
   }
 
   /** A click on empty space where a point is expected creates a free point there
@@ -1913,7 +2101,7 @@ export class App {
       if (p?.kind === "point" && last?.op === "point" && last.id === p.ref.obj && this.autoPoint === p.ref.obj) {
         const prev = this.undoStack.pop();
         if (prev) {
-          this.model = unpackModel(prev, this.blobs);
+          this.model = unpackModel(prev, this.blobs, this.model);
           this.changed();
         }
         this.autoPoint = null;
@@ -2064,29 +2252,12 @@ export class App {
       box.insertAdjacentHTML("beforeend", `<datalist id="${listId}">${refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</datalist>`);
       box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => {
         inp.setAttribute("list", listId);
-        const pick = document.createElement("select");
-        pick.className = "ref-pick";
-        pick.title = "اختر قياس X أو متغير Z";
-        pick.setAttribute("aria-label", "قائمة X و Z");
-        pick.innerHTML = `<option value="">X / Z</option>` + refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
-        pick.addEventListener("focus", () => {
-          const sizedNow = withSize(this.model);
-          const now: [string, string][] = [
-            ...sizedNow.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
-            ...this.model.variables.map((v): [string, string] => [`Z${v.id}`, `Z${v.id}${this.res.z.get(v.id) !== undefined ? " = " + fmt(this.res.z.get(v.id) as number) : ""}${v.name ? " · " + v.name : ""}`]),
-          ];
-          pick.innerHTML = `<option value="">X / Z</option>` + now.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
-        });
-        pick.addEventListener("change", () => {
-          const ref = pick.value;
-          pick.value = "";
-          if (!ref) return;
+        inp.after(this.refPicks((ref) => {
           const cur = inp.value.trim();
           inp.value = !cur || /^[XxZz]?$|^[\d.\s\u0660-\u0669]*$/.test(cur) ? ref : /[-+*/(]$/.test(cur) ? cur + ref : cur + "+" + ref;
           inp.dispatchEvent(new Event("input"));
           inp.focus();
-        });
-        inp.after(pick);
+        }));
       });
     }
     if (f.live) {
@@ -3182,7 +3353,7 @@ export class App {
             <div class="piece-head"><input data-pf="name" value="${esc(pc.name)}"/><button class="danger" data-pdel title="حذف القطعة">حذف</button></div>
             ${err ? `<div class="err">${esc(err)}</div>` : ""}
             <div class="piece-grid">
-              <label>العدد <input data-pf="quantity" type="number" min="1" value="${pc.quantity}"/></label>
+              <label>العدد <input data-pf="quantity" type="number" lang="en" dir="ltr" min="1" value="${pc.quantity}"/></label>
               <label>القماش <input data-pf="fabric" value="${esc(pc.fabric)}"/></label>
               <label>خط النسيج ° <input class="expr" data-pf="grain" value="${esc(pc.grain)}"/></label>
             </div>
@@ -3374,12 +3545,13 @@ export class App {
     const g = this.model.grading ?? {};
     const head = sizes
       .map(
-        (sz, i) => `<th class="size-col${sz.kind === "customer" ? " customer" : ""}">
+        (sz, i) => `<th class="size-col${sz.kind === "customer" ? " customer" : ""}${sz.off ? " sz-off" : ""}">
+          <label class="sz-on" title="مفعّل: يدخل في التعشيق والتصدير لكل المقاسات"><input type="checkbox" data-son="${i}"${sz.off ? "" : " checked"}/></label>
           <input data-sname="${i}" value="${esc(sz.name)}" title="اسم المقاس أو الزبون"/>
           ${
             sz.kind === "customer"
               ? `<div class="step">زبون</div>`
-              : `<div class="step">درجة <input type="number" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>`
+              : `<div class="step">درجة <input type="number" lang="en" dir="ltr" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>`
           }
           <button class="danger" data-sdel="${i}" title="حذف المقاس">×</button></th>`,
       )
@@ -3389,8 +3561,8 @@ export class App {
         (m) => `<tr>
           <td class="id">X${m.id}</td><td class="mname">${esc(m.name)}</td>
           <td class="base">${m.value}</td>
-          <td><input class="expr" type="number" step="any" data-grade="${m.id}" value="${g[m.id] ?? ""}" placeholder="0"/></td>
-          ${sizes.map((sz, i) => `<td><input class="expr" type="number" step="any" data-sv="${i}:${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${m.value}"/></td>`).join("")}
+          <td><input class="expr" type="number" lang="en" dir="ltr" step="any" data-grade="${m.id}" value="${g[m.id] ?? ""}" placeholder="0"/></td>
+          ${sizes.map((sz, i) => `<td><input class="expr" type="number" lang="en" dir="ltr" step="any" data-sv="${i}:${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${m.value}"/></td>`).join("")}
         </tr>`,
       )
       .join("");
@@ -3554,17 +3726,20 @@ export class App {
           .join("");
         return `<tr data-row="${i}" class="${i === this.xSel ? "sel" : ""}">
           <td class="xid">X${m.id}</td>
-          <td class="xn"><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="0"/></td>
+          <td class="xn"><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="—"/></td>
           <td class="xc"><input dir="ltr" data-i="${i}" data-f="code" value="${esc(m.code ?? "")}" placeholder="—" title="اسم هذا القياس في نظام MTM أو ملف الاستيراد"/></td>
           <td class="xv"><input class="expr num" type="text" inputmode="decimal" dir="ltr" lang="en" data-i="${i}" data-f="value" value="${m.value}"/></td>${cells}
         </tr>`;
       })
       .join("");
-    const head = sizes.map((sz) => `<th class="sz" title="${sz.kind === "customer" ? "زبون" : "مقاس"}">${esc(sz.name)}</th>`).join("");
+    // a tick above every size: switched-off sizes stay out of the marker and the all-size exports
+    const tick = (i: number) => `<label class="sz-on" title="مفعّل: يدخل في التعشيق والتصدير لكل المقاسات"><input type="checkbox" data-son="${i}"${sizeActive(this.model, i) ? " checked" : ""}/></label>`;
+    const head = sizes.map((sz, i) => `<th class="sz${sz.off ? " sz-off" : ""}" title="${sz.kind === "customer" ? "زبون" : "مقاس"}">${tick(i)}${esc(sz.name)}</th>`).join("");
     box.innerHTML = `<div class="xgrid">
       <div class="xg-bar"><button data-add class="xg-add" title="إضافة قياس X">⊕</button><button data-xa="del" class="xg-del" title="حذف القياس المحدد"${this.xSel < 0 ? " disabled" : ""}>✕</button>
-        <span class="xg-info">${this.model.measurements.length} X · ${sizes.length + 1} ${sizes.length ? "مقاسات" : "مقاس"}</span></div>
-      <div class="xg-table"><table><thead><tr><th class="xid">X</th><th class="xn">الاسم · Name</th><th class="xc">MTM</th><th class="xv">${esc(sizeName(this.model, -1))}</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+        <button data-xa="mlib" class="xg-lib" title="مكتبة القياسات: اختر جدول قياسات محفوظ لموديل، أو احفظ هذا الجدول فيها">📚 مكتبة القياسات</button>
+        <span class="xg-info">${this.model.mlibFrom ? `من المكتبة: «${esc(this.model.mlibFrom.name)}» · ` : ""}${this.model.measurements.length} X · ${sizes.length + 1} ${sizes.length ? "مقاسات" : "مقاس"}</span></div>
+      <div class="xg-table"><table><thead><tr><th class="xid">X</th><th class="xn">الاسم · Name</th><th class="xc">MTM</th><th class="xv${this.model.baseOff ? " sz-off" : ""}">${tick(-1)}${esc(sizeName(this.model, -1))}</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
       <div class="xg-foot"><span class="xg-search">⌕<input data-xa="search" value="${esc(this.xFilter)}" placeholder="بحث بالاسم أو الرقم"/><button data-xa="clear" title="مسح البحث">✕</button></span>
         <span class="xg-io"><button data-xa="import" title="رفع القياسات من ملف إكسل (.xlsx) أو CSV">⤓ استيراد Excel</button><button data-xa="export" title="تحميل القياسات كملف إكسل (.xlsx)">⤒ تصدير Excel</button><button data-xa="copy" title="نسخ الجدول (يُلصق في إكسل)">⧉ نسخ</button></span></div></div>`;
     this.bindTable(box, "measurements");
@@ -3627,6 +3802,7 @@ export class App {
     box.querySelector('[data-xa="export"]')?.addEventListener("click", () => {
       downloadBytes(`${safeFileName(this.model.name)} X.xlsx`, writeXlsx(xTableRows(this.model)), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     });
+    box.querySelector('[data-xa="mlib"]')?.addEventListener("click", () => this.openMLib());
     box.querySelector('[data-xa="import"]')?.addEventListener("click", () => {
       if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:open-table" }, "*");
       else {
@@ -3660,10 +3836,7 @@ export class App {
     try {
       const bytes = data.bytes ?? (data.base64 ? fromBase64(data.base64) : undefined);
       const rows = bytes ? await readXlsx(bytes) : readCsv(data.text ?? "");
-      const before = this.pack();
-      const r = importXTable(this.model, rows);
-      this.undoStack.push(before);
-      this.redoStack = [];
+      const r = importXTable(this.model, rows); // tables are not in the drawing history
       this.changed();
       this.toast(`استُورد من ${name}: ${r.added} قياس جديد، ${r.updated} محدَّث${r.sizes.length ? `، المقاسات: ${r.sizes.join("، ")}` : ""}`);
     } catch (e) {
@@ -3863,16 +4036,15 @@ export class App {
     box.querySelectorAll<HTMLInputElement>("input[data-f], textarea[data-f]").forEach((inp) => {
       inp.addEventListener("input", () => {
         if (inp.tagName === "TEXTAREA") grow(inp);
+        const row = this.model[key][Number(inp.dataset.i)] as unknown as Record<string, unknown>;
+        const v = Number(normalizeFormula(inp.value).trim());
+        if (inp.dataset.f === "value" && (inp.value === "" || Number.isNaN(v))) return; // nothing to keep yet
         if (!snapped) {
           this.snapshot();
           snapped = true;
         }
-        const row = this.model[key][Number(inp.dataset.i)] as unknown as Record<string, unknown>;
-        if (inp.dataset.f === "value") {
-          const v = Number(normalizeFormula(inp.value).trim());
-          if (inp.value === "" || Number.isNaN(v)) return;
-          row.value = v;
-        } else row[inp.dataset.f as string] = inp.value;
+        if (inp.dataset.f === "value") row.value = v;
+        else row[inp.dataset.f as string] = inp.value;
         this.changed(false);
       });
       inp.addEventListener("change", () => {
