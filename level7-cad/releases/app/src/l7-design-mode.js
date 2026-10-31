@@ -207,6 +207,42 @@ export function installDesignMode() {
       guide.querySelector('.l7g-text').textContent = (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' كليك يمين أو Enter للاعتماد، Esc للإلغاء. دابل كليك على أي عنصر لتعديل قيمه.';
     } else if (!t) delete guide.dataset.tool;
   };
+  // 0.9.139: the parts of the open MDL become parts of a new LEVEL7 design: their stored
+  // geometry (base size) as fixed points, lines and curves. The MDL file is not changed.
+  const convertMdl = () => {
+    const b = window.l7MdlBridge;
+    if (!b?.available()) { notice('افتح ملف MDL أولاً، ثم حوّل بارتاته إلى تصميم LEVEL7.'); return; }
+    const parts = [];
+    let skipped = 0, total = 0;
+    for (const p of b.parts()) {
+      const g = b.geometry(p.id);
+      if (!g?.available || !g.objects.length) { skipped++; continue; }
+      const steps = [], names = {};
+      let id = 1, np = 0, nl = 0, nc = 0;
+      const add = (kind, pts) => {
+        if (!pts.length || pts.some(q => !Number.isFinite(q[0]) || !Number.isFinite(q[1]))) return;
+        names[id] = kind === 'point' ? 'P' + ++np : pts.length > 2 ? 'C' + ++nc : 'L' + ++nl;
+        steps.push({ op: 'fixed', id: id++, kind, pts: pts.map(q => [Math.round(q[0] * 1000) / 1000, Math.round(q[1] * 1000) / 1000]) });
+      };
+      for (const o of g.objects) {
+        if (o.kind === 'point') add('point', o.points);
+        else if (o.kind === 'point-sequence') o.points.forEach(q => add('point', [q]));
+        else if (o.kind === 'sample-path' && o.points.length >= 2) add('line', o.points);
+        else if (o.kind === 'segment-pairs') for (let k = 0; k + 1 < o.points.length; k += 2) add('line', [o.points[k], o.points[k + 1]]);
+      }
+      if (!steps.length) { skipped++; continue; }
+      total += steps.length;
+      parts.push({ no: p.id, name: p.name, steps, names, nextId: id, pieces: [], amount: 1 });
+    }
+    if (!parts.length) { notice('لا توجد بارتات بهندسة محفوظة في هذا الملف.'); return; }
+    parts.sort((x, y) => x.no - y.no);
+    const first = parts[0];
+    const model = { version: 1, name: (b.filename() || 'GRAFIS').replace(/\.mdl$/i, ''), measurements: [], variables: [], steps: first.steps, names: first.names, nextId: first.nextId, pieces: [], parts, activePart: 0 };
+    open();
+    send({ type: 'l7:open', text: JSON.stringify(model), name: model.name });
+    status(`حُوّل ${parts.length} بارت (${total} عنصر)${skipped ? `، وتُرك ${skipped} بلا هندسة محفوظة` : ''}`);
+  };
+  const notice = text => { status(text); const n = document.querySelector('#native-notice'); if (n) { n.textContent = text; n.hidden = false; } };
   const openDesign = async () => {
     if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
     try {
@@ -294,6 +330,7 @@ export function installDesignMode() {
   item('menu-l7-design-new', 'تصميم LEVEL7 جديد · New LEVEL7 design', () => { open(); send({ type: 'l7:new' }); status('تصميم جديد'); });
   item('menu-l7-design-open', 'فتح تصميم LEVEL7… · Open LEVEL7 design', () => void openDesign());
   item('menu-l7-design-show', 'العودة إلى التصميم المفتوح · Show LEVEL7 design', () => open());
+  item('menu-l7-design-from-mdl', 'تحويل بارتات MDL المفتوحة إلى تصميم LEVEL7 · Convert MDL parts', () => convertMdl());
   // Empty canvas: a direct entry next to Open MDL.
   const empty = document.querySelector('#canvas-empty .empty-actions');
   if (empty) { const b = document.createElement('button'); b.type = 'button'; b.id = 'empty-l7-design'; b.textContent = 'تصميم LEVEL7 جديد'; b.addEventListener('click', () => { open(); send({ type: 'l7:new' }); }); empty.append(b); }

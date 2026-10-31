@@ -2522,7 +2522,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", mark: "Symbol / stitch", text: "Text", pointOffset: "Point offset", dim: "Dimension",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", mark: "Symbol / stitch", text: "Text", fixed: "Imported", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;
@@ -2530,7 +2530,7 @@ export class App {
       .map((s, i) => {
         const err = this.res.stepErrors.get(i);
         const name = s.op === "corner" ? `Corner (${s.kind})` : NAMES[s.op] ?? s.op;
-        return `<tr data-i="${i}" class="${i === sel ? "selected" : ""}${err ? " error" : ""}" title="${err ? esc(err) : "دابل كليك للتعديل"}"><td class="rs">${i + 1}</td><td class="nm">${name}</td><td class="ds">${describe(s, this.model).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}</td></tr>`;
+        return `<tr data-i="${i}" class="${i === sel ? "selected" : ""}${err ? " error" : ""}" title="${err ? esc(err) : "دابل كليك للتعديل"}"><td class="rs">${i + 1}</td><td class="nm">${name}</td><td class="ds">${(describe(s, this.model) ?? s.op).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}</td></tr>`;
       })
       .join("");
     box.innerHTML = `<div class="record">

@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.139
+
+File > "Convert MDL parts to a LEVEL7 design": every part of the open MDL that has stored geometry becomes a part of a new LEVEL7 design, with its name, as fixed points, lines and curves of the base size (seam helper lines left out). The MDL file is not changed. All LEVEL7 tools work on the converted geometry; the converted elements are not parametric (they do not follow X / Z), new steps drawn on them are.
+
 LEVEL7 and MTM 0.9.138
 
 LEVEL7 design mode: background pictures to trace over (add a photo / scan, place it in mm, transparency, calibrate from two clicked points and their real distance; F9 shows / hides); F8 writes the length of every line and curve on it; Arrange parts shows all parts as large pictures, a click opens one; the basic blocks library can be exported to a file and imported on another computer.

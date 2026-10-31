@@ -298,6 +298,13 @@ function text(element, value) { element.textContent = String(value); }
 function decimal(value) { return Number(value.toFixed(5)).toString(); }
 function counter(value) { return String(value).padStart(3, '0'); }
 function model(full = false) { const decoded = style ? decodeSupportedHistory(style, activePart, full ? {} : { throughRecord: cursor }) : null; const projected=n38?.projectedModel(decoded,full,cursor)??decoded; return n38?.eligible()?projected:(alaaAppend?.projectedModel(projected)??projected); }
+// 0.9.139: read-only bridge for the LEVEL7 design mode (convert MDL parts to a design).
+window.l7MdlBridge = Object.freeze({
+  available: () => !!style,
+  filename: () => filename,
+  parts: () => (metadata?.parts ?? []).map(part => ({ id: part.id, name: part.name || '' })),
+  geometry: partId => { const p = cachedPart(partId); return p ? { available: !!p.available, objects: (p.objects || []).filter(o => !o.nativeSeamHelper).map(o => ({ kind: o.kind, points: (o.points || []).map(q => [q.x, q.y]) })) } : null; }
+});
 function cachedPart(partId = activePart) {
   if (!style) return null;
   if (previewStyle !== style) { previewStyle = style; previews = new Map(); }

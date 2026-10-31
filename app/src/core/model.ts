@@ -63,6 +63,8 @@ export type Step =
   /** Marks (annotation only): stitch lines along a line / curve on one side at a distance,
    * a grain line between two points, or a symbol (button, drill hole, cross) at a point. */
   | { op: "mark"; kind: "lock" | "double" | "zigzag" | "deco" | "gather" | "grain" | "button" | "drill" | "cross"; obj?: number; side?: 1 | -1; a?: PointRef; b?: PointRef; size: string }
+  /** Fixed geometry (imported, e.g. from a GRAFIS part): a point or a line / curve. */
+  | { op: "fixed"; id: number; kind: "point" | "line"; pts: [number, number][] }
   /** A text on the drawing at a point; {X1} / {Z3} in it show the current values. */
   | { op: "text"; at: PointRef; text: string; size: string; angle: string }
   /** Objects inherited from an earlier part (linked: they follow the source part). */
@@ -361,6 +363,10 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
           break;
         }
+        case "fixed":
+          if (!s.pts.length || (s.kind === "line" && s.pts.length < 2)) throw new Error("عنصر مستورد بلا نقاط");
+          put(s.id, s.kind, s.pts.map(([x, y]) => [x, y] as Pt), i);
+          break;
         case "text":
           pointOf(s.at);
           vars.eval(s.size || "5");
@@ -599,6 +605,8 @@ export function usedIds(s: Step): number[] {
       return [];
     case "text":
       return [s.at.obj];
+    case "fixed":
+      return [];
     case "mark":
       return [...(s.obj !== undefined ? [s.obj] : []), ...[s.a, s.b].filter((r): r is PointRef => !!r).map((r) => r.obj)];
     case "setLength":

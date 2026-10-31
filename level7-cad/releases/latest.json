@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.138",
- "notes": "صور خلفية للتتبع مع معايرة (F9)؛ أطوال الخطوط (F8)؛ ترتيب البارتات؛ تصدير واستيراد المكتبة",
+ "version": "0.9.139",
+ "notes": "تحويل بارتات MDL إلى تصميم LEVEL7",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "69771e4a5f2c438d35fd7330ffef22fed76057c0f871e52c71a55e9067f8191f",
-   "size": 130469
+   "sha256": "88d1f3ad3d54af0e3715caa8d828ae505401e2f5f4535cca44b205e0628d29c6",
+   "size": 130905
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-CBv3Fd5b.js",
+   "sha256": "b157f95940cbed7d4702d54163b8c5f89f7da4b14d893d60eff7ff420f679602",
+   "size": 212110
+  },
+  {
    "path": "assets/l7design/assets/index-kQDRyIu7.css",
    "sha256": "a35c0dc01ec895eef80450bd33a5bda2fcfc64d5add344cfb07b6569620aa301",
    "size": 28504
   },
   {
-   "path": "assets/l7design/assets/index-mLZDTZ1d.js",
-   "sha256": "6658d36eb3fe76e04a32cdfea56ee8f5a26b7c723630c85a62459c30fe053e8b",
-   "size": 211790
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "543bb07fc4e5b7dc4f7739515688cbe12191afc59a5672f1fc34031ebc39dda3",
+   "sha256": "f0a30893c199f9ca2eb8deeeaa302be52e2438732998d7a89f9a21210f27036d",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "14355208dce3443f224b728da2feead4c9a66b1af90145073792584e68f90873",
+   "sha256": "0dee8cde3862d3b711e3103a8187e0ccb001cdc7399050cb3d378dee3d447b27",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "c56597304b01d55e5962d5675324cb1cb11f84d285d9173d551e5320fc913f82",
-   "size": 28844
+   "sha256": "08e8d725fccbadf45fd414089717dfaa35c97dac385d4c3dd5b271a3bee9f15f",
+   "size": 31412
   },
   {
    "path": "src/line-transform-ui.js",
@@ -425,8 +425,8 @@
   },
   {
    "path": "src/native-app.js",
-   "sha256": "500fe61c11d3de1eb9c814a56f4cef83b0e8c22a97d7efe123809c0ed5fdd899",
-   "size": 139683
+   "sha256": "4810206fd7e62f7144f1b4727676536599a7b334b55b3192fdbddc82abe91ed7",
+   "size": 138934
   },
   {
    "path": "src/native-bartack10-template.mjs",
