@@ -1187,7 +1187,7 @@ export class App {
           return `<li data-i="${i}" class="${i === this.selectedStep ? "selected" : ""}${err ? " error" : ""}">
             <span class="num">${i + 1}</span>
             <span class="desc">${esc(describe(s, this.model)).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}${err ? `<span class="err">${esc(err)}</span>` : ""}</span>
-            <span class="row-actions">${editable ? `<button data-edit="${i}" title="تعديل القيم">تعديل</button>` : ""}<button class="danger" data-del="${i}" title="حذف الخطوة">حذف</button></span>
+            <span class="row-actions">${editable ? `<button data-edit="${i}" title="تعديل القيم" aria-label="تعديل القيم"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>` : ""}<button class="danger" data-del="${i}" title="حذف الخطوة" aria-label="حذف الخطوة"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></span>
           </li>`;
         })
         .join("") +
@@ -1195,7 +1195,7 @@ export class App {
     box.querySelectorAll<HTMLElement>("li").forEach((li) =>
       li.addEventListener("click", (e) => {
         const i = Number(li.dataset.i);
-        const t = e.target as HTMLElement;
+        const t = ((e.target as HTMLElement).closest("button") ?? e.target) as HTMLElement;
         if (t.dataset.edit) return this.editStep(i);
         if (t.dataset.del) return this.deleteStep(i);
         this.selectedStep = this.selectedStep === i ? -1 : i;

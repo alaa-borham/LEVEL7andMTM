@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.124
+
+LEVEL7 design mode: the steps / X / Z / pieces / sizes page is a floating window, hidden until its button in the command bar (F5, Ctrl+X, F11, Ctrl+G, Pieces) is pressed; drag it by its title bar anywhere, resize it from its corner, close it with × or by pressing its button again; position and size are remembered. The drawing uses the full width. Construction steps: cleaner rows with a number badge and edit/delete icons that appear on hover.
+
 LEVEL7 and MTM 0.9.123
 
 LEVEL7 design mode: a right click (without dragging) confirms the step, a second one ends the tool; right-drag still pans. Double-click a line, curve or point to open its step with its values (angle, length, X/Z list) and change them. Measurements added while a value box is open are recognised at once (the box no longer reports "X2 not found"), and Arabic-Indic digits typed in the X table are read.

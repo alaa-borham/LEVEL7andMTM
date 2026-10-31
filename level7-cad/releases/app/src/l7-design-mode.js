@@ -191,6 +191,7 @@ export function installDesignMode() {
       for (const m of queue.splice(0)) frame.contentWindow.postMessage(m, '*');
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
+    else if (d.type === 'l7:panel') markTab(typeof d.tab === 'string' ? 'tab-' + d.tab : null);
     else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
   });
   host.addEventListener('click', e => {
@@ -206,10 +207,9 @@ export function installDesignMode() {
     if (action === 'open') void openDesign();
     else if (action === 'new') { send({ type: 'l7:new' }); status('تصميم جديد'); }
     else send({ type: 'l7:action', action });
-    if (action.startsWith('tab-')) markTab(action);
   };
   const markTab = action => { for (const b of barBox.querySelectorAll('[data-l7d-command^="tab-"]')) b.setAttribute('aria-pressed', String(b.dataset.l7dCommand === action)); };
-  markTab('tab-steps');
+
   document.addEventListener('keydown', e => {
     if (host.hidden) return;
     if (e.key === 'Escape' && openCat !== null) { showCat(null); e.preventDefault(); e.stopImmediatePropagation(); return; }

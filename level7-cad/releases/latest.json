@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.123",
- "notes": "كليك يمين للاعتماد؛ دابل كليك لتعديل الخط؛ إصلاح X غير موجود",
+ "version": "0.9.124",
+ "notes": "نافذة X وZ والخطوات عائمة تظهر عند الطلب؛ قائمة خطوات احترافية",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "ddd30ee842bdedfdd401f9aafe0d85bb3b5cc3477096e601aa260ab07b6b1367",
-   "size": 121627
+   "sha256": "b730cf0ea2d389ce2c3dd4589e8724eb98b906da2cb9006ff06f28a39331700e",
+   "size": 122099
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BHBiVpH9.css",
-   "sha256": "7940b3138add81183b7667dab1215a0fd11957a1eecb8e5de92093a292819842",
-   "size": 7884
+   "path": "assets/l7design/assets/index-DfXtkXjn.css",
+   "sha256": "bc9c4ad5117c6a347eb86ac37c61d18d63001b205675a0fb7a67d4dfeedf29e0",
+   "size": 10007
   },
   {
-   "path": "assets/l7design/assets/index-Bbagq21g.js",
-   "sha256": "a6c7c50136f1e3b90747102ed211bb984c58439b8b6825e6e2835d0b09edf526",
-   "size": 92387
+   "path": "assets/l7design/assets/index-h1xqRFGc.js",
+   "sha256": "af5cd27d33bab9ed864238ed037b72cdee4a0684ef1a6937c261683e371dfd0f",
+   "size": 94318
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "4cafab13842b6a5e47d37e98c545869ce34fe654a8cdab2ccab868f37ef986b4",
+   "sha256": "93a33bca0260c15dfd02474bda7a59837a810bc7b62ec12b3e6c7539c926f297",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "a50d727edbe4660811c9f01120be7e72fc06c7e88479d603b3452672c6ab43f3",
+   "sha256": "3b298abe22c4e937e3b0cb1a8fe231cc304f521b4fe904ae0f113103e29c6fa8",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "a2f3ea2381dd1e865de3251a384b6fbd777617d5921ea5d7128b10410523b61a",
-   "size": 19080
+   "sha256": "c7a8935c66233ce1b6f28ed18eb7d402f8d9baf92f0b724eff275a95ad65bce2",
+   "size": 19101
   },
   {
    "path": "src/line-transform-ui.js",

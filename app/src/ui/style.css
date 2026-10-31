@@ -543,3 +543,36 @@ body.dark { --live: #8fd14f; }
 /* X / Z picker beside formula fields */
 .tool-box .field:has(.ref-pick) { grid-template-columns: 110px 1fr auto; }
 .tool-box .ref-pick { width: 64px; padding: 3px 2px; font-size: 12px; }
+
+/* 0.9.124 embedded: the page panel is a floating window, hidden until opened */
+body.embedded .layout { grid-template-columns: 1fr; }
+body.embedded .panel {
+  position: fixed; left: 16px; top: 56px; width: 430px; height: 62vh; min-width: 300px; min-height: 180px;
+  max-width: calc(100vw - 20px); max-height: calc(100vh - 20px);
+  display: none; z-index: 30; resize: both; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+}
+body.embedded .panel.open { display: flex; }
+.float-head { display: none; }
+body.embedded .float-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none;
+  height: 34px; padding: 0 6px 0 12px; cursor: move; user-select: none;
+  background: var(--bg); border-bottom: 1px solid var(--border); border-radius: 10px 10px 0 0;
+}
+.float-head b { font-size: 13px; }
+.float-close { width: 28px; height: 24px; padding: 0; border: none; background: transparent; font-size: 18px; line-height: 1; color: var(--muted); }
+.float-close:hover { background: var(--danger); color: #fff; }
+
+/* 0.9.124 construction steps: cleaner rows, number badge, icon actions on hover */
+.steps li { grid-template-columns: 30px 1fr auto; align-items: center; padding: 7px 8px; border-radius: 6px; border-inline-start: 3px solid transparent; }
+.steps li + li { margin-top: 2px; }
+.steps .num { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--bg); color: var(--muted); font: 600 11px/1 Consolas, monospace; }
+.steps li.selected { border-inline-start-color: var(--accent); }
+.steps li.selected .num { background: var(--accent); color: #fff; }
+.steps .desc { line-height: 1.45; }
+.steps .row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s; }
+.steps li:hover .row-actions, .steps li.selected .row-actions, .steps li:focus-within .row-actions { opacity: 1; }
+.steps .row-actions button { width: 26px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; background: transparent; color: var(--muted); }
+.steps .row-actions button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.steps .row-actions button:hover { border-color: var(--border); color: var(--accent); background: var(--surface); }
+.steps .row-actions button.danger:hover { color: var(--danger); }

@@ -36,13 +36,62 @@ if (embedded && window.parent !== window) {
   app.selectTool = (t) => { select(t); post({ type: "l7:tool-state", tool: t.key }); };
   app.cancelTool = () => { cancel(); post({ type: "l7:tool-state", tool: null }); };
   const click = (action: string) => (document.querySelector(`.actions [data-action="${action}"]`) as HTMLButtonElement | null)?.click();
+  // The steps / X / Z / pieces / sizes page is a floating window: hidden until its
+  // button is pressed, dragged by its title bar anywhere, resizable, remembered.
+  const panel = document.querySelector(".panel") as HTMLElement;
+  const TITLES: Record<string, string> = { steps: "خطوات البناء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج" };
+  const head = document.createElement("div");
+  head.className = "float-head";
+  head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
+  panel.prepend(head);
+  let openTab: string | null = null;
+  try {
+    const g = JSON.parse(localStorage.getItem("level7.panel.geometry") || "null");
+    if (g) Object.assign(panel.style, { left: g.left, top: g.top, width: g.width, height: g.height });
+  } catch {}
+  const keep = () => {
+    try {
+      localStorage.setItem("level7.panel.geometry", JSON.stringify({ left: panel.style.left, top: panel.style.top, width: panel.style.width || panel.offsetWidth + "px", height: panel.style.height || panel.offsetHeight + "px" }));
+    } catch {}
+  };
+  const togglePanel = (tab: string | null) => {
+    if (tab && openTab === tab) tab = null;
+    openTab = tab;
+    panel.classList.toggle("open", !!tab);
+    if (tab) {
+      (document.querySelector(`.tabs [data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();
+      (head.firstElementChild as HTMLElement).textContent = TITLES[tab] ?? "";
+      const r = panel.getBoundingClientRect();
+      if (r.right > innerWidth || r.bottom > innerHeight || r.left < 0 || r.top < 0) Object.assign(panel.style, { left: "16px", top: "56px" });
+    }
+    post({ type: "l7:panel", tab });
+  };
+  (head.lastElementChild as HTMLElement).addEventListener("click", () => togglePanel(null));
+  head.addEventListener("pointerdown", (e) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    const r = panel.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    head.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const x = Math.min(Math.max(0, ev.clientX - dx), innerWidth - 80), y = Math.min(Math.max(0, ev.clientY - dy), innerHeight - 40);
+      Object.assign(panel.style, { left: x + "px", top: y + "px" });
+    };
+    const up = () => {
+      head.removeEventListener("pointermove", move);
+      head.removeEventListener("pointerup", up);
+      keep();
+    };
+    head.addEventListener("pointermove", move);
+    head.addEventListener("pointerup", up);
+  });
+  new ResizeObserver(() => panel.classList.contains("open") && keep()).observe(panel);
+
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);
     else if (action === "confirm") app.confirmStep();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);
-    else if (/^tab-(steps|x|z|pieces|sizes)$/.test(action)) (document.querySelector(`.tabs [data-tab="${action.slice(4)}"]`) as HTMLButtonElement | null)?.click();
+    else if (/^tab-(steps|x|z|pieces|sizes)$/.test(action)) togglePanel(action.slice(4));
   };
   // Shortcuts of the program's command bar also work while the drawing has focus;
   // the host decides what each one does (new/open use its file dialogs).

@@ -24,6 +24,14 @@ try{
  await (await tool(page,'parallel')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="parallel"]').getAttribute('aria-pressed')==='true');await page.keyboard.press('Escape');await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="parallel"]').getAttribute('aria-pressed')==='false');pass('tool state follows the engine; Esc cancels');
  // Command bar with the toolbox shortcuts (0.9.119).
  const tab=()=>f.evaluate(()=>document.querySelector('.tabs .active')?.dataset.tab);
+ // 0.9.124: the page panel is a floating window, hidden until its button is pressed
+ assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel')).display==='none'));
+ await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>document.querySelector('.panel').classList.contains('open'));
+ await page.waitForFunction(()=>document.querySelector('[data-l7d-command="tab-steps"]').getAttribute('aria-pressed')==='true');
+ const hb=await frame.locator('.float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
+ const hb2=await frame.locator('.float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
+ await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
+ pass('steps / X / Z window: hidden until pressed, dragged anywhere, pressing again closes it');
  assert(await page.locator('.l7-design-bar .palette-command').count()>=16);
  await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='x');
  await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('F11');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='z');
@@ -32,6 +40,7 @@ try{
  await page.locator('[data-l7d-command="zoomOut"]').click();await f.waitForFunction(s=>Math.abs(window.level7.scale-s)<1e-9,sc0);
  await page.keyboard.press('Control+z');await f.waitForFunction(()=>window.level7.model.steps.length===2);await page.keyboard.press('Control+y');await f.waitForFunction(()=>window.level7.model.steps.length===3);
  pass('command bar and shortcuts (X, F11, F5, +/−, Ctrl+Z/Y) drive the engine, also with focus in the drawing');
+ await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  // Save through the host dialog.
  const file=path.join(tmp,'design.level7.json');await app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
  await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('Control+s');await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
