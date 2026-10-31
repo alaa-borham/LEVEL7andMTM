@@ -137,3 +137,54 @@ body.ui-dark .l7-design-guide .l7g-pic svg .ink{stroke:#111}
 body.ui-dark .l7-design-guide .l7g-ok{color:#8fd14f}
 /* the step card sits low on the right so it never covers the engine's value box (top right) */
 .l7-design-guide{top:auto;bottom:44px;right:14px}
+
+/* 0.9.144 LEVEL7 icon set (src/l7-icons.js): every tool its own drawing; gradient strokes and
+   fills, a soft depth line under each stroke, glossy points, buttons as raised tiles. */
+svg.l7i{--i-ink:#22364a;--i-mute:#8a9aab;--i-under:rgba(16,32,48,.16);fill:none;stroke-linecap:round;stroke-linejoin:round;filter:none!important;overflow:visible}
+svg.l7i .u{stroke:var(--i-under);stroke-width:4.4}
+svg.l7i .s{stroke:var(--i-ink);stroke-width:2}
+svg.l7i .a{stroke:url(#l7g-stroke-a);stroke-width:2.3}
+svg.l7i .o{stroke:url(#l7g-stroke-o);stroke-width:2.2}
+svg.l7i .m{stroke:var(--i-mute);stroke-width:1.4;stroke-dasharray:2.4 2.4}
+svg.l7i .n{fill:url(#l7g-node);stroke:#fff;stroke-width:1}
+svg.l7i .fa{fill:url(#l7g-blue);stroke:none}
+svg.l7i .fo{fill:url(#l7g-amber);stroke:none}
+svg.l7i .r circle{fill:url(#l7g-red);stroke:#fff;stroke-width:1.1}
+svg.l7i .r path{stroke:#fff;stroke-width:1.8}
+body.ui-dark svg.l7i{--i-ink:#e8eef4;--i-mute:#7f8d9d;--i-under:rgba(0,0,0,.55)}
+body.ui-dark svg.l7i .n,body.ui-dark svg.l7i .r circle{stroke:#0e141b}
+/* strip buttons: raised tiles */
+.l7-design-cat{width:44px;height:42px;border-radius:9px;border:1px solid #c9d5df;background:linear-gradient(180deg,#ffffff,#e9eff4);box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(16,32,48,.12)}
+.l7-design-cat:hover{border-color:#5aa6e0;background:linear-gradient(180deg,#ffffff,#deebf6)}
+.l7-design-cat[aria-expanded="true"],.l7-design-cat.l7-active{border-color:#2f8ee0;background:linear-gradient(180deg,#e8f3fd,#cfe3f6);box-shadow:inset 0 1px 0 #fff,0 0 0 2px rgba(47,142,224,.25)}
+body.ui-dark .l7-design-cat{border-color:#2e3a47;background:linear-gradient(180deg,#273240,#1b232d);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 2px 4px rgba(0,0,0,.35)}
+body.ui-dark .l7-design-cat:hover{border-color:#3d7fbf;background:linear-gradient(180deg,#2c3a4b,#1f2935)}
+body.ui-dark .l7-design-cat[aria-expanded="true"],body.ui-dark .l7-design-cat.l7-active{border-color:#3d9bff;background:linear-gradient(180deg,#22476d,#173452);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 2px rgba(61,155,255,.3)}
+.l7-cat+.l7-cat{border-top:0!important;padding-top:4px}
+.l7-design-cat svg.l7i{width:30px;height:30px}
+/* flyout rows: the icon on a small tile */
+.l7-design-flyout .l7-design-tool svg.l7i{width:24px;height:24px;padding:3px;border-radius:7px;border:1px solid #d3dde6;background:linear-gradient(180deg,#fff,#edf2f6);box-sizing:content-box}
+body.ui-dark .l7-design-flyout .l7-design-tool svg.l7i{border-color:#2e3a47;background:linear-gradient(180deg,#273240,#1b232d)}
+.l7-design-flyout .l7-design-tool{height:38px}
+.l7-design-guide .l7g-text[hidden]{display:none}
+.l7-design-guide span.l7g-now{display:block;margin-top:4px;padding:6px 9px;border-radius:6px;background:#e3f0fb;color:#0f4c81;font-weight:600;font-size:13px;line-height:1.5}
+body.ui-dark .l7-design-guide span.l7g-now{background:#173451;color:#d6ebff}
+.l7-design-guide span.l7g-now[hidden]{display:none}
+.l7-design-bar .l7-design-status{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap}
+
+
+.l7-design-size{position:relative}
+.l7-size-btn{min-width:58px;max-width:92px}
+.l7-size-btn b{font-size:13px;font-weight:700;color:#1f7fd1;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:20px}
+body.ui-dark .l7-size-btn b{color:#4aa8ff}
+.l7-size-menu{position:absolute;top:100%;right:0;left:auto;z-index:60;min-width:150px;max-height:60vh;overflow:auto;padding:4px;border:1px solid #9fb2c0;border-radius:6px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.28);direction:rtl;display:flex;flex-direction:column;gap:1px}
+.l7-size-menu[hidden]{display:none}
+.l7-size-menu header{padding:4px 8px;font-size:11px;font-weight:600;color:#5b7488}
+.l7-size-menu button{height:28px;padding:0 10px;border:0;border-radius:4px;background:transparent;text-align:right;font-size:13px;color:inherit;cursor:pointer}
+.l7-size-menu button:hover{background:#dfeef8}
+.l7-size-menu button[aria-checked="true"]{font-weight:700;color:#1f7fd1}
+body.ui-dark .l7-size-menu{background:#1b232d;border-color:#33404f;color:#e6edf4}
+body.ui-dark .l7-size-menu button:hover{background:#26364a}
+body.ui-dark .l7-size-menu button[aria-checked="true"]{color:#4aa8ff}
+/* the tool card does not block the drawing under it (drags pass through); only its buttons take clicks */
+.l7-design-guide{pointer-events:none}.l7-design-guide button{pointer-events:auto}

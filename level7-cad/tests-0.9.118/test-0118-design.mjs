@@ -36,7 +36,7 @@ try{
  assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel')).display==='none'));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>document.querySelector('.panel').classList.contains('open'));
  await page.waitForFunction(()=>document.querySelector('[data-l7d-command="tab-steps"]').getAttribute('aria-pressed')==='true');
- const hb=await frame.locator('.panel:not(.zwin):not(.pwin) .float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
+ const hb=await frame.locator('.panel:not(.zwin):not(.pwin) .float-head').boundingBox();await page.mouse.move(hb.x+hb.width/2,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+hb.width/2+200,hb.y+135,{steps:6});await page.mouse.up();
  const hb2=await frame.locator('.panel:not(.zwin):not(.pwin) .float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  pass('steps / X / Z window: hidden until pressed, dragged anywhere, pressing again closes it');

@@ -84,8 +84,50 @@ if (embedded && window.parent !== window) {
   const makeWindow = (win: HTMLElement, slot: "main" | "z" | "parts") => {
     const head = document.createElement("div");
     head.className = "float-head";
-    head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
+    head.innerHTML = `<b class="float-title"></b><span class="float-btns"><button type="button" class="float-max" title="ملء الشاشة / الحجم السابق (دابل كليك على العنوان)">▢</button><button type="button" class="float-close" title="إغلاق">×</button></span>`;
     win.prepend(head);
+    // 0.9.144: resize from every edge and corner (large tables: drag to see all sizes / columns)
+    for (const dir of ["n", "s", "e", "w", "ne", "nw", "se", "sw"]) {
+      const h = document.createElement("div");
+      h.className = `float-grip g-${dir}`;
+      h.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        win.classList.remove("maxed");
+        const r = win.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY;
+        h.setPointerCapture(e.pointerId);
+        const move = (ev: PointerEvent) => {
+          const dx = ev.clientX - x0, dy = ev.clientY - y0;
+          let { left, top, width, height } = r;
+          if (dir.includes("e")) width = r.width + dx;
+          if (dir.includes("s")) height = r.height + dy;
+          if (dir.includes("w")) (width = r.width - dx), (left = r.left + dx);
+          if (dir.includes("n")) (height = r.height - dy), (top = r.top + dy);
+          width = Math.min(Math.max(width, 300), innerWidth - 4);
+          height = Math.min(Math.max(height, 180), innerHeight - 4);
+          if (dir.includes("w")) left = Math.max(0, r.right - width);
+          if (dir.includes("n")) top = Math.max(0, r.bottom - height);
+          Object.assign(win.style, { left: left + "px", top: top + "px", width: width + "px", height: height + "px" });
+        };
+        const up = () => {
+          h.removeEventListener("pointermove", move);
+          h.removeEventListener("pointerup", up);
+          keep();
+        };
+        h.addEventListener("pointermove", move);
+        h.addEventListener("pointerup", up);
+      });
+      win.append(h);
+    }
+    let before: Partial<CSSStyleDeclaration> | null = null;
+    const maximize = () => {
+      if (win.classList.toggle("maxed")) {
+        before = { left: win.style.left, top: win.style.top, width: win.style.width, height: win.style.height };
+        Object.assign(win.style, { left: "4px", top: "4px", width: innerWidth - 8 + "px", height: innerHeight - 8 + "px" });
+      } else if (before) Object.assign(win.style, before);
+    };
+    head.querySelector(".float-max")?.addEventListener("click", maximize);
+    head.addEventListener("dblclick", (e) => !(e.target as HTMLElement).closest("button") && maximize());
     const restore = (tab: string) => {
       let g: Record<string, string> | null = null;
       try {
@@ -116,7 +158,7 @@ if (embedded && window.parent !== window) {
       }
       report();
     };
-    (head.lastElementChild as HTMLElement).addEventListener("click", () => toggle(null));
+    head.querySelector(".float-close")?.addEventListener("click", () => toggle(null));
     win.addEventListener("pointerdown", () => (win.style.zIndex = String(++zTop)));
     head.addEventListener("pointerdown", (e) => {
       if ((e.target as HTMLElement).closest("button")) return;
@@ -173,7 +215,7 @@ if (embedded && window.parent !== window) {
   window.addEventListener("contextmenu", () => post({ type: "l7:context" }));
   window.addEventListener("message", (e) => {
     if (e.source !== window.parent || typeof e.data?.type !== "string") return;
-    const d = e.data as { type: string; key?: string; action?: string; text?: string; name?: string; grafis?: boolean };
+    const d = e.data as { type: string; key?: string; action?: string; text?: string; name?: string; grafis?: boolean; value?: unknown };
     switch (d.type) {
       case "l7:tool": {
         const t = TOOLS.find((x) => x.key === d.key);
@@ -187,6 +229,8 @@ if (embedded && window.parent !== window) {
       case "l7:table": void app.importXFile(String(d.name ?? ""), { text: typeof d.text === "string" ? d.text : undefined, base64: (d as unknown as { base64?: unknown }).base64 as string | undefined }); break;
       case "l7:new": app.newDesign(); break;
       case "l7:saved": app.markSaved(); break;
+      case "l7:size": if (typeof d.value === "number") app.setSize(d.value); break;
+      case "l7:unit": if (d.value === "mm" || d.value === "in") app.setUnit(d.value); break;
       case "l7:open": if (typeof d.text === "string") app.openText(d.text, d.name ?? "", d.grafis === true); break;
       case "l7:action": if (d.action) run(d.action); break;
     }

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.143",
- "notes": "حماية التصميم من الضياع قبل بدء الرسم",
+ "version": "0.9.144",
+ "notes": "شاشة التصميم: مساحة أكبر للرسم، نوافذ تُكبَّر بالسحب، أيقونة البرنامج",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "21512316933b322d0758ccea1f857dd691b15ae2d88d4f6ad30bdc76415c7da1",
-   "size": 132845
+   "sha256": "db1d45f7deb80008d307f8e1a0b65cd974aa23c55d85f3856636417d00c4f5c5",
+   "size": 133578
   },
   {
    "path": "assets/icon.ico",
@@ -34,24 +34,24 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BvJG3-FB.js",
-   "sha256": "9a068ef54d124558f967d1696d5e70843087f0ad057eb2c3c6cfb38f70aefb6e",
-   "size": 227132
+   "path": "assets/l7design/assets/index-Cew9q04Z.js",
+   "sha256": "0f648fde5b74553ac72fd67f932449bfe242930e0808015762c5d7a4be2fe3b4",
+   "size": 230176
   },
   {
-   "path": "assets/l7design/assets/index-tCW5ave4.css",
-   "sha256": "632a6f7239f52b08fcedaa5a953d40667a54db23a2a63c95795aa822e7168378",
-   "size": 28685
+   "path": "assets/l7design/assets/index-CxdhY5LV.css",
+   "sha256": "2ae416d82818777e0a2e486ba913c9ba30a35562fc4ae759a5d0c7afe8b13e0c",
+   "size": 31319
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "f537c9172a20fbf3b7b6024f29932d165e210d8a40f87dad1d12423c95cedf56",
+   "sha256": "cf5f94431490f8e46175633034d460e509ffe6a7292282c5314967285999a455",
    "size": 3594
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "be3e5e61af8a0c4f4a12aba5b054f4a694d17065864150ff092eeb224643b748",
-   "size": 24976
+   "sha256": "0ba84f73748354edf0f71c4daa634bd996a21d33a74a7272b38a0f9a17207160",
+   "size": 26223
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "188317cdbd45d58490478223e406b8a5b73704b6416820994909e0cd59739fcf",
+   "sha256": "df81744ac2316edef39772407dd7c8745382d90f74b7c7081697abcf4a743cb1",
    "size": 301
   },
   {
@@ -370,8 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "e212ff22b9ce30a416aed9bb20426ddea9b3a9de78842b9f756703a17ef0a4de",
-   "size": 32250
+   "sha256": "fec6df50eabf635fa285c082a08007ff25a301322ac6bb5f18359433e7995495",
+   "size": 35917
+  },
+  {
+   "path": "src/l7-icons.js",
+   "sha256": "13b3ad51ec9bd3de4316da97da77a2aaf54e2e1118de678fdd514ef57767f18e",
+   "size": 9752
   },
   {
    "path": "src/line-transform-ui.js",
@@ -425,8 +430,8 @@
   },
   {
    "path": "src/native-app.js",
-   "sha256": "4810206fd7e62f7144f1b4727676536599a7b334b55b3192fdbddc82abe91ed7",
-   "size": 138934
+   "sha256": "fb7d04788e1d1d03ffb338ff250a295d5dab25666f906eb9a377d895a68928cd",
+   "size": 139354
   },
   {
    "path": "src/native-bartack10-template.mjs",
@@ -1505,8 +1510,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "93e14158c053f5166d4d968dc2cb0617a49d3ee2b22f47a210c4e48b11bdc3bc",
-   "size": 13369
+   "sha256": "57dd42e45d94625ffd1df682f035178cec5a01636c68322c91c93e60aa4b382b",
+   "size": 17851
   },
   {
    "path": "src/ui-guide-0113.js",

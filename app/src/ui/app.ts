@@ -38,6 +38,12 @@ const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
 const PICK_PX = 10;
 /** Points attract the pointer from farther away (magnet): a click then takes that point. */
 const SNAP_PX = 18;
+/** A one-line text area that grows with its text (descriptions). */
+const grow = (t: HTMLElement): void => {
+  t.style.height = "";
+  // a hidden window has no size yet: CSS (field-sizing) sizes it when it shows
+  if (t.scrollHeight) t.style.height = t.scrollHeight + 2 + "px";
+};
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
 type Hover = Pick | null;
@@ -264,7 +270,7 @@ export class App {
    * kept in the design file. */
   openProduct(): void {
     document.querySelector(".product-win")?.remove();
-    const pr: Record<string, string> = { ...(this.model.product ?? {}) };
+    const pr: Record<string, string> = { name: this.model.name, ...(this.model.product ?? {}) };
     const f = (k: string, label: string, list = false) => `<label class="pi-f"><span>${label}</span><input data-pi="${k}" value="${esc(pr[k] ?? "")}"${list ? ` list="pi-${k}"` : ""}/></label>`;
     const img = (k: string, label: string, cls = "") => `<div class="pi-img ${cls}"><div class="pi-img-head"><span>${label}</span><button data-pimg="${k}" title="اختيار صورة">📁</button><button data-pclr="${k}" class="pi-x" title="إزالة">✕</button></div><div class="pi-pic" data-ppic="${k}">${pr[k] ? `<img src="${pr[k]}" alt=""/>` : ""}</div></div>`;
     const sizes = [sizeName(this.model, -1), ...(this.model.sizes ?? []).map((z) => z.name)];
@@ -720,7 +726,13 @@ export class App {
     this.cy = (y0 + y1) / 2;
     const w = Math.max(x1 - x0, 50);
     const h = Math.max(y1 - y0, 50);
-    this.scale = Math.min((r.width - 80) / w, (r.height - 80) / h);
+    // room above and below for the undo / size bar over the drawing; inside LEVEL7 and MTM also
+    // room on the right for the tool card, so the drawing is never under it
+    const side = document.body.classList.contains("embedded") ? Math.min(240, r.width * 0.25) : 0;
+    // and room on the left for the parts strip when it stays open
+    const ps = document.querySelector<HTMLElement>(".part-strip"), left = ps && getComputedStyle(ps).position !== "static" && ps.offsetWidth && this.stripMode === "permanent" ? ps.offsetWidth : 0;
+    this.scale = Math.min((r.width - 80 - side - left) / w, (r.height - 128) / h);
+    this.cx += (side - left) / 2 / this.scale;
     this.render();
   }
 
@@ -1079,6 +1091,8 @@ export class App {
 
   private curveHandlesSvg(): string {
     const hs = this.curveHandles();
+    // while curve handles show, the undo bar fades and lets clicks through (a handle may sit under it)
+    document.querySelector(".hist-bar")?.classList.toggle("ghost", hs.length > 0);
     if (!hs.length) return "";
     const out: string[] = [];
     for (const h of hs) {
@@ -1356,7 +1370,13 @@ export class App {
       text += " — Esc للإلغاء";
     }
     $("#prompt").textContent = text;
+    // inside LEVEL7 and MTM the line under the drawing is hidden: the current step goes to the tool card
+    if (document.body.classList.contains("embedded") && window.parent !== window && text !== this.lastPrompt) {
+      this.lastPrompt = text;
+      window.parent.postMessage({ type: "l7:prompt", text: this.tool ? text.replace(/ — Esc للإلغاء$/, "") : "" }, "*");
+    }
   }
+  private lastPrompt = "";
 
   // ---- point input panel (as GRAFIS): how a click makes the point a tool needs
   ptMode: "free" | "online" | "intersect" | "pct" | "mm" | "xy" = "free";
@@ -1542,6 +1562,7 @@ export class App {
       <button data-h="redo" title="إعادة خطوة (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg><b></b></button><button data-h="redo-list" class="hist-more" title="الإعادة عدة خطوات">▾</button>
       <div class="hist-menu" hidden></div>`;
     wrap.append(bar);
+
     const menu = bar.querySelector(".hist-menu") as HTMLElement;
     const many = (dir: "undo" | "redo", k: number) => {
       for (let n = 0; n < k; n++) dir === "undo" ? this.undo() : this.redo();
@@ -3232,10 +3253,23 @@ export class App {
     const active = this.model.activeSize ?? -1;
     const opts = [-1, ...(this.model.sizes ?? []).map((_, i) => i)];
     sel.innerHTML = opts.map((i) => `<option value="${i}"${i === active ? " selected" : ""}>${esc(sizeName(this.model, i))}</option>`).join("");
-    sel.onchange = () => {
-      this.model.activeSize = Number(sel.value);
-      this.changed();
-    };
+    sel.onchange = () => this.setSize(Number(sel.value));
+    // inside LEVEL7 and MTM the size and unit lists are in the program's command bar
+    if (document.body.classList.contains("embedded") && window.parent !== window)
+      window.parent.postMessage({ type: "l7:sizes", sizes: opts.map((i) => ({ value: i, name: sizeName(this.model, i) })), active, unit: this.model.unit ?? "mm" }, "*");
+  }
+
+  setSize(i: number): void {
+    this.model.activeSize = i;
+    this.changed();
+  }
+
+  setUnit(u: "mm" | "in"): void {
+    this.snapshot();
+    this.toast(u === "in" ? "قيم الأبعاد بالبوصة" : "قيم الأبعاد بالمليمتر");
+    this.model.unit = u;
+    $<HTMLSelectElement>("#unit-select").value = u;
+    this.changed();
   }
 
   private renderSizes(): void {
@@ -3563,17 +3597,21 @@ export class App {
         return `<tr>
           <td class="id">Z${v.id}</td>
           <td class="zf-cell">${formula}</td>
-          <td><input data-i="${i}" data-f="name" value="${esc(v.name)}" placeholder="—" title="الوصف"/></td>
+          <td class="zdesc-cell"><textarea class="zdesc" rows="1" data-i="${i}" data-f="name" placeholder="—" title="الوصف">${esc(v.name)}</textarea></td>
           <td class="val${err ? " bad" : ""}" data-zval="${v.id}" title="${err ? esc(err) : ""}">${err ? esc(err) : val !== undefined ? fmt(val) : ""}</td>
           <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
         </tr>`;
       })
       .join("");
     box.innerHTML =
+      // 0.9.144: the buttons at the top of the window (they stay there while the list scrolls)
+      `<div class="table-actions z-actions"><button data-add>إضافة معادلة</button><button data-zas-bar title="مساعد المعادلة للسطر الحالي: شروط IF وقوائم X و Z">ƒx مساعد المعادلات</button></div>` +
       `<table class="grid ztable"><thead><tr><th>Z</th><th>Formula · المعادلة</th><th>Text · الوصف</th><th>Value</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
-      `<div class="table-actions"><button data-add>إضافة معادلة</button><button data-zas-bar title="مساعد المعادلة للسطر الحالي: شروط IF وقوائم X و Z">ƒx مساعد المعادلات</button></div>` +
       `<p class="empty">اكتب المعادلة في خانة Formula (مثل X2/2 أو Z1+10)، أو اضغط ƒx للمساعد. Enter يحفظ وينتقل للسطر التالي. للقياس من الرسم استخدم أداتي «قياس مسافة» و«قياس طول».</p>`;
     this.bindTable(box, "variables");
+    // the description grows with its text, so all of it shows
+    // (CSS field-sizing grows it; grow() is the fallback, run again when the field gets the focus)
+    box.querySelectorAll<HTMLTextAreaElement>("textarea.zdesc").forEach((t) => (grow(t), t.addEventListener("focus", () => grow(t))));
     box.querySelectorAll<HTMLButtonElement>("[data-zas]").forEach((b) => b.addEventListener("click", () => this.openZAssistant(Number(b.dataset.zas))));
     box.querySelectorAll<HTMLInputElement>("input[data-f='expr']").forEach((inp) => inp.addEventListener("focus", () => (this.zRow = Number(inp.dataset.i))));
     box.querySelector("[data-zas-bar]")?.addEventListener("click", () => {
@@ -3727,8 +3765,9 @@ export class App {
 
   private bindTable(box: HTMLElement, key: "measurements" | "variables"): void {
     let snapped = false;
-    box.querySelectorAll<HTMLInputElement>("input[data-f]").forEach((inp) => {
+    box.querySelectorAll<HTMLInputElement>("input[data-f], textarea[data-f]").forEach((inp) => {
       inp.addEventListener("input", () => {
+        if (inp.tagName === "TEXTAREA") grow(inp);
         if (!snapped) {
           this.snapshot();
           snapped = true;
@@ -3754,7 +3793,7 @@ export class App {
         if (e.key !== "Enter") return;
         e.preventDefault();
         inp.dispatchEvent(new Event("change"));
-        const next = box.querySelector<HTMLInputElement>(`input[data-f="${inp.dataset.f}"][data-i="${Number(inp.dataset.i) + 1}"]`);
+        const next = box.querySelector<HTMLInputElement>(`[data-f="${inp.dataset.f}"][data-i="${Number(inp.dataset.i) + 1}"]`);
         if (next) next.focus();
         else inp.blur();
         const label = key === "measurements" ? `X${this.model.measurements[Number(inp.dataset.i)]?.id}` : `Z${this.model.variables[Number(inp.dataset.i)]?.id}`;

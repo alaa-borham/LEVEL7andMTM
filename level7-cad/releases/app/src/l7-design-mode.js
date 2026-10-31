@@ -6,6 +6,11 @@
  * read and edited by the existing MDL path. Files go through the host's own
  * dialogs (window.desktop); the frame has no file or Node access. */
 import { toolIcon } from './grouped-tool-palette.js';
+import { l7Icon } from './l7-icons.js';
+/** 0.9.144: the LEVEL7 icon set first; the shared program drawings only as a fallback. */
+// the LEVEL7 icon set (l7-icons.js) is kept for a later redesign; the program drawings are used
+const USE_L7_ICONS = false;
+const iconOf = it => (USE_L7_ICONS && l7Icon(it.tool || it.command)) || toolIcon(it.glyph) || toolIcon('point');
 
 // Engine tool key -> host icon drawing.
 const GLYPH = {
@@ -91,7 +96,7 @@ export function installDesignMode() {
   const host = document.createElement('section');
   host.id = 'l7-design'; host.className = 'l7-design'; host.hidden = true; host.dir = 'rtl';
   host.setAttribute('aria-label', 'تصميم LEVEL7');
-  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div><div class="l7-design-guide" aria-live="polite" hidden><b class="l7g-title"></b><div class="l7g-pic" aria-hidden="true"></div><span class="l7g-text"></span><footer><button type="button" class="l7g-ok" data-l7d-step="confirm" title="تأكيد الخطوة · Enter">✓</button><button type="button" class="l7g-back" data-l7d-step="back" title="رجوع خطوة">‹</button></footer></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><button type="button" class="l7-design-close" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button><div class="l7-design-tools" role="toolbar" aria-orientation="vertical"></div></aside>';
+  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div><div class="l7-design-guide" aria-live="polite" hidden><b class="l7g-title"></b><div class="l7g-pic" aria-hidden="true"></div><span class="l7g-text"></span><span class="l7g-now" dir="rtl"></span><footer><button type="button" class="l7g-ok" data-l7d-step="confirm" title="تأكيد الخطوة · Enter">✓</button><button type="button" class="l7g-back" data-l7d-step="back" title="رجوع خطوة">‹</button></footer></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><button type="button" class="l7-design-close" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button><div class="l7-design-tools" role="toolbar" aria-orientation="vertical"></div></aside>';
   workArea.append(host);
   const stage = host.querySelector('.l7-design-stage'), toolsBox = host.querySelector('.l7-design-tools');
   const guide = host.querySelector('.l7-design-guide');
@@ -119,8 +124,30 @@ export function installDesignMode() {
     barBox.append(g);
   }
   const cmdBox = barBox;
+  // 0.9.144: size and unit of the design: one button in the command bar (current size, unit
+  // underneath) that opens a short list; nothing over the drawing.
+  const sizeBox = document.createElement('div'); sizeBox.className = 'palette-group l7-design-size';
+  sizeBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-size-btn" data-l7d-sizebtn title="المقاس والوحدة" aria-haspopup="menu"><b class="l7-size-name">الأساسي</b><small class="l7-size-unit">mm</small></button><div class="l7-size-menu" role="menu" hidden></div>';
+  barBox.append(sizeBox);
+  let sizeState = { sizes: [], active: -1, unit: 'mm' };
+  const sizeBtn = sizeBox.querySelector('[data-l7d-sizebtn]'), sizeMenu = sizeBox.querySelector('.l7-size-menu');
+  const renderSizeMenu = () => {
+    const opt = (attr, val, label, on) => `<button type="button" role="menuitemradio" aria-checked="${on}" ${attr}="${val}">${on ? '● ' : ''}${label.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c])}</button>`;
+    sizeMenu.innerHTML = '<header>المقاس</header>' + sizeState.sizes.map(z => opt('data-size', Number(z.value), String(z.name), Number(z.value) === sizeState.active)).join('')
+      + '<header>الوحدة</header>' + opt('data-unit', 'mm', 'mm', sizeState.unit !== 'in') + opt('data-unit', 'in', 'inch', sizeState.unit === 'in');
+  };
+  sizeBtn.addEventListener('click', () => { renderSizeMenu(); sizeMenu.hidden = !sizeMenu.hidden; });
+  sizeMenu.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.size !== undefined) send({ type: 'l7:size', value: Number(b.dataset.size) });
+    else if (b.dataset.unit) send({ type: 'l7:unit', value: b.dataset.unit });
+    sizeMenu.hidden = true; frame?.focus();
+  });
+  document.addEventListener('pointerdown', e => { if (!sizeMenu.hidden && !e.target.closest?.('.l7-design-size')) sizeMenu.hidden = true; }, true);
+  window.addEventListener('blur', () => { sizeMenu.hidden = true; });
   const statusOut = document.createElement('output'); statusOut.className = 'l7-design-status'; statusOut.setAttribute('aria-live', 'polite'); barBox.append(statusOut);
-  status = text => { statusOut.textContent = text; };
+  // the message also goes to the program's status line; the bar keeps the room for size / unit
+  status = text => { statusOut.textContent = text; const t = document.getElementById('status-text'); if (t) t.textContent = text; };
 
   const send = msg => { if (ready && frame?.contentWindow) frame.contentWindow.postMessage(msg, '*'); else queue.push(msg); };
   const dark = () => document.body.classList.contains('ui-dark');
@@ -147,7 +174,7 @@ export function installDesignMode() {
     list.push({ name: 'التصدير والحفظ', items: [['save', 'حفظ التصميم · Ctrl+S', 'folder'], ['aama', 'تصدير AAMA للتعشيق · Ctrl+E', 'manufacturing'], ['dxf', 'تصدير DXF', 'line20'], ['plt', 'تصدير PLT للبلوتر', 'raster']].map(([command, name, glyph]) => ({ command, name, glyph })) });
     return list;
   };
-  const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return toolIcon(it.glyph) || toolIcon('point'); };
+  const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return iconOf(it); };
   const renderTools = () => {
     toolsBox.replaceChildren();
     cats = categories();
@@ -161,7 +188,7 @@ export function installDesignMode() {
       for (const it of c.items) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'l7-design-tool'; b.setAttribute('role', 'menuitem');
         if (it.tool) { b.dataset.l7dTool = it.tool; b.setAttribute('aria-pressed', 'false'); } else b.dataset.l7dCommand = it.command;
-        b.innerHTML = (toolIcon(it.glyph) || toolIcon('point')) + `<span>${it.name}</span>`;
+        b.innerHTML = iconOf(it) + `<span>${it.name}</span>`;
         panel.append(b);
       }
       wrap.append(head, panel); toolsBox.append(wrap);
@@ -203,7 +230,7 @@ export function installDesignMode() {
     if (t && guide.dataset.tool !== t.key) {
       guide.dataset.tool = t.key;
       guide.querySelector('.l7g-title').textContent = t.name;
-      guide.querySelector('.l7g-pic').innerHTML = toolIcon(GLYPH[t.key] || 'point'); decorate(guide);
+      guide.querySelector('.l7g-pic').innerHTML = iconOf({ tool: t.key, glyph: GLYPH[t.key] || 'point' }); decorate(guide);
       guide.querySelector('.l7g-text').textContent = (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' كليك يمين أو Enter للاعتماد، Esc للإلغاء. دابل كليك على أي عنصر لتعديل قيمه.';
     } else if (!t) delete guide.dataset.tool;
   };
@@ -271,6 +298,20 @@ export function installDesignMode() {
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
     else if (d.type === 'l7:context') showCat(null);
+    else if (d.type === 'l7:sizes' && Array.isArray(d.sizes)) {
+      sizeState = { sizes: d.sizes.map(z => ({ value: Number(z.value), name: String(z.name) })), active: Number(d.active), unit: d.unit === 'in' ? 'in' : 'mm' };
+      const cur = sizeState.sizes.find(z => z.value === sizeState.active);
+      sizeBox.querySelector('.l7-size-name').textContent = cur ? cur.name : '—';
+      sizeBox.querySelector('.l7-size-unit').textContent = sizeState.unit === 'in' ? 'inch' : 'mm';
+      sizeBtn.title = 'المقاس: ' + (cur ? cur.name : '') + ' · الوحدة: ' + sizeBox.querySelector('.l7-size-unit').textContent + ' (انقر للتغيير)';
+      if (!sizeMenu.hidden) renderSizeMenu();
+    }
+    else if (d.type === 'l7:prompt') {
+      // the current step replaces the long tool hint (kept as the card's tooltip)
+      const n = guide.querySelector('.l7g-now'), t = guide.querySelector('.l7g-text');
+      n.textContent = typeof d.text === 'string' ? d.text.replace(/^[^:]*:\s*/, '') : '';
+      n.hidden = !n.textContent; t.hidden = !n.hidden; guide.title = t.textContent;
+    }
     else if (d.type === 'l7:open-json' && d.purpose === 'library') void (async () => {
       if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
       try { const file = await desktop.openFile({ design: true }); if (file) send({ type: 'l7:json', purpose: 'library', text: file.text, name: file.name }); }

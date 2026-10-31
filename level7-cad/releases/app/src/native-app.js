@@ -398,6 +398,10 @@ function creationError(error) {
 }
 bindMainMenu(document.querySelector('.menubar'));
 function closeMenus() { $$('details.menu[open]').forEach(menu => { menu.open = false; }); }
+// 0.9.144: an open menu closes on a press anywhere outside it (also on the drawing, which may
+// stop the event, and inside the LEVEL7 design frame, which takes the focus from this window).
+document.addEventListener('pointerdown', event => { if (!event.target.closest?.('details.menu')) closeMenus(); }, true);
+window.addEventListener('blur', () => { if ($$('details.menu[open]').length) setTimeout(closeMenus, 0); });
 function status(message) { text($('#status-text'), message); $('#status-text').title = message; }
 function notice(message, error = false, persistent = false, details = message) {
   clearTimeout(noticeTimer);

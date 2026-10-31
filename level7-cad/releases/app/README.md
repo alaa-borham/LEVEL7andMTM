@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.144
+
+LEVEL7 design screen: no row over the drawing (size and unit are one command-bar button with a short list; the name is edited in Info); no status line under the drawing (the current step shows in the tool card); menus close on a click anywhere, also on the drawing; X / Z / Parts windows resize from every edge and corner, ▢ or a double-click on the title fills the screen; the X table has wider, clearly separated columns; Z descriptions wrap and grow; "Add formula" and the formula assistant are at the top of the Z window; Fit leaves room for the undo bar and the tool card. Windows: the exe of new builds carries the LEVEL7 icon, and existing desktop / Start-menu shortcuts are pointed at it on start.
+
 LEVEL7 and MTM 0.9.143
 
 LEVEL7 design safety: unsaved work survives a restart or crash (autosave + an "unsaved" mark) and "New" / "Open" offer it back or ask to save it before replacing it; a design counts as saved only when the program confirms the file was written; undo copies keep each background picture once (a 3 MB scan no longer multiplies by 200); autosave falls back to keeping the design without picture data when storage is full, and says so; deleting an X that formulas use asks first; saving always includes the current part. A fixed 0.9.143 design file is now part of the tests so later versions keep opening today's files.

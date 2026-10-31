@@ -35,6 +35,7 @@ try{
  pass('curve: two end handles; dragging the start handle sets the start direction (0°)');
  const hh2=await f.evaluate(()=>window.level7.curveHandles()[0].hs);await page.mouse.dblclick(box.x+hh2[0],box.y+hh2[1]);await f.waitForFunction(()=>window.level7.model.steps.at(-1).startAngle==='');pass('double-click on the handle frees the direction again');
  // 0.9.131: handle distance sets the strength; the middle point of the curve can be dragged
+ await f.evaluate(()=>window.level7.zoomBy(0.75)); // room below the drawing for dragging the end handle outwards
  {const h0=await f.evaluate(()=>window.level7.curveHandles()[1]);const [ex,ey]=h0.es;const ux=(h0.hs[0]-ex)/Math.hypot(h0.hs[0]-ex,h0.hs[1]-ey),uy=(h0.hs[1]-ey)/Math.hypot(h0.hs[0]-ex,h0.hs[1]-ey);
   const len0=await f.evaluate(()=>{const s=window.level7.model.steps.at(-1);const o=window.level7.res.objects.get(s.id);let L=0;for(let i=1;i<o.pts.length;i++)L+=Math.hypot(o.pts[i][0]-o.pts[i-1][0],o.pts[i][1]-o.pts[i-1][1]);return L;});
   await page.mouse.move(box.x+h0.hs[0],box.y+h0.hs[1]);await page.mouse.down();await page.mouse.move(box.x+ex+ux*140,box.y+ey+uy*140,{steps:6});await page.mouse.up();
@@ -83,7 +84,7 @@ try{
  await tool('dimSum');await page.mouse.click(...await at(100,0));await page.mouse.click(...await at(0,100));await page.keyboard.press('Enter');
  await fr.locator('#tool-box [data-ok]').click();await f.waitForFunction(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('Σ 460')));
  pass('sum dimension: two lines (260 + 200) shown as Σ 460');
- await page.keyboard.press('Escape');await fr.locator('#unit-select').selectOption('in');
+ await page.keyboard.press('Escape');await page.locator('[data-l7d-sizebtn]').click();await page.locator('.l7-size-menu [data-unit="in"]').click();
  await f.waitForFunction(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('18.11″')));
  pass('unit inch: Σ 460 mm shows as 18.11″');
  await page.screenshot({path:'shot-0134-dims.png'});

@@ -59,7 +59,8 @@ button:disabled {
 }
 
 input,
-select {
+select,
+textarea {
   font: inherit;
   border: 1px solid var(--border);
   border-radius: 5px;
@@ -531,7 +532,7 @@ body.embedded .layout{grid-template-columns:1fr 340px}
 /* Dark theme matching the host's professional dark interface. */
 body.dark{--bg:#14181e;--surface:#1c222b;--border:#2e3742;--text:#e4e9f0;--muted:#8d98a7;--accent:#3d9bff;--accent-soft:#1d3550;--line:#e4e9f0;--point:#ff6b6b;--hover:#ffb340;--select:#3d9bff;--grid:#1f262f;--grid-major:#29323d;--piece:#5ccf73;--piece-fill:rgba(92,207,115,.10)}
 body.dark{color:var(--text)}
-body.dark input,body.dark select,body.dark #canvas{background:#10141a}
+body.dark input,body.dark select,body.dark textarea,body.dark #canvas{background:#10141a}
 body.dark .size-table th.customer{background:#3a2f17}
 /* 0.9.119: the program's command bar switches the pages (F5, Ctrl+X, F11, Ctrl+G, Pieces). */
 body.embedded .panel .tabs{display:none}
@@ -853,3 +854,51 @@ body.embedded .hist-bar { left: 104px; }
 .ar-item:hover { border-color: var(--accent); }
 .marker-win { width: 520px; } .mk-list { max-height: 50vh; overflow: auto; font-size: 12.5px; padding-inline-start: 18px; } .mk-list li { margin: 3px 0; }
 .iso-hint { font-size: 12px; opacity: .75; margin: 8px 0; }
+
+/* 0.9.144: no separate row for name / size / unit inside LEVEL7 and MTM: size and unit sit in the
+   undo bar on the drawing; the name is edited in Info. */
+body.embedded .topbar { display: none; }
+body.embedded .layout { height: 100%; }
+.hist-bar .size-pick { font-size: 0; gap: 0; border-left: 1px solid var(--border); margin-left: 3px; padding-left: 3px; }
+.hist-bar .size-pick select { font-size: 13px; font-weight: 600; min-width: 0; height: 30px; border: none; background: transparent; color: var(--text); padding: 0 4px; cursor: pointer; }
+/* 0.9.144: no status line under the drawing inside LEVEL7 and MTM (the step shows in the tool
+   card); the cursor coordinates stay as a small label in the corner of the drawing. */
+body.embedded footer.status { position: absolute; left: 8px; bottom: 6px; height: auto; padding: 0; border: 0; background: transparent; pointer-events: none; z-index: 5; }
+body.embedded footer.status #prompt { display: none; }
+body.embedded footer.status #coords { font-size: 11px; opacity: .7; }
+body.embedded #canvas { height: 100%; }
+/* 0.9.144: floating windows resize from every edge and corner; ▢ / double-click fills the screen */
+body.embedded .panel { resize: none; }
+.float-grip { display: none; }
+body.embedded .float-grip { display: block; position: absolute; z-index: 3; }
+.float-grip.g-n, .float-grip.g-s { left: 10px; right: 10px; height: 7px; cursor: ns-resize; }
+.float-grip.g-n { top: -3px; } .float-grip.g-s { bottom: -3px; }
+.float-grip.g-e, .float-grip.g-w { top: 10px; bottom: 10px; width: 7px; cursor: ew-resize; }
+.float-grip.g-e { right: -3px; } .float-grip.g-w { left: -3px; }
+.float-grip.g-ne, .float-grip.g-nw, .float-grip.g-se, .float-grip.g-sw { width: 14px; height: 14px; }
+.float-grip.g-ne { top: -3px; right: -3px; cursor: nesw-resize; } .float-grip.g-sw { bottom: -3px; left: -3px; cursor: nesw-resize; }
+.float-grip.g-nw { top: -3px; left: -3px; cursor: nwse-resize; } .float-grip.g-se { bottom: -3px; right: -3px; cursor: nwse-resize; }
+body.embedded .panel { overflow: visible; }
+.float-btns { display: flex; gap: 2px; }
+.float-max { font-size: 13px; }
+/* the button row under the X table wraps instead of scrolling sideways */
+.xg-foot { flex-wrap: wrap; row-gap: 4px; overflow: hidden; }
+.xg-io { flex-wrap: wrap; }
+.z-actions { position: sticky; top: -8px; z-index: 2; margin: -8px -8px 8px; padding: 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
+/* clicks on the empty edges of the undo bar reach the drawing (a curve handle may sit under it) */
+.hist-bar { pointer-events: none; }
+.hist-bar > button, .hist-bar .hist-menu { pointer-events: auto; }
+/* Z description: wraps and grows so the whole text shows */
+.ztable textarea.zdesc { width: 100%; min-height: 28px; resize: none; overflow: hidden; line-height: 1.4; padding: 4px 6px; font: inherit; box-sizing: border-box; white-space: pre-wrap; }
+.ztable td { vertical-align: top; }
+.ztable th:nth-child(3), .ztable td.zdesc-cell { min-width: 150px; width: 34%; }
+/* 0.9.144 X table: wider value columns, clear column lines and banded rows, so neighbouring
+   numbers never read as one */
+.xg-table td.xv, .xg-table th.xv, .xg-table th:not(.xid):not(.xn):not(.xc) { min-width: 78px; }
+.xg-table td { border-inline-start: 1px solid color-mix(in srgb, var(--border) 85%, var(--text) 15%); }
+.xg-table th { border-inline-start: 1px solid var(--border); }
+.xg-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 70%, var(--text) 4%); }
+.xg-table td.xv input { padding: 0 10px; letter-spacing: .3px; font-size: 13px; }
+.xg-table td.xn { min-width: 150px; }
+.ztable textarea.zdesc { field-sizing: content; height: auto; min-height: 28px; }
+.hist-bar.ghost { opacity: .3; } .hist-bar.ghost > button { pointer-events: none; }

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, session, Menu, crashReporter, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, session, Menu, crashReporter, clipboard, shell } = require('electron');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
@@ -427,7 +427,29 @@ async function createWindow() {
   await win.loadFile(INDEX_FILE);
 }
 
+// 0.9.144: shortcuts made for earlier versions show Electron's icon (the exe of those builds has
+// no LEVEL7 icon, and updates do not replace the exe). On Windows, shortcuts on the desktop and in
+// the Start menu that start this program are pointed at assets/icon.ico. Only those shortcuts,
+// only their icon; any failure is ignored.
+function fixShortcutIcons() {
+  if (process.platform !== 'win32') return;
+  const ico = path.join(app.getAppPath(), 'assets', 'icon.ico'), exe = process.execPath.toLowerCase();
+  const dirs = [app.getPath('desktop'), path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')];
+  for (const dir of dirs) {
+    let names = [];
+    try { names = fs.readdirSync(dir).filter(n => n.toLowerCase().endsWith('.lnk')); } catch { continue; }
+    for (const n of names) {
+      try {
+        const file = path.join(dir, n), link = shell.readShortcutLink(file);
+        if (String(link.target || '').toLowerCase() !== exe || String(link.icon || '').toLowerCase() === ico.toLowerCase()) continue;
+        shell.writeShortcutLink(file, 'update', { icon: ico, iconIndex: 0 });
+      } catch { /* not a readable shortcut */ }
+    }
+  }
+}
+
 app.whenReady().then(async () => {
+  try { fixShortcutIcons(); } catch { /* ignore */ }
   Menu.setApplicationMenu(null);
   lockSession(session.defaultSession);
   registerIpc();
