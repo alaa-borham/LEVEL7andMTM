@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.152",
- "notes": "Shift للالتصاق بطرف الخط، البداية على الخط، تمييز أعمدة Z",
+ "version": "0.9.153",
+ "notes": "اختيار X / Z يستبدل الخانة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "53b6ac509b46036189b8f59f56d41d20a235fbc1209099a642b88705df8c0c86",
-   "size": 137666
+   "sha256": "187d6d9ebcf3548662be8739526be6698cc02eb84ffbf7b4b0bc532ad5066b3f",
+   "size": 137884
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-Cru5nknW.js",
+   "sha256": "72634bfdf5618e9a33e6232be1db903571c1c20bcb68b4a0d973d5503389431b",
+   "size": 253659
+  },
+  {
    "path": "assets/l7design/assets/index-Cz9wE9Cd.css",
    "sha256": "52ae8523c67615094d23fc1195414b693398b4bd9b1b91cc8b396f26f402f598",
    "size": 37813
   },
   {
-   "path": "assets/l7design/assets/index-oljsqnXz.js",
-   "sha256": "43046231631984345ca4538162f21e0172e59f2fbf7cf3d985a8404dc273b2c5",
-   "size": 254136
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "7edeaab16b5795640a633e682ea8d3148209ed94cee6e56bbe33a9bb10a3faf3",
+   "sha256": "34310812bc5d98c24a4caa87eb96d8e479e73edb38386c4758a50dd80441b076",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "26ecee841e49d7253f99fce41174b93558b233c14cb8680515766e9f625745c7",
+   "sha256": "88aa1b09de428ad2565bc294ef8140758e52a332b3a35e9f67276096fe8581ac",
    "size": 301
   },
   {

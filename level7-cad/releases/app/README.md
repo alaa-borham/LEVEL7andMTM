@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.153
+
+LEVEL7 design: choosing from the X or Z list beside a value replaces the field (it is added only after an operator typed on purpose, e.g. "X3/2+"); no suggestion arrow inside the value fields.
+
 LEVEL7 and MTM 0.9.152
 
 LEVEL7 design: Shift held snaps to the nearest line end / point (within 60 px) and a click joins it, as GRAFIS. A click where the near mark sits on a line makes the point ON that line (linked), not a loose point beside it. Points that are only line ends are not drawn as separate dots. With a tool open, a click near a dimension is the tool's pick (the dimension is not dragged). Z window: formula and description columns look different.

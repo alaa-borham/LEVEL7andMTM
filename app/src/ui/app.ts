@@ -2401,23 +2401,14 @@ export class App {
       inp.addEventListener("input", () => preview(inp));
     });
     // X / Z list next to every formula field: pick a measurement or variable instead of typing it.
-    const sized = withSize(this.model);
-    const refs: [string, string][] = [
-      ...sized.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
-      ...this.model.variables.map((v): [string, string] => {
-        const val = this.res.z.get(v.id);
-        return [`Z${v.id}`, `Z${v.id}${val !== undefined ? " = " + fmt(val) : ""}${v.name ? " · " + v.name : ""}`];
-      }),
-    ];
     this.refreshForm = () => box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => preview(inp));
     if (true) {
-      const listId = "xz-refs";
-      box.insertAdjacentHTML("beforeend", `<datalist id="${listId}">${refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</datalist>`);
       box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => {
-        inp.setAttribute("list", listId);
         inp.after(this.refPicks((ref) => {
           const cur = inp.value.trim();
-          inp.value = !cur || /^[XxZz]?$|^[\d.\s\u0660-\u0669]*$/.test(cur) ? ref : /[-+*/(]$/.test(cur) ? cur + ref : cur + "+" + ref;
+          // a choice replaces the field; it is added only after an operator typed on purpose ("X3/2+")
+          inp.value = /[-+*/(]\s*$/.test(cur) ? cur + ref : ref;
+          inp.scrollLeft = 0;
           inp.dispatchEvent(new Event("input"));
           inp.focus();
         }));

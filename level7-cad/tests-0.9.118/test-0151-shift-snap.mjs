@@ -40,5 +40,13 @@ try{
  const z=await f.evaluate(()=>{const a=getComputedStyle(document.querySelector('.ztable .zf input')),b=getComputedStyle(document.querySelector('.ztable textarea.zdesc'));return[a.color,b.color,a.borderStyle,b.borderStyle,b.fontStyle];});
  assert(z[0]!==z[1]&&z[3]==='dashed'&&z[4]==='italic',JSON.stringify(z));
  pass('Z window: formulas in yellow on a tinted field, descriptions muted italic with a dashed frame');
+ // choosing from the Z list replaces the field; after an operator typed on purpose it is added
+ await page.locator('[data-l7d-command="tab-z"]').click(); /* close the Z window over the drawing */await page.keyboard.press('Escape');await f.evaluate(()=>{const a=window.level7;a.model.measurements=[{id:3,name:'s',value:460}];a.model.variables=[{id:15,name:'',expr:'230'}];a.changed();});
+ await page.locator('[data-l7d-cat="الخطوط"]').click({button:'right'});await page.locator('[data-l7d-tool="lineAngle"]').click();await page.waitForTimeout(300);
+ await page.mouse.click(box.x+box.width*0.6,box.y+box.height*0.6);const len=fr.locator('#tool-box input[data-key="length"]');await len.waitFor();
+ await len.fill('X3/2');await fr.locator('#tool-box .ref-z').nth(1).selectOption('Z15');assert.equal(await len.inputValue(),'Z15');
+ await len.fill('X3/2+');await fr.locator('#tool-box .ref-z').nth(1).selectOption('Z15');assert.equal(await len.inputValue(),'X3/2+Z15');
+ assert.equal(await len.getAttribute('list'),null);
+ pass('Z list: a choice replaces «X3/2» with «Z15»; after «X3/2+» it gives «X3/2+Z15»; no suggestion arrow in the field');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
