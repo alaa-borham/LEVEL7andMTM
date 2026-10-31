@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.144",
- "notes": "شاشة التصميم: مساحة أكبر للرسم، نوافذ تُكبَّر بالسحب، أيقونة البرنامج",
+ "version": "0.9.145",
+ "notes": "إخفاء إحداثيات المؤشر",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "db1d45f7deb80008d307f8e1a0b65cd974aa23c55d85f3856636417d00c4f5c5",
-   "size": 133578
+   "sha256": "bb33cd480c443a69784a10584ff4c413087f38afa1cb09d9961f9934ad2ec0fe",
+   "size": 133686
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-Cew9q04Z.js",
+   "path": "assets/l7design/assets/index-6gX5kpVi.css",
+   "sha256": "633cf09776ece5a5b3ec79df79115d782deadc6f1f2d725c83cc7c8dc6648cec",
+   "size": 31298
+  },
+  {
+   "path": "assets/l7design/assets/index-EyUN7Rp9.js",
    "sha256": "0f648fde5b74553ac72fd67f932449bfe242930e0808015762c5d7a4be2fe3b4",
    "size": 230176
   },
   {
-   "path": "assets/l7design/assets/index-CxdhY5LV.css",
-   "sha256": "2ae416d82818777e0a2e486ba913c9ba30a35562fc4ae759a5d0c7afe8b13e0c",
-   "size": 31319
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "cf5f94431490f8e46175633034d460e509ffe6a7292282c5314967285999a455",
+   "sha256": "a0bfa9d088b28b814d0a5b34a3494c03bf9808ddf421db3218e984ef865c63b0",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "df81744ac2316edef39772407dd7c8745382d90f74b7c7081697abcf4a743cb1",
+   "sha256": "7de3d6c61775e90ead58dc2a99c21db4a248e9200523a04e191c9fa4038d4c57",
    "size": 301
   },
   {

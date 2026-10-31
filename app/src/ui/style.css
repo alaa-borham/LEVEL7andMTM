@@ -865,7 +865,7 @@ body.embedded .layout { height: 100%; }
    card); the cursor coordinates stay as a small label in the corner of the drawing. */
 body.embedded footer.status { position: absolute; left: 8px; bottom: 6px; height: auto; padding: 0; border: 0; background: transparent; pointer-events: none; z-index: 5; }
 body.embedded footer.status #prompt { display: none; }
-body.embedded footer.status #coords { font-size: 11px; opacity: .7; }
+body.embedded footer.status { display: none; }
 body.embedded #canvas { height: 100%; }
 /* 0.9.144: floating windows resize from every edge and corner; ▢ / double-click fills the screen */
 body.embedded .panel { resize: none; }

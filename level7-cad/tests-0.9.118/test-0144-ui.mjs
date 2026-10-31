@@ -9,13 +9,13 @@ try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');
  await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
- assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).display==='none'&&getComputedStyle(document.querySelector('#prompt')).display==='none'));
+ assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).display==='none'&&getComputedStyle(document.querySelector('footer.status')).display==='none'&&!document.querySelector('#coords').offsetParent));
  await f.evaluate(()=>{const a=window.level7;a.model.sizes=[{name:'L',step:1,values:{}}];a.changed();});
  await page.locator('[data-l7d-sizebtn]').click();await page.locator('.l7-size-menu [data-size="0"]').click();
  await f.waitForFunction(()=>window.level7.model.activeSize===0);await page.waitForFunction(()=>document.querySelector('.l7-size-name').textContent==='L');
  await page.locator('[data-l7d-sizebtn]').click();await page.locator('.l7-size-menu [data-unit="in"]').click();await f.waitForFunction(()=>window.level7.model.unit==='in');
  assert.equal(await page.locator('.l7-size-unit').textContent(),'inch');
- pass('no row over the drawing; the command-bar button shows size L / inch and changes them');
+ pass('no row over the drawing, no line or coordinates under it; the command-bar button shows size L / inch and changes them');
  await page.locator('.menubar summary',{hasText:'Extras'}).click();assert.equal(await page.locator('details.menu[open]').count(),1);
  const cb=await page.locator('#l7-design-frame').boundingBox();await page.mouse.click(cb.x+cb.width*0.5,cb.y+cb.height*0.5);
  await page.waitForFunction(()=>!document.querySelector('details.menu[open]'));pass('an open menu closes on a click on the drawing');
