@@ -110,6 +110,13 @@ Object.assign(glyphs,{
  arrow:arrow,text:'<text x="6" y="37" fill="#666" stroke="none" font-size="24">ABC</text>',seam:`${part}<path class="blue" stroke-dasharray="3 3" d="M15 25V48H31V30"/>`,mirror:`${part}<path class="blue" stroke-dasharray="3 3" d="M41 7V54M44 10H53V52H44"/>`
 });
 function optionGlyph(glyph,attrs){const point=attrs['data-original-point'];if(point==='line')return'linkedLine';if(point==='chain')return'linkedChain';const shape=attrs['data-original-shape-create'];if(shape)return shape;const length=attrs['data-original-length'];if(length)return{to:'lengthTo',by:'lengthBy',edit:'lengthEdit'}[length];const cut=attrs['data-original-cut'];if(cut)return{1:'cutEnd',2:'cutStart',split:'splitLine'}[cut];if(attrs['data-original-parallel']==='ends')return'offsetEnds';if(attrs['data-original-point-edit'])return'pointEdit';if(attrs['data-original-grain-edit'])return'grainEdit';return glyph;}
+// 0.9.134: drawings for the LEVEL7 design transformations (same style as the others)
+Object.assign(glyphs,{
+ mirrorPts:'<path class="ink" d="M10 46L24 14L24 46Z"/><path class="ink" d="M50 46L36 14L36 46Z" stroke-dasharray="3 3"/><path class="blue" d="M30 6V54"/><circle class="dot" cx="30" cy="8" r="3"/><circle class="dot" cx="30" cy="52" r="3"/>',
+ mirrorDir:'<path class="ink" d="M10 46L24 14L24 46Z"/><path class="ink" d="M50 46L36 14L36 46Z" stroke-dasharray="3 3"/><path class="blue" d="M30 54V6M30 6L26 12M30 6L34 12"/><circle class="dot" cx="30" cy="52" r="3"/>',
+ scalePts:'<path class="ink" d="M8 52V34H26V52Z"/><path class="ink" d="M8 52V10H50V52Z" stroke-dasharray="3 3"/><path class="blue" d="M24 36L46 14M46 14H38M46 14V22"/><circle class="dot" cx="8" cy="52" r="3"/>',
+ scaleDir:'<path class="ink" d="M8 52V30H24V52Z"/><path class="ink" d="M8 52V30H52V52Z" stroke-dasharray="3 3"/><path class="blue" d="M26 20H50M50 20L44 16M50 20L44 24"/><circle class="dot" cx="8" cy="52" r="3"/>'
+});
 /** 0.9.118: the design engine palette reuses these drawings. */
 export function toolIcon(name){return Object.hasOwn(glyphs,name)?icon(name):'';}
 function icon(name){if(!Object.hasOwn(glyphs,name))throw Error('Missing tool icon: '+name);return `<svg viewBox="0 0 60 60" data-tool-icon="${name}" data-icon-revision="73" aria-hidden="true" focusable="false">${glyphs[name]}</svg>`;}

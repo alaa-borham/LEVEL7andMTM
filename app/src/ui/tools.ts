@@ -66,6 +66,11 @@ const obj = (c: Ctx, id: number): GObj => c.res.objects.get(id) as GObj;
 const line = (c: Ctx, i: number) => c.picks[i] as Extract<Pick, { kind: "line" }>;
 const point = (c: Ctx, i: number) => c.picks[i] as Extract<Pick, { kind: "point" }>;
 
+const MODE_FIELD: Field = { key: "mode", label: "النتيجة", value: "copy", options: [["copy", "نسخة جديدة"], ["move", "نقل الأصل"]] };
+/** Transformed items: copies get new names (curves keep the C prefix), moves keep the object. */
+const transformItems = (c: Ctx, mode: string) =>
+  c.extra.map((p) => pickedId(p) as number).map((src) => (mode === "move" ? { src } : { src, dst: newId(c.model, copyKind(c, src)) }));
+
 export const TOOLS: Tool[] = [
   {
     key: "point",
@@ -163,7 +168,23 @@ export const TOOLS: Tool[] = [
         { key: "side", label: "الجهة", value: String(sideOf(obj(c, p.obj), p.at)), options: [["1", "يسار اتجاه الخط"], ["-1", "يمين اتجاه الخط"]] },
       ];
     },
-    build: (c, v) => ({ op: "parallel", id: newId(c.model, "line"), of: line(c, 0).obj, dist: v.dist, side: v.side === "1" ? 1 : -1 }),
+    build: (c, v) => ({ op: "parallel", id: newId(c.model, copyKind(c, line(c, 0).obj) === "curve" ? "curve" : "line"), of: line(c, 0).obj, dist: v.dist, side: v.side === "1" ? 1 : -1 }),
+  },
+  {
+    key: "parallelMany",
+    name: "موازٍ لعدة خطوط ومنحنيات",
+    group: "الخطوط",
+    picks: [],
+    multi: { kind: "line", prompt: "انقر الخطوط والمنحنيات، كلاً في الجهة التي تريد الموازي فيها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [
+      { key: "dist", label: "المسافة", value: "10" },
+      { key: "flip", label: "الجهة", value: "", options: [["", "كما نقرت"], ["1", "الجهة الأخرى للكل"]] },
+    ],
+    build: (c, v) => {
+      const of = c.extra.map((p) => pickedId(p) as number);
+      const sides = c.extra.map((p) => (sideOf(obj(c, pickedId(p) as number), p.at) * (v.flip === "1" ? -1 : 1)) as 1 | -1);
+      return { op: "parallels", ids: of.map((id) => newId(c.model, copyKind(c, id) === "curve" ? "curve" : "line")), of, sides, dist: v.dist };
+    },
   },
   {
     key: "setLength",
@@ -189,8 +210,8 @@ export const TOOLS: Tool[] = [
   },
   {
     key: "mirrorCopy",
-    name: "انعكاس (نسخة)",
-    group: "التعديل",
+    name: "انعكاس حول خط (نسخة)",
+    group: "التحويلات",
     shortcut: "8",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
     multi: { kind: "object", prompt: "انقر العناصر المراد نسخها بالانعكاس، ثم Enter للتنفيذ", min: 1 },
@@ -202,11 +223,50 @@ export const TOOLS: Tool[] = [
   },
   {
     key: "mirrorMove",
-    name: "انعكاس (نقل)",
-    group: "التعديل",
+    name: "انعكاس حول خط (نقل)",
+    group: "التحويلات",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
     multi: { kind: "object", prompt: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ", min: 1 },
     build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((p) => ({ src: pickedId(p) as number })) }),
+  },
+  {
+    key: "mirrorPts",
+    name: "انعكاس بمحور من نقطة إلى نقطة",
+    group: "التحويلات",
+    picks: [
+      { kind: "point", prompt: "انقر النقطة الأولى لمحور الانعكاس" },
+      { kind: "point", prompt: "انقر النقطة الثانية لمحور الانعكاس" },
+    ],
+    multi: { kind: "object", prompt: "انقر العناصر المراد عكسها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [MODE_FIELD],
+    build: (c, v) => ({ op: "mirror", axisPts: [point(c, 0).ref, point(c, 1).ref], items: transformItems(c, v.mode) }),
+  },
+  {
+    key: "mirrorDir",
+    name: "انعكاس بمحور من نقطة واتجاه",
+    group: "التحويلات",
+    picks: [{ kind: "point", prompt: "انقر نقطة على محور الانعكاس" }],
+    multi: { kind: "object", prompt: "انقر العناصر المراد عكسها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [{ key: "angle", label: "اتجاه المحور °", value: "90" }, MODE_FIELD],
+    build: (c, v) => ({ op: "mirror", axisAt: point(c, 0).ref, axisAngle: v.angle, items: transformItems(c, v.mode) }),
+  },
+  {
+    key: "scalePts",
+    name: "تكبير وتصغير حول نقطة",
+    group: "التحويلات",
+    picks: [{ kind: "point", prompt: "انقر نقطة مركز التكبير" }],
+    multi: { kind: "object", prompt: "انقر العناصر المراد تكبيرها أو تصغيرها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [{ key: "factor", label: "النسبة %", value: "100" }, MODE_FIELD],
+    build: (c, v) => ({ op: "scale", center: point(c, 0).ref, factor: v.factor, items: transformItems(c, v.mode) }),
+  },
+  {
+    key: "scaleDir",
+    name: "تكبير وتصغير باتجاه",
+    group: "التحويلات",
+    picks: [{ kind: "point", prompt: "انقر نقطة الأساس" }],
+    multi: { kind: "object", prompt: "انقر العناصر المراد مطّها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [{ key: "angle", label: "الاتجاه °", value: "0" }, { key: "factor", label: "النسبة %", value: "100" }, MODE_FIELD],
+    build: (c, v) => ({ op: "scale", center: point(c, 0).ref, factor: v.factor, angle: v.angle, items: transformItems(c, v.mode) }),
   },
   {
     key: "curve",
@@ -332,6 +392,18 @@ export const TOOLS: Tool[] = [
     build: (c, v) => ({ op: "dim", kind: "length", obj: line(c, 0).obj, offset: v.offset }),
   },
   {
+    key: "dimSum",
+    name: "مجموع أطوال (Σ)",
+    group: "الأبعاد",
+    picks: [],
+    multi: { kind: "line", prompt: "انقر الخطوط والمنحنيات المراد جمع أطوالها، ثم Enter أو كليك يمين", min: 1 },
+    fields: () => [
+      { key: "offset", label: "إزاحة خط البعد", value: "10" },
+      { key: "text", label: "نص على البعد", value: "", text: true, optional: true },
+    ],
+    build: (c, v) => ({ op: "dim", kind: "sum", objs: c.extra.map((p) => pickedId(p) as number), offset: v.offset, text: v.text || undefined }),
+  },
+  {
     key: "dimAngle",
     name: "بُعد زاوية",
     group: "الأبعاد",
@@ -390,7 +462,11 @@ export function stepFields(s: Step): Field[] {
     case "pointMove":
       return [{ key: "dist", label: "المسافة", value: s.dist }];
     case "dim":
-      return s.kind === "angle" ? [] : [{ key: "offset", label: "إزاحة خط البعد", value: s.offset }];
+      return [
+        ...(s.kind === "angle" ? [] : [{ key: "offset", label: "إزاحة خط البعد", value: s.offset }]),
+        { key: "text", label: "نص على البعد", value: s.text ?? "", text: true, optional: true },
+        { key: "flip", label: "اتجاه القيمة", value: s.flip ?? "", options: [["", "عادي"], ["1", "مقلوب (الجهة الأخرى)"]] as [string, string][] },
+      ];
     case "pointOffset":
       return [
         { key: "dx", label: "إزاحة س", value: s.dx },
@@ -401,6 +477,12 @@ export function stepFields(s: Step): Field[] {
         { key: "angle", label: "الزاوية °", value: s.angle },
         { key: "length", label: "الطول", value: s.length },
       ];
+    case "parallels":
+      return [{ key: "dist", label: "المسافة", value: s.dist }];
+    case "mirror":
+      return s.axisAt ? [{ key: "axisAngle", label: "اتجاه المحور °", value: s.axisAngle ?? "90" }] : [];
+    case "scale":
+      return [{ key: "factor", label: "النسبة %", value: s.factor }, ...(s.angle !== undefined ? [{ key: "angle", label: "الاتجاه °", value: s.angle }] : [])];
     case "parallel":
       return [
         { key: "dist", label: "المسافة", value: s.dist },

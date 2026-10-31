@@ -67,5 +67,25 @@ try{
  pass('horizontal dimension placed with the mouse (200 mm) and updated when the pattern changes (260 mm)');
  await page.keyboard.press('Escape');await tool('dimAngle');for(const[x,y]of[[150,0],[0,0],[0,150]])await page.mouse.click(...await at(x,y));
  await f.waitForFunction(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('90°')));pass('angle dimension: 90°');
+ // 0.9.134: drag a dimension, text + flip by double-click, sum of lengths, inches
+ await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+ const hi=await f.evaluate(()=>{const a=window.level7,i=a.model.steps.findIndex(s=>s.op==='dim'&&s.kind==='h');const h=a.dimHits.find(x=>x.i===i);return{i,p:h.pts[0],q:h.pts[1]};});
+ const mx=(hi.p[0]+hi.q[0])/2,my=(hi.p[1]+hi.q[1])/2;const off0=await f.evaluate(i=>window.level7.model.steps[i].offset,hi.i);
+ await page.mouse.move(box.x+mx,box.y+my);await page.mouse.down();await page.mouse.move(box.x+mx,box.y+my-60,{steps:5});await page.mouse.up();
+ const off1=await f.evaluate(i=>Number(window.level7.model.steps[i].offset),hi.i);assert(off1>Number(off0)+5,off0+' → '+off1);
+ pass('dimension dragged away from the line it measures (offset '+off0+' → '+off1+' mm)');
+ const hj=await f.evaluate(i=>{const h=window.level7.dimHits.find(x=>x.i===i);return[(h.pts[0][0]+h.pts[1][0])/2,(h.pts[0][1]+h.pts[1][1])/2]},hi.i);
+ await page.mouse.dblclick(box.x+hj[0],box.y+hj[1]);await fr.locator('#tool-box input[data-key="text"]').waitFor();
+ await fr.locator('#tool-box input[data-key="text"]').fill('عرض');await fr.locator('#tool-box select[data-key="flip"]').selectOption('1');await fr.locator('#tool-box [data-ok]').click();
+ await f.waitForFunction(i=>{const s=window.level7.model.steps[i];return s.text==='عرض'&&s.flip==='1'},hi.i);
+ assert(await f.evaluate(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('عرض')&&t.textContent.includes('260'))));
+ pass('double-click: text «عرض» added to the dimension and its value turned to the other side');
+ await tool('dimSum');await page.mouse.click(...await at(100,0));await page.mouse.click(...await at(0,100));await page.keyboard.press('Enter');
+ await fr.locator('#tool-box [data-ok]').click();await f.waitForFunction(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('Σ 460')));
+ pass('sum dimension: two lines (260 + 200) shown as Σ 460');
+ await page.keyboard.press('Escape');await fr.locator('#unit-select').selectOption('in');
+ await f.waitForFunction(()=>[...document.querySelectorAll('#canvas g.dim text')].some(t=>t.textContent.includes('18.11″')));
+ pass('unit inch: Σ 460 mm shows as 18.11″');
+ await page.screenshot({path:'shot-0134-dims.png'});
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

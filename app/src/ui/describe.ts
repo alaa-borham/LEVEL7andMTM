@@ -20,8 +20,9 @@ export function describe(s: Step, m: Model): string {
     case "pointMove":
       return `نقطة ${n(s.id)} = ${pr(s.from)} منقولة ${e(s.dist)} باتجاه ${n(s.along)}`;
     case "dim": {
-      const k = { aligned: "بُعد مائل", h: "بُعد أفقي", v: "بُعد رأسي", length: "بُعد طول", angle: "بُعد زاوية" }[s.kind];
+      const k = { aligned: "بُعد مائل", h: "بُعد أفقي", v: "بُعد رأسي", length: "بُعد طول", angle: "بُعد زاوية", sum: "مجموع أطوال" }[s.kind] + (s.text ? ` «${s.text}»` : "");
       if (s.kind === "length") return `${k} ${n(s.obj as number)}`;
+      if (s.kind === "sum") return `${k} ${(s.objs ?? []).map(n).join(" + ")}`;
       if (s.kind === "angle") return `${k} ${pr(s.a as PointRef)} – ${pr(s.b as PointRef)} – ${pr(s.c as PointRef)}`;
       return `${k} بين ${pr(s.a as PointRef)} و ${pr(s.b as PointRef)}`;
     }
@@ -31,6 +32,8 @@ export function describe(s: Step, m: Model): string {
       return `خط ${n(s.id)} من ${pr(s.p1)} إلى ${pr(s.p2)}`;
     case "lineAngle":
       return `خط ${n(s.id)} من ${pr(s.start)} بزاوية ${e(s.angle + "°")} وطول ${e(s.length)}`;
+    case "parallels":
+      return `خطوط موازية ${s.ids.map(n).join("، ")} لـ ${s.of.map(n).join("، ")} بمسافة ${e(s.dist)}`;
     case "parallel":
       return `خط ${n(s.id)} موازي لـ ${n(s.of)} بمسافة ${e(s.dist)}`;
     case "setLength":
@@ -48,7 +51,12 @@ export function describe(s: Step, m: Model): string {
     }
     case "mirror": {
       const list = s.items.map((it) => (it.dst ? `${n(it.src)}←${n(it.dst)}` : n(it.src))).join("، ");
-      return `انعكاس حول ${n(s.axis)} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;
+      const axis = s.axisPts ? `${pr(s.axisPts[0])}–${pr(s.axisPts[1])}` : s.axisAt ? `${pr(s.axisAt)} بزاوية ${e((s.axisAngle ?? "90") + "°")}` : n(s.axis as number);
+      return `انعكاس حول ${axis} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;
+    }
+    case "scale": {
+      const list = s.items.map((it) => (it.dst ? `${n(it.src)}←${n(it.dst)}` : n(it.src))).join("، ");
+      return `تكبير ${e(s.factor + "%")} حول ${pr(s.center)}${s.angle ? ` باتجاه ${e(s.angle + "°")}` : ""} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;
     }
   }
 }

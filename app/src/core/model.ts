@@ -49,13 +49,19 @@ export type Step =
   | { op: "pointOffset"; id: number; from: PointRef; dx: string; dy: string }
   /** Dimension (annotation only, creates no geometry): aligned / horizontal / vertical
    * distance between a and b, length of obj, or angle a-b-c; offset places the line. */
-  | { op: "dim"; kind: "aligned" | "h" | "v" | "length" | "angle"; a?: PointRef; b?: PointRef; c?: PointRef; obj?: number; offset: string }
+  | { op: "dim"; kind: "aligned" | "h" | "v" | "length" | "angle" | "sum"; a?: PointRef; b?: PointRef; c?: PointRef; obj?: number; objs?: number[]; offset: string; text?: string; flip?: string }
   | { op: "line"; id: number; p1: PointRef; p2: PointRef }
   | { op: "lineAngle"; id: number; start: PointRef; angle: string; length: string }
   | { op: "parallel"; id: number; of: number; dist: string; side: 1 | -1 }
+  /** Parallels of several lines / curves at one distance; each on the side it was clicked. */
+  | { op: "parallels"; ids: number[]; of: number[]; sides: (1 | -1)[]; dist: string }
   | { op: "setLength"; target: number; length: string }
   | { op: "trim"; target: number; end: "start" | "end"; to: number }
-  | { op: "mirror"; axis: number; items: { src: number; dst?: number }[] }
+  /** Mirror about a line (axis), the line through two points (axisPts), or the line
+   * through a point at an angle (axisAt + axisAngle). dst set = copy, else move. */
+  | { op: "mirror"; axis?: number; axisPts?: [PointRef, PointRef]; axisAt?: PointRef; axisAngle?: string; items: { src: number; dst?: number }[] }
+  /** Scale about a centre by factor %; with angle: only along that direction (stretch). */
+  | { op: "scale"; center: PointRef; factor: string; angle?: string; items: { src: number; dst?: number }[] }
   | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string }
   /** Corner of two lines, each taken at the end nearer the corner: "sharp" extends or trims
    * both to their intersection; "round" adds a tangent arc of radius `size`; "chamfer" cuts
@@ -75,6 +81,7 @@ export interface Model {
   activeSize?: number; // index in sizes, or -1 / undefined for the base size
   nextId: number;
   names: Record<number, string>; // object display names (P1, L3, ...)
+  unit?: "mm" | "in"; // how dimensions show their values (geometry is always mm)
 }
 
 /** A size (or a customer for made-to-measure): values that replace the base measurements. */
@@ -291,6 +298,7 @@ export function evaluateModel(model: Model): EvalResult {
         case "dim": {
           for (const r of [s.a, s.b, s.c]) if (r) pointOf(r);
           if (s.obj !== undefined) needLine(s.obj);
+          for (const o of s.objs ?? []) needLine(o);
           vars.eval(s.offset || "0");
           break;
         }
@@ -312,6 +320,27 @@ export function evaluateModel(model: Model): EvalResult {
         case "parallel": {
           // side 1 = left of the direction start -> end, -1 = right
           put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
+          break;
+        }
+        case "scale": {
+          const C = pointOf(s.center), k = vars.eval(s.factor) / 100;
+          if (!(k > 0)) throw new Error("نسبة التكبير يجب أن تكون أكبر من صفر");
+          const dir = s.angle !== undefined && s.angle.trim() !== "" ? ((a) => [Math.cos(a), Math.sin(a)] as Pt)((vars.eval(s.angle) * Math.PI) / 180) : null;
+          const tf = (p: Pt): Pt => {
+            const v: Pt = [p[0] - C[0], p[1] - C[1]];
+            if (!dir) return [C[0] + v[0] * k, C[1] + v[1] * k];
+            const t = (v[0] * dir[0] + v[1] * dir[1]) * (k - 1); // stretch only along the direction
+            return [p[0] + dir[0] * t, p[1] + dir[1] * t];
+          };
+          for (const it of s.items) {
+            const o = need(it.src);
+            put(it.dst ?? o.id, o.kind, o.pts.map(tf), i);
+          }
+          break;
+        }
+        case "parallels": {
+          const d = vars.eval(s.dist);
+          s.of.forEach((src, k) => put(s.ids[k], "line", offsetPolyline(needLine(src).pts, (s.sides[k] ?? 1) * d), i));
           break;
         }
         case "setLength": {
@@ -403,9 +432,21 @@ export function evaluateModel(model: Model): EvalResult {
           break;
         }
         case "mirror": {
-          const ax = needLine(s.axis).pts;
-          const origin = ax[0];
-          const d: Pt = [ax[ax.length - 1][0] - origin[0], ax[ax.length - 1][1] - origin[1]];
+          let origin: Pt, d: Pt;
+          if (s.axisPts) {
+            origin = pointOf(s.axisPts[0]);
+            const b = pointOf(s.axisPts[1]);
+            d = [b[0] - origin[0], b[1] - origin[1]];
+            if (Math.hypot(d[0], d[1]) < 1e-9) throw new Error("نقطتا محور الانعكاس متطابقتان");
+          } else if (s.axisAt) {
+            origin = pointOf(s.axisAt);
+            const r = (vars.eval(s.axisAngle ?? "90") * Math.PI) / 180;
+            d = [Math.cos(r), Math.sin(r)];
+          } else {
+            const ax = needLine(s.axis as number).pts;
+            origin = ax[0];
+            d = [ax[ax.length - 1][0] - origin[0], ax[ax.length - 1][1] - origin[1]];
+          }
           for (const it of s.items) {
             const o = need(it.src);
             put(it.dst ?? o.id, o.kind, o.pts.map((p) => mirrorPt(p, origin, d)), i);
@@ -455,7 +496,10 @@ export function createdIds(s: Step): number[] {
       return [];
     case "corner":
       return s.id === undefined ? [] : [s.id];
+    case "parallels":
+      return s.ids;
     case "mirror":
+    case "scale":
       return s.items.filter((it) => it.dst !== undefined).map((it) => it.dst as number);
     default:
       return [s.id];
@@ -476,19 +520,23 @@ export function usedIds(s: Step): number[] {
     case "pointOffset":
       return [s.from.obj];
     case "dim":
-      return [s.a, s.b, s.c].filter((r): r is PointRef => !!r).map((r) => r.obj).concat(s.obj !== undefined ? [s.obj] : []);
+      return [s.a, s.b, s.c].filter((r): r is PointRef => !!r).map((r) => r.obj).concat(s.obj !== undefined ? [s.obj] : [], s.objs ?? []);
     case "line":
       return [s.p1.obj, s.p2.obj];
     case "lineAngle":
       return [s.start.obj];
     case "parallel":
       return [s.of];
+    case "parallels":
+      return s.of;
     case "setLength":
       return [s.target];
     case "trim":
       return [s.target, s.to];
     case "mirror":
-      return [s.axis, ...s.items.map((it) => it.src)];
+      return [...(s.axis !== undefined ? [s.axis] : []), ...(s.axisPts ?? []).map((r) => r.obj), ...(s.axisAt ? [s.axisAt.obj] : []), ...s.items.map((it) => it.src)];
+    case "scale":
+      return [s.center.obj, ...s.items.map((it) => it.src)];
     case "curve":
       return s.through.map((r) => r.obj);
     case "corner":

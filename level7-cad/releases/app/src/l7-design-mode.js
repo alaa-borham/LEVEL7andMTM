@@ -10,19 +10,25 @@ import { toolIcon } from './grouped-tool-palette.js';
 // Engine tool key -> host icon drawing.
 const GLYPH = {
   point: 'point', pointOn: 'pointFraction', intersect: 'pointCluster', pointMove: 'vector',
-  line: 'line', lineAngle: 'angle', parallel: 'parallel', setLength: 'lengthTo', trim: 'cutEnd',
+  line: 'line', lineAngle: 'angle', parallel: 'parallel', parallelMany: 'offsetEnds', setLength: 'lengthTo', trim: 'cutEnd',
   cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
-  dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
-  mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', curve: 'curve10', piece: 'seam',
+  dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
+  mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
+  mirrorPts: 'انقر نقطتي محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين؛ اختر نسخة أو نقل.',
+  mirrorDir: 'انقر نقطة على المحور، ثم العناصر، ثم Enter؛ اكتب اتجاه المحور (رقماً أو X/Z).',
+  scalePts: 'انقر مركز التكبير، ثم العناصر، ثم Enter؛ اكتب النسبة % (100 = نفس الحجم) رقماً أو X/Z.',
+  scaleDir: 'انقر نقطة الأساس، ثم العناصر، ثم Enter؛ اكتب الاتجاه والنسبة %: يُمط في ذلك الاتجاه فقط.',
+  parallelMany: 'انقر الخطوط والمنحنيات واحداً واحداً، كلاً في الجهة التي تريد الموازي فيها، ثم Enter أو كليك يمين. اكتب المسافة رقماً أو X/Z أو حرّك الماوس، ثم انقر للاعتماد. تبقى مرتبطة: غيّر X فتتحرك كلها.',
   cornerSharp: 'انقر الخطين قرب الزاوية؛ النتيجة تظهر قبل النقرة الثانية، ويمتدان أو يُقصّان حتى يلتقيا.',
   dimAligned: 'انقر نقطتين، ثم حرّك الماوس لوضع خط البعد وانقر. القيمة تتحدث مع الباترون.',
   dimH: 'انقر نقطتين، ثم حرّك الماوس لأعلى أو أسفل لوضع البعد الأفقي وانقر.',
   dimV: 'انقر نقطتين، ثم حرّك الماوس يميناً أو يساراً لوضع البعد الرأسي وانقر.',
   dimLength: 'انقر الخط أو المنحنى، ثم حرّك الماوس لوضع بعد الطول وانقر.',
   dimAngle: 'انقر نقطة على الضلع الأول، ثم رأس الزاوية، ثم نقطة على الضلع الثاني.',
+  dimSum: 'انقر الخطوط والمنحنيات واحداً واحداً، ثم Enter أو كليك يمين؛ يظهر مجموع أطوالها Σ. اسحب أي بُعد لتقريبه أو إبعاده، ودابل كليك عليه لإضافة نص أو قلب اتجاه القيمة.',
   cornerRound: 'انقر الخطين قرب الزاوية (النتيجة تظهر قبل النقرة الثانية)، ثم حرّك الماوس: نصف القطر يتبعه. انقر لتثبيته أو اكتب القيمة.',
   cornerChamfer: 'انقر الخطين قرب الزاوية، ثم حرّك الماوس: مسافة القطع تتبعه. انقر لتثبيتها أو اكتب القيمة.',
   point: 'انقر على اللوحة لوضع نقطة، ثم عدّل س/ص في المربع.',

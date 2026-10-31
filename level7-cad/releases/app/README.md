@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.134
+
+Dimensions: drag a dimension closer to / farther from what it measures; double-click it to add text and put the value on the other side of the line; new sum dimension (Σ) of several lines and curves; unit switch mm / inch for dimension values (angles stay in degrees). Magnet: points attract the pointer from 18 px, a left click takes that point. Parallels of several lines and curves at once at one distance (number or X/Z), each on the side it was clicked; the parallel of a curve is a curve. Transformations group: mirror about an axis from point to point or a point and a direction, scale about a point (%) and scale along a direction (stretch), each as a copy or a move, values as numbers or X/Z.
+
 LEVEL7 and MTM 0.9.133
 
 X values: import from Excel (.xlsx) or CSV and export to Excel (.xlsx) through the program's dialogs; columns are found by their headers (X, Name, MTM, Standard, sizes) or by content; existing X are updated, new ones added, size columns filled (a value equal to the base means "same as base"). Curves: every point a curve passes through can be dragged in any direction; a point tied to a line gets an offset (dx, dy) and stays tied to its line. Messages never block the drawing under them.

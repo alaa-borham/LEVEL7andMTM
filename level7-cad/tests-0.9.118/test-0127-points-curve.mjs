@@ -45,5 +45,14 @@ try{
  const vals=await frame.locator('.pt-modes [data-pv]').evaluateAll(a=>a.map(i=>i.value));assert.deepEqual(vals,['0','0','0','0']);
  assert.equal(await frame.locator('.pt-modes [data-pm="free"]').getAttribute('class'),'on');
  pass('next time the point panel opens, all its values are 0 and the plain point mode is on');
+ // 0.9.134: magnet — a line end clicked 14 px away from a point takes that point
+ await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+ await (async()=>{const b=page.locator('[data-l7d-tool="line"]');if(!await b.isVisible())await page.locator('[data-l7d-cat="الخطوط"]').click({button:"right"});await b.click();})();
+ const n0=await f.evaluate(()=>window.level7.model.steps.length);
+ const [ax,ay]=await at(200,0);await page.mouse.click(ax+10,ay-10);const [bx,by]=await at(0,200);await page.mouse.move(bx+12,by+8,{steps:3});
+ await f.waitForFunction(()=>window.level7.hover?.kind==='point');await page.mouse.click(bx+12,by+8);
+ await f.waitForFunction(n=>window.level7.model.steps.length===n+1,n0);
+ const ln=await f.evaluate(()=>window.level7.model.steps.at(-1));assert.equal(ln.op,'line');assert.deepEqual([ln.p1.obj,ln.p2.obj],[1,3]);
+ pass('magnet: both ends clicked 14 px off the points attach to P1 and P3 (no new points)');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

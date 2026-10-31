@@ -33,6 +33,8 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
 
 const PICK_PX = 10;
+/** Points attract the pointer from farther away (magnet): a click then takes that point. */
+const SNAP_PX = 18;
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
 type Hover = Pick | null;
@@ -251,7 +253,9 @@ export class App {
   }
 
   // ---- dimensions (annotation steps): drawn from the current geometry, always up to date
-  private dimSvg(s: Extract<Step, { op: "dim" }>, live = false): string {
+  private dimHits: { i: number; pts: Pt[] }[] = [];
+
+  private dimSvg(s: Extract<Step, { op: "dim" }>, live = false, dimIndex = -1): string {
     let off = 0;
     try {
       off = new Vars(withSize(this.model), undefined, this.res.z).eval(s.offset || "0");
@@ -265,17 +269,25 @@ export class App {
       const [x, y] = sc(tip), [fx, fy] = sc(from), L = Math.hypot(x - fx, y - fy) || 1, ux = (x - fx) / L, uy = (y - fy) / L;
       return `M${x} ${y} l${(-9 * ux + 3.5 * uy).toFixed(1)} ${(-9 * uy - 3.5 * ux).toFixed(1)} M${x} ${y} l${(-9 * ux - 3.5 * uy).toFixed(1)} ${(-9 * uy + 3.5 * ux).toFixed(1)}`;
     };
+    const flip = s.flip === "1";
     const text = (a: Pt, b: Pt, label: string) => {
       const [x1, y1] = sc(a), [x2, y2] = sc(b);
       let ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
       if (ang > 90) ang -= 180;
       if (ang < -90) ang += 180;
       const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-      return `<text class="dim-text" x="${mx}" y="${my - 5}" transform="rotate(${ang.toFixed(1)} ${mx} ${my})" text-anchor="middle" direction="ltr">\u2066${label}\u2069</text>`;
+      const full = s.text ? `${esc(s.text)} \u2066${label}\u2069` : `\u2066${label}\u2069`;
+      // flipped: the value sits on the other side of the dimension line, still readable
+      return `<text class="dim-text" x="${mx}" y="${flip ? my + 15 : my - 5}" transform="rotate(${ang.toFixed(1)} ${mx} ${my})" text-anchor="middle">${full}</text>`;
+    };
+    const hit = (pts: Pt[]) => {
+      if (!live && dimIndex >= 0) this.dimHits.push({ i: dimIndex, pts: pts.map(sc) });
     };
     const line = (a: Pt, b: Pt, dashed = false) => `<line x1="${sc(a)[0]}" y1="${sc(a)[1]}" x2="${sc(b)[0]}" y2="${sc(b)[1]}"${dashed ? ' stroke-dasharray="4 3"' : ""}/>`;
     const out: string[] = [];
-    const r1 = (v: number) => fmt(Math.round(v * 10) / 10);
+    // values in mm, or in inches when the drawing's unit is inch
+    const inch = this.model.unit === "in";
+    const r1 = (v: number) => (inch ? `${fmt(Math.round((v / 25.4) * 100) / 100)}″` : fmt(Math.round(v * 10) / 10));
     if (s.kind === "aligned" || s.kind === "h" || s.kind === "v") {
       const A = P(s.a), B = P(s.b);
       if (!A || !B) return "";
@@ -289,6 +301,7 @@ export class App {
         val = L;
       }
       out.push(line(A, A2, true), line(B, B2, true), line(A2, B2), `<path d="${arrow(A2, B2)} ${arrow(B2, A2)}"/>`, text(A2, B2, r1(val)));
+      hit([A2, B2]);
     } else if (s.kind === "length" && s.obj !== undefined) {
       const o = this.res.objects.get(s.obj);
       if (!o) return "";
@@ -296,6 +309,21 @@ export class App {
       out.push(`<polyline points="${pts.map((p) => sc(p).join(",")).join(" ")}" fill="none"/>`, `<path d="${arrow(pts[0], pts[1])} ${arrow(pts[n - 1], pts[n - 2])}"/>`);
       const m = Math.floor(n / 2);
       out.push(text(pts[Math.max(0, m - 1)], pts[Math.min(n - 1, m + 1)], r1(polyLen(o.pts))));
+      hit(pts);
+    } else if (s.kind === "sum" && s.objs?.length) {
+      // several lines / curves: each drawn beside itself, one total
+      let total = 0, first: Pt[] | null = null;
+      for (const id of s.objs) {
+        const o = this.res.objects.get(id);
+        if (!o) return "";
+        total += polyLen(o.pts);
+        const pts = off ? offsetPolyline(o.pts, off) : o.pts, n = pts.length;
+        first ??= pts;
+        out.push(`<polyline points="${pts.map((p) => sc(p).join(",")).join(" ")}" fill="none"/>`, `<path d="${arrow(pts[0], pts[1])} ${arrow(pts[n - 1], pts[n - 2])}"/>`);
+        hit(pts);
+      }
+      const f0 = first as Pt[], m = Math.floor(f0.length / 2);
+      out.push(text(f0[Math.max(0, m - 1)], f0[Math.min(f0.length - 1, m + 1)], `Σ ${r1(total)}`));
     } else if (s.kind === "angle") {
       const A = P(s.a), V = P(s.b), C = P(s.c);
       if (!A || !V || !C) return "";
@@ -307,15 +335,19 @@ export class App {
       const R = 32, p1 = [vx + R * Math.cos(a1), vy + R * Math.sin(a1)], p2 = [vx + R * Math.cos(a1 + sweep), vy + R * Math.sin(a1 + sweep)];
       out.push(`<path d="M${p1[0]} ${p1[1]} A${R} ${R} 0 0 ${sweep > 0 ? 1 : 0} ${p2[0]} ${p2[1]}" fill="none"/>`);
       const mid = a1 + sweep / 2;
-      out.push(`<text class="dim-text" x="${vx + (R + 14) * Math.cos(mid)}" y="${vy + (R + 14) * Math.sin(mid) + 4}" text-anchor="middle" direction="ltr">\u2066${r1((Math.abs(sweep) * 180) / Math.PI)}°\u2069</text>`);
+      const deg = `\u2066${fmt(Math.round(((Math.abs(sweep) * 180) / Math.PI) * 10) / 10)}°\u2069`; // angles stay in degrees
+      const rr = flip ? R - 14 : R + 14;
+      out.push(`<text class="dim-text" x="${vx + rr * Math.cos(mid)}" y="${vy + rr * Math.sin(mid) + 4}" text-anchor="middle">${s.text ? esc(s.text) + " " : ""}${deg}</text>`);
+      hit([p1 as Pt, p2 as Pt]);
     }
     return `<g class="${cls}">${out.join("")}</g>`;
   }
 
   private dimsSvg(): string {
     const out: string[] = [];
+    this.dimHits = [];
     this.model.steps.forEach((s, i) => {
-      if (s.op === "dim" && !this.res.stepErrors.has(i)) out.push(this.dimSvg(s));
+      if (s.op === "dim" && !this.res.stepErrors.has(i)) out.push(this.dimSvg(s, false, i));
     });
     // the dimension being placed
     const t = this.tool;
@@ -391,6 +423,30 @@ export class App {
   }
 
   private dragPoint: { step: number; mode: "xy" | "offset"; base: Pt } | null = null;
+  private dragDim: number | null = null;
+
+  /** The dimension whose line is under the pointer (screen px). */
+  private dimAt(sx: number, sy: number): number | null {
+    let best: { i: number; d: number } | null = null;
+    for (const h of this.dimHits) {
+      const d = closestOnPolyline(h.pts, [sx, sy]).d;
+      if (d <= 8 && (!best || d < best.d)) best = { i: h.i, d };
+    }
+    return best?.i ?? null;
+  }
+
+  /** The offset that puts dimension s's line under the mouse (world mm). */
+  private dimOffsetAt(s: Extract<Step, { op: "dim" }>, at: Pt): number | null {
+    if (s.kind === "h" && s.a) return at[1] - this.pointOf(s.a)[1];
+    if (s.kind === "v" && s.a) return at[0] - this.pointOf(s.a)[0];
+    if (s.kind === "aligned" && s.a && s.b) {
+      const A = this.pointOf(s.a), B = this.pointOf(s.b), L = dist(A, B) || 1;
+      return (-(B[1] - A[1]) * (at[0] - A[0]) + (B[0] - A[0]) * (at[1] - A[1])) / L;
+    }
+    const id = s.kind === "length" ? s.obj : s.objs?.[0];
+    const o = id !== undefined ? this.res.objects.get(id) : undefined;
+    return o ? closestOnPolyline(o.pts, at).d * sideOf(o, at) : null;
+  }
 
   /** Start dragging through-point k of the curve at step index ci. */
   private grabCurvePoint(ci: number, k: number): void {
@@ -491,7 +547,7 @@ export class App {
     if (s) {
       for (const id of createdIds(s)) ids.add(id);
       if (s.op === "setLength" || s.op === "trim") ids.add(s.target);
-      if (s.op === "mirror") for (const it of s.items) ids.add(it.dst ?? it.src);
+      if (s.op === "mirror" || s.op === "scale") for (const it of s.items) ids.add(it.dst ?? it.src);
     }
     return ids;
   }
@@ -534,7 +590,7 @@ export class App {
       return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3.5" opacity="0.8"/>`;
     }
     const [x, y] = this.toScreen(p.kind === "point" ? this.pointOf(p.ref) : p.at);
-    return `<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="${color}" stroke-width="2"/>`;
+    return `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="${color}" stroke-width="2.4"/><circle cx="${x}" cy="${y}" r="2.6" fill="${color}"/>`;
   }
 
   private gridSvg(w: number, h: number): string {
@@ -589,7 +645,7 @@ export class App {
         const cands: PointRef[] = o.kind === "point" ? [{ obj: o.id }] : kind === "point" ? [{ obj: o.id, end: "start" }, { obj: o.id, end: "end" }] : [];
         for (const ref of cands) {
           const d = near(this.pointOf(ref));
-          if (d <= PICK_PX && (!best || d < best.d)) best = { d, ref };
+          if (d <= (kind === "point" ? SNAP_PX : PICK_PX) && (!best || d < best.d)) best = { d, ref };
         }
       }
       if (best) return { kind: "point", ref: best.ref, at: w };
@@ -1042,6 +1098,11 @@ export class App {
         if (!o) return undefined;
         return { values: (at) => ({ dist: r1(closestOnPolyline(o.pts, at).d), side: String(sideOf(o, at)) }) };
       }
+      case "parallelMany": {
+        const p0 = this.extra[0], o = p0?.kind === "line" ? this.res.objects.get(p0.obj) : undefined;
+        if (!o) return undefined;
+        return { values: (at) => ({ dist: r1(closestOnPolyline(o.pts, at).d) }) };
+      }
       case "setLength": {
         const o = lineObj(0);
         if (!o) return undefined;
@@ -1417,6 +1478,12 @@ export class App {
     // double-click a line, curve or point: open its step with its values (angle, length, X/Z ...)
     svg.addEventListener("dblclick", (e) => {
       const r = svg.getBoundingClientRect();
+      const dd = this.dimAt(e.clientX - r.left, e.clientY - r.top);
+      if (dd !== null) {
+        this.cancelTool();
+        this.editStep(dd);
+        return;
+      }
       const hh = this.handleAt(e.clientX - r.left, e.clientY - r.top);
       if (hh) {
         const s = this.model.steps[hh.i] as Extract<Step, { op: "curve" }>;
@@ -1464,6 +1531,14 @@ export class App {
           return;
         }
         const sx = e.clientX - r0.left, sy = e.clientY - r0.top;
+        // drag a dimension closer to / farther from what it measures
+        const di = !this.tool || (!this.picks.length && !this.extra.length && !this.form) ? this.dimAt(sx, sy) : null;
+        if (di !== null) {
+          this.snapshot();
+          this.dragDim = di;
+          e.preventDefault();
+          return;
+        }
         const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 7 && Math.abs(p.s[1] - sy) <= 7);
         if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
           this.grabCurvePoint(this.selectedStep, cp.k);
@@ -1490,9 +1565,10 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
-      if (this.dragHandle || this.dragPoint !== null) {
+      if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         this.dragHandle = null;
         this.dragPoint = null;
+        this.dragDim = null;
         this.changed();
       }
       const rd = this.rightDown;
@@ -1512,6 +1588,15 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.dragDim !== null) {
+        const st = this.model.steps[this.dragDim] as Extract<Step, { op: "dim" }>;
+        const off = this.dimOffsetAt(st, this.mouse);
+        if (off !== null) {
+          st.offset = String(Math.round(off * 10) / 10);
+          this.render();
+        }
+        return;
+      }
       if (this.dragPoint !== null) {
         const q = this.ptRaster > 0 ? this.ptRaster : 0.1;
         const r = (v: number) => String(Math.round(Math.round(v / q) * q * 10) / 10);
@@ -1608,6 +1693,12 @@ export class App {
   }
 
   private bindTopbar(): void {
+    $<HTMLSelectElement>("#unit-select").addEventListener("change", (e) => {
+      this.snapshot();
+      this.model.unit = (e.target as HTMLSelectElement).value === "in" ? "in" : "mm";
+      this.changed();
+      this.toast(this.model.unit === "in" ? "قيم الأبعاد بالبوصة" : "قيم الأبعاد بالمليمتر");
+    });
     const name = $<HTMLInputElement>("#model-name");
     name.value = this.model.name;
     name.addEventListener("change", () => {
@@ -1748,6 +1839,7 @@ export class App {
 
   renderPanels(): void {
     $<HTMLInputElement>("#model-name").value = this.model.name;
+    $<HTMLSelectElement>("#unit-select").value = this.model.unit ?? "mm";
     this.renderSteps();
     this.renderX();
     this.renderZ();
@@ -1795,7 +1887,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", pointOffset: "Point offset", dim: "Dimension",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;

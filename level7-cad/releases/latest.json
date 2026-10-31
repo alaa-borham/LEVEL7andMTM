@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.133",
- "notes": "رفع وتحميل القياسات من إكسل؛ تحريك نقطة الكرف في أي اتجاه",
+ "version": "0.9.134",
+ "notes": "تحكم في الأبعاد ونص وجمع وبوصة؛ مغناطيس النقاط؛ موازٍ لعدة خطوط؛ انعكاس وتكبير",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "80291a0e8470d1d8144a9b78005b94a7238cf0a8462b2034e85e73be0b28b6a1",
-   "size": 127102
+   "sha256": "bb48b8f95890ecea178125f1ab5c60277d881b4ad9a9c00fa70a0621be5a8982",
+   "size": 127830
   },
   {
    "path": "assets/icon.ico",
@@ -34,19 +34,19 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-BremXwdC.js",
+   "sha256": "6055eb970ff2274226e95eca7ed81b8f3cbaaaadfea99f67a8094892ed1a10f9",
+   "size": 158719
+  },
+  {
    "path": "assets/l7design/assets/index-DCsN9aId.css",
    "sha256": "8ca2f79d5d1aa9d260e3c3c307d59813ff9167e185507e77eccad6a8694e831a",
    "size": 21387
   },
   {
-   "path": "assets/l7design/assets/index-Do0DeQ9i.js",
-   "sha256": "220cd2de3aa382d72c51fb9e22323cd623a6d6bbd516ae6f31862f3080b3bb79",
-   "size": 150664
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "c5a94ca46802d6c7e8ef7a3ab333736469c2c1ad5a9dfed4ba436b93c1ed6785",
-   "size": 3317
+   "sha256": "29f8e739d38ada22b0b31ae126ba3f43563bbc23ac28df8cc77e0e553ebe985a",
+   "size": 3594
   },
   {
    "path": "desktop/main.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "f5367bd780f07b426d431e152c6a13111ec22a78260bbbc8b5f8b89e83c02e58",
+   "sha256": "87666b03b83001c9793d43b44473c1c3dac74c1ce2f5492febf9c9139ba3c62d",
    "size": 301
   },
   {
@@ -300,8 +300,8 @@
   },
   {
    "path": "src/grouped-tool-palette.js",
-   "sha256": "2a3842f711ce1c2193ee36f755dff3d06b66afabaec3c09fd1228ba05ed29f1e",
-   "size": 54635
+   "sha256": "6ff30c918f25b13c5cca2a6ebdc6a72721be89999fb608540115dcdb833cd710",
+   "size": 55638
   },
   {
    "path": "src/history-prefix-preview.js",
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "11ca252a62bea6005c49dbd544c5db1c0b86cb3addc1d6a5610891a5631469d6",
-   "size": 21760
+   "sha256": "c862175bd6350a7f18fc1e92b1eac2b07a8a9d1e139d97352e3d9f02b6da97f4",
+   "size": 23177
   },
   {
    "path": "src/line-transform-ui.js",
