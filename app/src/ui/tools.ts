@@ -52,6 +52,9 @@ export interface Tool {
   addNotch?: boolean; // notch tool: the picked point goes to the nearest piece
   /** A tool that opens a window instead of picking on the drawing (inheritance). */
   action?: boolean;
+  /** Delete tools: what they remove, picked one by one or inside a frame (two corners). */
+  remove?: "points" | "lines" | "all";
+  frame?: boolean;
 }
 
 /** Object id of a multi-pick (a whole point or line). */
@@ -230,6 +233,129 @@ export const TOOLS: Tool[] = [
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
     multi: { kind: "object", prompt: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ", min: 1 },
     build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((p) => ({ src: pickedId(p) as number })) }),
+  },
+  {
+    key: "stitchLock",
+    name: "غرزة مستقيمة (Lockstitch)",
+    group: "الغرز",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها" }],
+    fields: () => [{ key: "size", label: "البعد عن الحافة مم", value: "3" }],
+    build: (c, v) => ({ op: "mark", kind: "lock", obj: line(c, 0).obj, side: sideOf(obj(c, line(c, 0).obj), line(c, 0).at), size: v.size }),
+  },
+  {
+    key: "stitchDouble",
+    name: "غرزة مزدوجة",
+    group: "الغرز",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها" }],
+    fields: () => [{ key: "size", label: "البعد عن الحافة مم", value: "3" }],
+    build: (c, v) => ({ op: "mark", kind: "double", obj: line(c, 0).obj, side: sideOf(obj(c, line(c, 0).obj), line(c, 0).at), size: v.size }),
+  },
+  {
+    key: "stitchZigzag",
+    name: "غرزة زجزاج",
+    group: "الغرز",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها" }],
+    fields: () => [{ key: "size", label: "البعد عن الحافة مم", value: "3" }],
+    build: (c, v) => ({ op: "mark", kind: "zigzag", obj: line(c, 0).obj, side: sideOf(obj(c, line(c, 0).obj), line(c, 0).at), size: v.size }),
+  },
+  {
+    key: "stitchDeco",
+    name: "غرز زخرفية",
+    group: "الغرز",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها" }],
+    fields: () => [{ key: "size", label: "البعد عن الحافة مم", value: "3" }],
+    build: (c, v) => ({ op: "mark", kind: "deco", obj: line(c, 0).obj, side: sideOf(obj(c, line(c, 0).obj), line(c, 0).at), size: v.size }),
+  },
+  {
+    key: "stitchGather",
+    name: "كشكشة (Gather)",
+    group: "الغرز",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها" }],
+    fields: () => [{ key: "size", label: "البعد عن الحافة مم", value: "3" }],
+    build: (c, v) => ({ op: "mark", kind: "gather", obj: line(c, 0).obj, side: sideOf(obj(c, line(c, 0).obj), line(c, 0).at), size: v.size }),
+  },
+  {
+    key: "grainLine",
+    name: "خط النسيج (Grain line)",
+    group: "العلامات",
+    picks: [
+      { kind: "point", prompt: "انقر بداية خط النسيج" },
+      { kind: "point", prompt: "انقر نهايته" },
+    ],
+    build: (c) => ({ op: "mark", kind: "grain", a: point(c, 0).ref, b: point(c, 1).ref, size: "0" }),
+  },
+  {
+    key: "symButton",
+    name: "زر",
+    group: "العلامات",
+    picks: [{ kind: "point", prompt: "انقر موضع العلامة" }],
+    fields: () => [{ key: "size", label: "قطر الزر مم", value: "12" }],
+    build: (c, v) => ({ op: "mark", kind: "button", a: point(c, 0).ref, size: v.size }),
+  },
+  {
+    key: "symDrill",
+    name: "ثقب (Drill hole)",
+    group: "العلامات",
+    picks: [{ kind: "point", prompt: "انقر موضع العلامة" }],
+    fields: () => [{ key: "size", label: "القطر مم", value: "4" }],
+    build: (c, v) => ({ op: "mark", kind: "drill", a: point(c, 0).ref, size: v.size }),
+  },
+  {
+    key: "symCross",
+    name: "علامة +",
+    group: "العلامات",
+    picks: [{ kind: "point", prompt: "انقر موضع العلامة" }],
+    fields: () => [{ key: "size", label: "الحجم مم", value: "8" }],
+    build: (c, v) => ({ op: "mark", kind: "cross", a: point(c, 0).ref, size: v.size }),
+  },
+  {
+    key: "delPoints",
+    name: "حذف نقاط",
+    group: "الحذف",
+    picks: [],
+    multi: { kind: "object", prompt: "انقر النقاط المراد حذفها، ثم Enter أو كليك يمين", min: 1 },
+    remove: "points",
+  },
+  {
+    key: "delLines",
+    name: "حذف خطوط ومنحنيات",
+    group: "الحذف",
+    picks: [],
+    multi: { kind: "line", prompt: "انقر الخطوط والمنحنيات المراد حذفها، ثم Enter أو كليك يمين", min: 1 },
+    remove: "lines",
+  },
+  {
+    key: "delPointsFrame",
+    name: "حذف نقاط داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "points",
+    frame: true,
+  },
+  {
+    key: "delLinesFrame",
+    name: "حذف خطوط ومنحنيات داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "lines",
+    frame: true,
+  },
+  {
+    key: "delAllFrame",
+    name: "حذف الكل داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "all",
+    frame: true,
   },
   {
     key: "inheritObjects",
@@ -495,6 +621,8 @@ export function stepFields(s: Step): Field[] {
       ];
     case "parallels":
       return [{ key: "dist", label: "المسافة", value: s.dist }];
+    case "mark":
+      return s.kind === "grain" ? [] : [{ key: "size", label: s.obj !== undefined ? "البعد عن الحافة مم" : "الحجم مم", value: s.size }];
     case "mirror":
       return s.axisAt ? [{ key: "axisAngle", label: "اتجاه المحور °", value: s.axisAngle ?? "90" }] : [];
     case "scale":

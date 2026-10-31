@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.136
+
+LEVEL7 design mode: Delete group (points, lines and curves by picking; points / lines / everything inside a frame); dependent steps and pieces are deleted with them after a confirmation; undo brings them back. Stitches group (lockstitch, double, zigzag, decorative, gather) along a line or curve on the clicked side at a distance; Symbols group (grain line, button, drill hole, cross). Parts strip with thumbnails on the left of the drawing (permanent / dynamic / off, eye per part, a click switches part). Product info window (name, article, version, variation, season, collection, product group, target audience, block reference, fabric name / type, subtitle, completion, author, comments, addition, sample size and size list, logo, two sketches and a fabric picture), kept in the design file. Not yet: deleting texts / inner / seam symbols, converting notches, printing the product info.
+
 LEVEL7 and MTM 0.9.135
 
 LEVEL7 design mode: parts, as GRAFIS part organisation. A Parts window (button Parts, Ctrl+T): No | 👁 | name | RS | Obj | production, add / copy / delete a part, click a row to make it active, rename, draft or production part, fabric, amount normal / mirrored, category, last edit, and a preview. 👁 shows other parts faded behind the active one. Inheritance group: inherit chosen objects, or a whole part, from an earlier part; the copies stay linked to the source (they follow its changes and the X / Z values). Inheriting basic blocks from a library of other files is not available yet.

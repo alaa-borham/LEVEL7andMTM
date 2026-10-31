@@ -196,8 +196,111 @@ export class App {
     return evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }));
   }
 
+  /** Parts strip (as GRAFIS): a thumbnail per part on the left of the drawing, to see and
+   * pick a part at once. Permanent, dynamic (opens when the pointer reaches it) or off. */
+  private stripMode: "permanent" | "dynamic" | "off" = (() => {
+    try {
+      const v = localStorage.getItem("level7.partStrip");
+      return v === "dynamic" || v === "off" ? v : "permanent";
+    } catch {
+      return "permanent";
+    }
+  })();
+
+  private renderPartStrip(): void {
+    let strip = document.querySelector(".part-strip") as HTMLElement | null;
+    if (!strip) {
+      strip = document.createElement("aside");
+      strip.className = "part-strip";
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(strip);
+      strip.addEventListener("click", (e) => {
+        const t = e.target as HTMLElement, m = t.closest<HTMLElement>("[data-smode]"), eye = t.closest<HTMLElement>("[data-seye]"), th = t.closest<HTMLElement>("[data-spart]");
+        if (m) {
+          this.stripMode = m.dataset.smode as "permanent" | "dynamic" | "off";
+          try {
+            localStorage.setItem("level7.partStrip", this.stripMode);
+          } catch {}
+          this.renderPartStrip();
+        } else if (eye) {
+          const p = (this.model.parts ?? [])[Number(eye.dataset.seye)];
+          if (p) (p.visible = !p.visible), this.changed();
+        } else if (th) this.switchPart(Number(th.dataset.spart));
+      });
+    }
+    strip.dataset.mode = this.stripMode;
+    const ps = this.model.parts?.length ? this.model.parts : null, act = this.model.activePart ?? 0;
+    const items = (ps ?? [{ no: 1, name: this.model.name } as Part]).map((p, k) => {
+      const pv = this.partPreview(ps ? this.partResult(k) : this.res);
+      return `<div class="ps-item${k === act ? " act" : ""}" data-spart="${k}" title="${String(p.no).padStart(3, "0")} ${esc(p.name)}">
+        <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible || k === act ? "on" : ""}" title="إظهار البارت باهتاً"${k === act || !ps ? " disabled" : ""}>👁</button></div>
+        <svg viewBox="${pv.box}">${pv.svg}</svg></div>`;
+    });
+    strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء">⦸</button></div><div class="ps-list">${items.join("")}</div>`;
+  }
+
+  /** Product info (as GRAFIS 2026): product texts, logo, two sketches and a fabric picture,
+   * kept in the design file. */
+  openProduct(): void {
+    document.querySelector(".product-win")?.remove();
+    const pr: Record<string, string> = { ...(this.model.product ?? {}) };
+    const f = (k: string, label: string, list = false) => `<label class="pi-f"><span>${label}</span><input data-pi="${k}" value="${esc(pr[k] ?? "")}"${list ? ` list="pi-${k}"` : ""}/></label>`;
+    const img = (k: string, label: string, cls = "") => `<div class="pi-img ${cls}"><div class="pi-img-head"><span>${label}</span><button data-pimg="${k}" title="اختيار صورة">📁</button><button data-pclr="${k}" class="pi-x" title="إزالة">✕</button></div><div class="pi-pic" data-ppic="${k}">${pr[k] ? `<img src="${pr[k]}" alt=""/>` : ""}</div></div>`;
+    const sizes = [sizeName(this.model, -1), ...(this.model.sizes ?? []).map((z) => z.name)];
+    const el = document.createElement("section");
+    el.className = "z-assistant product-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>Product info · معلومات المنتج</b><button data-pi-act="close">×</button></div>
+      <div class="za-body pi-grid">
+        <div class="pi-col">${img("logo", "Logo · الشعار", "small")}${f("name", "Name · الاسم")}${f("article", "Article · الصنف")}${f("version", "Version · الإصدار")}${f("variation", "Variation · النوع")}${img("sketch1", "Sketch 1 · رسم 1")}${img("sketch2", "Sketch 2 · رسم 2")}</div>
+        <div class="pi-col">${f("season", "Season · الموسم", true)}${f("collection", "Collection · المجموعة", true)}${f("group", "Product group · فئة المنتج", true)}${f("audience", "Target audience · الفئة المستهدفة", true)}${f("block", "Block reference · مرجع القالب")}${f("fabricName", "Fabric name · اسم القماش")}${f("fabricType", "Fabric type · نوع القماش")}${f("subtitle", "Subtitle · عنوان فرعي")}
+          <label class="pi-t"><span>Comments · ملاحظات</span><textarea data-pi="comments" rows="5">${esc(pr.comments ?? "")}</textarea></label>
+          <label class="pi-t"><span>Addition · إضافات</span><textarea data-pi="addition" rows="5">${esc(pr.addition ?? "")}</textarea></label></div>
+        <div class="pi-col"><div class="pi-ro"><span>Sample size · المقاس الأساسي</span><b dir="ltr">${esc(sizes[0])}</b></div><div class="pi-ro"><span>Size list · المقاسات</span><div class="pi-sizes" dir="ltr">${sizes.map(esc).join("<br>")}</div></div>
+          ${f("completion", "Completion · التسليم")}${f("author", "Author · المصمم")}${img("fabric", "Fabric · القماش")}</div>
+        <datalist id="pi-season"><option>Summer</option><option>Winter</option><option>Ramadan</option><option>Eid</option></datalist>
+        <datalist id="pi-collection"></datalist><datalist id="pi-group"><option>Thobe</option><option>Shirt</option><option>Trousers</option></datalist><datalist id="pi-audience"><option>Men</option><option>Women</option><option>Kids</option></datalist>
+      </div>
+      <div class="za-foot pi-foot"><button class="primary" data-pi-act="ok">✓ حفظ</button><button data-pi-act="close">إلغاء</button></div>`;
+    document.body.append(el);
+    el.addEventListener("input", (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.pi) pr[t.dataset.pi] = t.value;
+    });
+    el.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      const pick = t.closest<HTMLElement>("[data-pimg]"), clr = t.closest<HTMLElement>("[data-pclr]"), act = t.closest<HTMLElement>("[data-pi-act]")?.dataset.piAct;
+      const show = (k: string) => ((el.querySelector(`[data-ppic="${k}"]`) as HTMLElement).innerHTML = pr[k] ? `<img src="${pr[k]}" alt=""/>` : "");
+      if (pick) {
+        const k = pick.dataset.pimg as string, inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "image/png,image/jpeg,image/gif,image/webp";
+        inp.onchange = () => {
+          const file = inp.files?.[0];
+          if (!file) return;
+          if (file.size > 2_000_000) return this.toast("الصورة أكبر من 2 ميجابايت");
+          const r = new FileReader();
+          r.onload = () => ((pr[k] = String(r.result)), show(k));
+          r.readAsDataURL(file);
+        };
+        inp.click();
+      } else if (clr) {
+        delete pr[clr.dataset.pclr as string];
+        show(clr.dataset.pclr as string);
+      } else if (act === "close") el.remove();
+      else if (act === "ok") {
+        this.snapshot();
+        this.model.product = Object.fromEntries(Object.entries(pr).filter(([, v]) => v && v.trim() !== ""));
+        if (pr.name?.trim()) this.model.name = pr.name.trim();
+        this.changed();
+        el.remove();
+        this.toast("حُفظت معلومات المنتج");
+      }
+    });
+  }
+
   /** Parts window: list (No, eye, name, RS, Obj, production), properties and a preview. */
   renderParts(): void {
+    if (document.body.classList.contains("embedded")) this.renderPartStrip();
     const box = document.querySelector("#tab-partlist") as HTMLElement | null;
     if (!box) return;
     const ps = this.ensureParts(), act = this.model.activePart ?? 0;
@@ -456,6 +559,7 @@ export class App {
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.dimsSvg());
+    parts.push(this.marksSvg());
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     // no letters on the drawing: the name of the element under the pointer only
@@ -559,6 +663,83 @@ export class App {
       hit([p1 as Pt, p2 as Pt]);
     }
     return `<g class="${cls}">${out.join("")}</g>`;
+  }
+
+  // ---- stitch lines and symbols (annotation steps)
+  private symbolSvg(s: Extract<Step, { op: "mark" }>, live = false): string {
+    let size = 0;
+    try {
+      size = new Vars(withSize(this.model), undefined, this.res.z).eval(s.size || "0");
+    } catch {
+      return "";
+    }
+    const sc = (p: Pt) => this.toScreen(p).map((v) => v.toFixed(1)).join(",");
+    const cls = live ? "mark live" : "mark";
+    if (s.obj !== undefined) {
+      const o = this.res.objects.get(s.obj);
+      if (!o || o.pts.length < 2) return "";
+      const side = s.side ?? 1, base = offsetPolyline(o.pts, side * size), L = polyLen(base);
+      if (!(L > 0)) return "";
+      const along = (d: number, n = 0): Pt => {
+        const p = pointAlong(base, Math.min(L, Math.max(0, d))), [ux, uy] = directionAt(base, Math.min(L, Math.max(0, d)));
+        return [p[0] - uy * n * side, p[1] + ux * n * side]; // n > 0: farther from the edge
+      };
+      const line = (pts: Pt[], extra = "") => `<polyline points="${pts.map(sc).join(" ")}" fill="none"${extra}/>`;
+      const out: string[] = [];
+      if (s.kind === "lock") out.push(line(base, ' stroke-dasharray="6 3"'));
+      else if (s.kind === "double") out.push(line(base, ' stroke-dasharray="6 3"'), line(offsetPolyline(o.pts, side * (size + 3)), ' stroke-dasharray="6 3"'));
+      else if (s.kind === "zigzag") {
+        const pts: Pt[] = [];
+        for (let d = 0, k = 0; d <= L; d += 2, k++) pts.push(along(d, k % 2 ? 1.5 : -1.5));
+        out.push(line(pts));
+      } else if (s.kind === "gather") {
+        const pts: Pt[] = [];
+        for (let d = 0; d <= L; d += 0.5) pts.push(along(d, 1.6 * Math.sin((d / 6) * 2 * Math.PI)));
+        out.push(line(pts));
+      } else if (s.kind === "deco") {
+        out.push(line(base));
+        for (let d = 2; d < L; d += 4) out.push(line([along(d, 0), along(d, 2.5)]));
+      }
+      return `<g class="${cls}">${out.join("")}</g>`;
+    }
+    if (!s.a) return "";
+    const A = this.pointOf(s.a), [ax, ay] = this.toScreen(A);
+    if (s.kind === "grain") {
+      if (!s.b) return "";
+      const [bx, by] = this.toScreen(this.pointOf(s.b)), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+      const head = (x: number, y: number, k: number) => `M${x} ${y} l${(k * (-12 * ux + 5 * uy)).toFixed(1)} ${(k * (-12 * uy - 5 * ux)).toFixed(1)} M${x} ${y} l${(k * (-12 * ux - 5 * uy)).toFixed(1)} ${(k * (-12 * uy + 5 * ux)).toFixed(1)}`;
+      return `<g class="${cls} grain"><path d="M${ax} ${ay} L${bx} ${by} ${head(bx, by, 1)} ${head(ax, ay, -1)}" fill="none"/></g>`;
+    }
+    const r = Math.max(2.5, (size / 2) * this.scale);
+    if (s.kind === "button") return `<g class="${cls}"><circle cx="${ax}" cy="${ay}" r="${r}" fill="none"/><circle cx="${ax - r / 3}" cy="${ay}" r="${Math.max(1, r / 7)}"/><circle cx="${ax + r / 3}" cy="${ay}" r="${Math.max(1, r / 7)}"/></g>`;
+    if (s.kind === "drill") return `<g class="${cls}"><circle cx="${ax}" cy="${ay}" r="${r}" fill="none"/><path d="M${ax - r * 1.4} ${ay} H${ax + r * 1.4} M${ax} ${ay - r * 1.4} V${ay + r * 1.4}" fill="none"/></g>`;
+    return `<g class="${cls}"><path d="M${ax - r} ${ay} H${ax + r} M${ax} ${ay - r} V${ay + r}" fill="none" stroke-width="2"/></g>`;
+  }
+
+  private marksSvg(): string {
+    const out: string[] = [];
+    this.model.steps.forEach((s, i) => {
+      if (s.op === "mark" && !this.res.stepErrors.has(i)) out.push(this.symbolSvg(s));
+    });
+    const t = this.tool;
+    if (t?.build && (t.group === "الغرز" || t.group === "العلامات")) {
+      let picks = this.picks;
+      let values: Record<string, string> | null = null;
+      if (this.form) {
+        values = {};
+        $("#tool-box").querySelectorAll<HTMLInputElement>("[data-key]").forEach((el) => ((values as Record<string, string>)[el.dataset.key as string] = el.value.trim()));
+      } else if (this.hover && picks.length === t.picks.length - 1 && t.picks[picks.length].kind === this.hover.kind) picks = [...picks, this.hover];
+      else return out.join("");
+      try {
+        const ctx = { model: parseModel(JSON.stringify(this.model)), res: this.res, picks, extra: this.extra };
+        if (!values) values = Object.fromEntries((t.fields?.(ctx) ?? []).map((f) => [f.key, f.value]));
+        const st = t.build(ctx, values);
+        if (st.op === "mark") out.push(this.symbolSvg(st, true));
+      } catch {
+        /* incomplete */
+      }
+    }
+    return out.join("");
   }
 
   private dimsSvg(): string {
@@ -719,6 +900,14 @@ export class App {
       return `<text class="live-label" x="${x + 8}" y="${y - 8}" direction="ltr">\u2066${angle ? fmt(Math.round(deg * 10) / 10) + "° · " : ""}${fmt(Math.round(L * 10) / 10)} mm\u2069</text>`;
     };
     const objs = this.previewObjects();
+    if (this.tool?.frame && this.picks.length === 1) {
+      const [x1, y1] = this.toScreen(this.picks[0].at), [x2, y2] = this.toScreen(this.mouse);
+      out.push(`<rect x="${Math.min(x1, x2)}" y="${Math.min(y1, y2)}" width="${Math.abs(x2 - x1)}" height="${Math.abs(y2 - y1)}" fill="rgba(229,57,53,.08)" stroke="#e53935" stroke-dasharray="5 3"/>`);
+      const a = this.picks[0].at, b = this.mouse, X0 = Math.min(a[0], b[0]), X1 = Math.max(a[0], b[0]), Y0 = Math.min(a[1], b[1]), Y1 = Math.max(a[1], b[1]);
+      for (const o of this.res.objects.values())
+        if (this.kindOk(o.id, this.tool.remove ?? "all") && o.pts.every(([x, y]) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1))
+          out.push(o.kind === "point" ? `<circle cx="${this.toScreen(o.pts[0])[0]}" cy="${this.toScreen(o.pts[0])[1]}" r="5" fill="none" stroke="#e53935" stroke-width="2"/>` : `<polyline points="${o.pts.map((p) => this.toScreen(p).join(",")).join(" ")}" fill="none" stroke="#e53935" stroke-width="2.5"/>`);
+    }
     if (this.currentPickKind() === "point" && this.ptMode !== "free") {
       const [sx, sy] = this.toScreen(this.mouse);
       const c = this.modeCandidate(this.mouse, sx, sy);
@@ -1252,6 +1441,14 @@ export class App {
 
   private finishPicks(): void {
     const t = this.tool as Tool;
+    if (t.remove) {
+      const ids = t.frame ? this.inFrame(t.remove) : this.extra.map((p) => pickedId(p)).filter((id): id is number => id !== null && this.kindOk(id, t.remove as "points" | "lines" | "all"));
+      if (!ids.length) this.toast("لا يوجد ما يُحذف");
+      else this.removeObjects(new Set(ids));
+      this.restartTool();
+      this.render();
+      return;
+    }
     if (t.multi && this.extra.length < t.multi.min) {
       this.toast(t.multi.kind === "point" ? `حدد ${t.multi.min} نقاط على الأقل` : "لم تحدد أي عنصر");
       return;
@@ -1869,7 +2066,7 @@ export class App {
       if (JSON.stringify(h && { ...h, at: 0 }) !== JSON.stringify(this.hover && { ...this.hover, at: 0 })) {
         this.hover = h;
         this.render();
-      } else if ((this.tool?.key === "line" && this.picks.length === 1) || (this.collecting && this.tool?.multi?.kind === "point" && this.extra.length)) this.render(); // rubber band / curve
+      } else if ((this.tool?.frame && this.picks.length === 1) || (this.tool?.key === "line" && this.picks.length === 1) || (this.collecting && this.tool?.multi?.kind === "point" && this.extra.length)) this.render(); // rubber band / curve
     });
     svg.addEventListener(
       "wheel",
@@ -2111,7 +2308,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", pointOffset: "Point offset", dim: "Dimension",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", mark: "Symbol / stitch", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;
@@ -2205,6 +2402,59 @@ export class App {
         this.changed();
       },
     });
+  }
+
+  private kindOk(id: number, what: "points" | "lines" | "all"): boolean {
+    const o = this.res.objects.get(id);
+    return !!o && (what === "all" || (what === "points" ? o.kind === "point" : o.kind === "line"));
+  }
+
+  /** Objects lying wholly inside the frame of the two picked corners. */
+  private inFrame(what: "points" | "lines" | "all"): number[] {
+    const [a, b] = this.picks.map((p) => p.at);
+    if (!a || !b) return [];
+    const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    return [...this.res.objects.values()].filter((o) => this.kindOk(o.id, what) && o.pts.every(([x, y]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)).map((o) => o.id);
+  }
+
+  /** Delete objects: the steps that made them (or just their part of a multi step), and
+   * every later step that depends on them (after a confirmation). */
+  removeObjects(ids: Set<number>): void {
+    const del = new Set(ids);
+    let dependents = 0;
+    const keep: Step[] = [];
+    for (const st of this.model.steps) {
+      const made = createdIds(st), used = usedIds(st);
+      if (used.some((id) => del.has(id))) {
+        made.forEach((id) => del.add(id));
+        dependents++;
+        continue;
+      }
+      if (!made.some((id) => del.has(id))) {
+        keep.push(st);
+        continue;
+      }
+      if (made.every((id) => del.has(id))) continue;
+      // only some results of a multi step go
+      const s2 = JSON.parse(JSON.stringify(st)) as Step;
+      if (s2.op === "mirror" || s2.op === "scale") s2.items = s2.items.filter((it) => it.dst === undefined || !del.has(it.dst));
+      else if (s2.op === "inherit") s2.items = s2.items.filter((it) => !del.has(it.dst));
+      else if (s2.op === "parallels") {
+        const k = s2.ids.map((id, n) => (del.has(id) ? -1 : n)).filter((n) => n >= 0);
+        Object.assign(s2, { ids: k.map((n) => s2.ids[n]), of: k.map((n) => s2.of[n]), sides: k.map((n) => s2.sides[n]) });
+      }
+      keep.push(s2);
+    }
+    const pieces = (this.model.pieces ?? []).filter((pc) => !pc.edges.some((id) => del.has(id)));
+    const lostPieces = (this.model.pieces?.length ?? 0) - pieces.length;
+    if ((dependents || lostPieces) && !confirm(`${dependents ? `${dependents} خطوة تعتمد على العناصر المحذوفة` : ""}${dependents && lostPieces ? " و" : ""}${lostPieces ? `${lostPieces} قطعة` : ""} ستُحذف أيضاً. متابعة؟`)) return;
+    this.snapshot();
+    this.model.steps = keep;
+    this.model.pieces = pieces;
+    for (const id of del) delete this.model.names[id];
+    this.selectedStep = -1;
+    this.changed();
+    this.toast(`حُذف ${ids.size} عنصر${dependents ? ` و${dependents} خطوة تابعة` : ""}`);
   }
 
   private deleteStep(i: number): void {

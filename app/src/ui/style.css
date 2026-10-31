@@ -774,3 +774,56 @@ body.embedded .pwin #tab-partlist { display: block !important; flex: 1; overflow
 .ih-list li i { color: var(--muted); font-style: normal; font-size: 11px; }
 .ih-all { padding: 5px 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; align-items: center; }
 .pwin { display: none; }
+
+/* 0.9.136 stitch lines and symbols */
+:root { --mark: #c77d0a; }
+body.dark { --mark: #f0b44c; }
+#canvas g.mark { stroke: var(--mark); stroke-width: 1.3; fill: var(--mark); }
+#canvas g.mark polyline, #canvas g.mark path { fill: none; }
+#canvas g.mark.live { stroke: var(--live); fill: var(--live); }
+#canvas g.mark.grain { stroke-width: 1.6; }
+
+/* 0.9.136 parts strip (as GRAFIS): permanent / dynamic / off */
+.part-strip { position: absolute; top: 0; bottom: 30px; left: 0; z-index: 5; width: 92px; display: flex; flex-direction: column; direction: ltr;
+  background: var(--surface); border-right: 1px solid var(--border); transition: transform 0.15s; }
+.part-strip[data-mode="dynamic"] { transform: translateX(-84px); }
+.part-strip[data-mode="dynamic"]:hover { transform: none; box-shadow: 6px 0 18px rgba(0, 0, 0, 0.35); }
+.part-strip[data-mode="off"] { width: 28px; }
+.part-strip[data-mode="off"] .ps-list { display: none; }
+.part-strip[data-mode="off"] .ps-head { flex-direction: column; }
+.ps-head { display: flex; gap: 2px; padding: 3px; border-bottom: 1px solid var(--border); }
+.ps-head button { flex: 1; height: 22px; padding: 0; font-size: 11px; border: 1px solid transparent; background: transparent; opacity: 0.55; }
+.ps-head button.on { opacity: 1; border-color: var(--live); }
+.ps-list { flex: 1; overflow-y: auto; padding: 3px; display: flex; flex-direction: column; gap: 4px; }
+.ps-item { display: grid; grid-template-columns: 22px 1fr; gap: 2px; cursor: pointer; border-left: 3px solid transparent; }
+.ps-item.act { border-left-color: var(--live); }
+.ps-item .ps-side { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 600 11px Consolas, monospace; color: var(--muted); }
+.ps-item.act .ps-side b { color: var(--live); }
+.ps-item .ps-side button { width: 20px; height: 18px; padding: 0; border: none; background: transparent; font-size: 11px; opacity: 0.3; }
+.ps-item .ps-side button.on { opacity: 1; }
+.ps-item svg { width: 100%; height: 74px; background: #000; border: 1px solid var(--border); }
+.ps-item svg .rec-old { fill: none; stroke: #e8e8e8; }
+.ps-item svg circle.rec-old { fill: #e8e8e8; stroke: none; }
+.ps-item.act svg .rec-old { stroke: #2fa4dd; }
+.ps-item:hover svg { border-color: var(--accent); }
+body.embedded .hist-bar { left: 104px; }
+
+/* 0.9.136 Product info (as GRAFIS 2026) */
+.product-win { width: min(1080px, calc(100vw - 30px)); top: 40px; right: 15px; }
+.pi-grid { display: grid; grid-template-columns: 1fr 1.25fr 0.9fr; gap: 14px; align-items: start; }
+.pi-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pi-f { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.pi-f input { height: 26px; }
+.pi-t { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.pi-t textarea { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 6px; resize: vertical; }
+.pi-img-head { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.pi-img-head span { flex: 1; }
+.pi-img-head button { width: 26px; height: 24px; padding: 0; border: 1px solid transparent; background: transparent; }
+.pi-img-head .pi-x { color: var(--danger); }
+.pi-pic { height: 150px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.pi-img.small .pi-pic { height: 70px; }
+.pi-pic img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.pi-ro { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.pi-ro b { color: var(--text); font: 600 13px Consolas, monospace; }
+.pi-sizes { height: 120px; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 6px; font: 12px Consolas, monospace; color: var(--text); }
+.pi-foot { padding: 0 12px 12px; }

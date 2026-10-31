@@ -139,6 +139,7 @@ if (embedded && window.parent !== window) {
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);
     else if (action === "confirm") app.confirmStep();
+    else if (action === "product") app.openProduct();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);

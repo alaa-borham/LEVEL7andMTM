@@ -60,6 +60,9 @@ export type Step =
   /** Mirror about a line (axis), the line through two points (axisPts), or the line
    * through a point at an angle (axisAt + axisAngle). dst set = copy, else move. */
   | { op: "mirror"; axis?: number; axisPts?: [PointRef, PointRef]; axisAt?: PointRef; axisAngle?: string; items: { src: number; dst?: number }[] }
+  /** Marks (annotation only): stitch lines along a line / curve on one side at a distance,
+   * a grain line between two points, or a symbol (button, drill hole, cross) at a point. */
+  | { op: "mark"; kind: "lock" | "double" | "zigzag" | "deco" | "gather" | "grain" | "button" | "drill" | "cross"; obj?: number; side?: 1 | -1; a?: PointRef; b?: PointRef; size: string }
   /** Objects inherited from an earlier part (linked: they follow the source part). */
   | { op: "inherit"; part: number; items: { src: number; dst: number }[] }
   /** Scale about a centre by factor %; with angle: only along that direction (stretch). */
@@ -88,6 +91,8 @@ export interface Model {
    * names / nextId / pieces; parts[activePart] holds it again whenever it is synced. */
   parts?: Part[];
   activePart?: number;
+  /** Product info (as GRAFIS): texts, and images as data URLs (logo, sketches, fabric). */
+  product?: Record<string, string>;
 }
 
 /** A size (or a customer for made-to-measure): values that replace the base measurements. */
@@ -352,6 +357,12 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
           break;
         }
+        case "mark": {
+          if (s.obj !== undefined) needLine(s.obj);
+          for (const r of [s.a, s.b]) if (r) pointOf(r);
+          vars.eval(s.size || "0");
+          break;
+        }
         case "inherit": {
           const me = model.parts?.[model.activePart ?? 0]?.no ?? Infinity;
           if (!(s.part < me)) throw new Error("الوراثة من بارت سابق فقط");
@@ -535,6 +546,7 @@ export function createdIds(s: Step): number[] {
     case "setLength":
     case "trim":
     case "dim":
+    case "mark":
       return [];
     case "corner":
       return s.id === undefined ? [] : [s.id];
@@ -575,6 +587,8 @@ export function usedIds(s: Step): number[] {
       return s.of;
     case "inherit":
       return [];
+    case "mark":
+      return [...(s.obj !== undefined ? [s.obj] : []), ...[s.a, s.b].filter((r): r is PointRef => !!r).map((r) => r.obj)];
     case "setLength":
       return [s.target];
     case "trim":

@@ -13,10 +13,17 @@ const GLYPH = {
   line: 'line', lineAngle: 'angle', parallel: 'parallel', parallelMany: 'offsetEnds', setLength: 'lengthTo', trim: 'cutEnd',
   cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
   dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
+  stitchLock: 'stitchLock', stitchDouble: 'stitchDouble', stitchZigzag: 'stitchZigzag', stitchDeco: 'stitchDeco', stitchGather: 'stitchGather',
+  grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
+  delPoints: 'delPoints', delLines: 'delLines', delPointsFrame: 'delFrame', delLinesFrame: 'delFrame', delAllFrame: 'delFrame',
   inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
+  stitchLock: 'انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها، ثم اكتب بعدها عن الحافة.', stitchDouble: 'انقر الخط أو المنحنى في جهة الغرزة المزدوجة، ثم اكتب البعد.', stitchZigzag: 'انقر الخط أو المنحنى في جهة غرزة الزجزاج، ثم اكتب البعد.', stitchDeco: 'انقر الخط أو المنحنى في جهة الغرز الزخرفية، ثم اكتب البعد.', stitchGather: 'انقر الخط أو المنحنى في جهة الكشكشة، ثم اكتب البعد.',
+  grainLine: 'انقر بداية خط النسيج ثم نهايته.', symButton: 'انقر موضع الزر ثم اكتب قطره.', symDrill: 'انقر موضع الثقب ثم اكتب قطره.', symCross: 'انقر موضع العلامة.',
+  delPoints: 'انقر النقاط واحدة واحدة ثم Enter أو كليك يمين؛ ما يعتمد عليها يُسأل عنه قبل الحذف.', delLines: 'انقر الخطوط والمنحنيات ثم Enter أو كليك يمين.',
+  delPointsFrame: 'انقر ركني إطار: تُحذف النقاط الواقعة داخله بالكامل.', delLinesFrame: 'انقر ركني إطار: تُحذف الخطوط والمنحنيات الواقعة داخله بالكامل.', delAllFrame: 'انقر ركني إطار: يُحذف كل ما داخله.',
   inheritObjects: 'يفتح نافذة: اختر بارتاً سابقاً ثم العناصر؛ تُنسخ إلى البارت النشط وتبقى مرتبطة بالأصل.',
   inheritPart: 'يفتح نافذة: اختر بارتاً سابقاً فتُنسخ كل عناصره إلى البارت النشط مرتبطة بالأصل.',
   mirrorPts: 'انقر نقطتي محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين؛ اختر نسخة أو نقل.',
@@ -82,7 +89,7 @@ export function installDesignMode() {
   // Command bar in the style of the program's own toolbox, with the same shortcuts.
   const icon = id => `<svg aria-hidden="true"><use href="#icon-${id}"/></svg>`, letter = t => `<span class="palette-letter" aria-hidden="true">${t}</span>`;
   const bar = [
-    [['save', icon('save'), 'Save', 'حفظ التصميم · Ctrl+S']],
+    [['product', icon('info'), 'Info', 'معلومات المنتج · Product info'], ['save', icon('save'), 'Save', 'حفظ التصميم · Ctrl+S']],
     [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
     [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع'], ['tab-partlist', icon('parts'), 'Parts', 'البارتات (تنظيم البارتات) · Ctrl+T']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
@@ -245,6 +252,7 @@ export function installDesignMode() {
   const run = action => {
     if (action === 'open') void openDesign();
     else if (action === 'new') { send({ type: 'l7:new' }); status('تصميم جديد'); }
+    else if (action === 'product') send({ type: 'l7:action', action: 'product' });
     else send({ type: 'l7:action', action });
   };
   const markTab = actions => { for (const b of barBox.querySelectorAll('[data-l7d-command^="tab-"]')) b.setAttribute('aria-pressed', String(actions.includes(b.dataset.l7dCommand))); };

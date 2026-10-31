@@ -54,6 +54,12 @@ export function describe(s: Step, m: Model): string {
       const axis = s.axisPts ? `${pr(s.axisPts[0])}–${pr(s.axisPts[1])}` : s.axisAt ? `${pr(s.axisAt)} بزاوية ${e((s.axisAngle ?? "90") + "°")}` : n(s.axis as number);
       return `انعكاس حول ${axis} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;
     }
+    case "mark": {
+      const k = { lock: "غرزة مستقيمة", double: "غرزة مزدوجة", zigzag: "غرزة زجزاج", deco: "غرز زخرفية", gather: "كشكشة", grain: "خط النسيج (البوصلة)", button: "زر", drill: "ثقب", cross: "علامة +" }[s.kind];
+      if (s.obj !== undefined) return `${k} على ${n(s.obj)} بمسافة ${e(s.size)}`;
+      if (s.kind === "grain") return `${k} من ${pr(s.a as PointRef)} إلى ${pr(s.b as PointRef)}`;
+      return `${k} عند ${pr(s.a as PointRef)} بحجم ${e(s.size)}`;
+    }
     case "inherit":
       return `وراثة من البارت ${e(String(s.part).padStart(3, "0"))}: ${s.items.map((it) => n(it.dst)).join("، ")}`;
     case "scale": {

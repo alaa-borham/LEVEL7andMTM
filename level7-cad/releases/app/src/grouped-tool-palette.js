@@ -117,6 +117,20 @@ Object.assign(glyphs,{
  scalePts:'<path class="ink" d="M8 52V34H26V52Z"/><path class="ink" d="M8 52V10H50V52Z" stroke-dasharray="3 3"/><path class="blue" d="M24 36L46 14M46 14H38M46 14V22"/><circle class="dot" cx="8" cy="52" r="3"/>',
  scaleDir:'<path class="ink" d="M8 52V30H24V52Z"/><path class="ink" d="M8 52V30H52V52Z" stroke-dasharray="3 3"/><path class="blue" d="M26 20H50M50 20L44 16M50 20L44 24"/><circle class="dot" cx="8" cy="52" r="3"/>'
 });
+// 0.9.136: stitch lines, symbols and delete tools of the LEVEL7 design
+Object.assign(glyphs,{
+ stitchLock:'<path class="ink" d="M6 22H54"/><path class="blue" stroke-dasharray="6 3" d="M6 32H54"/>',
+ stitchDouble:'<path class="ink" d="M6 18H54"/><path class="blue" stroke-dasharray="6 3" d="M6 28H54M6 38H54"/>',
+ stitchZigzag:'<path class="ink" d="M6 20H54"/><path class="blue" d="M6 36L11 30L16 36L21 30L26 36L31 30L36 36L41 30L46 36L51 30L54 33"/>',
+ stitchDeco:'<path class="ink" d="M6 20H54"/><path class="blue" d="M6 30H54M10 30V40M18 30V40M26 30V40M34 30V40M42 30V40M50 30V40"/>',
+ stitchGather:'<path class="ink" d="M6 20H54"/><path class="blue" d="M6 34C9 28 13 28 16 34S23 40 26 34 33 28 36 34 43 40 46 34 53 28 54 31"/>',
+ symButton:'<circle class="ink" cx="30" cy="30" r="16"/><circle class="dot" cx="24" cy="30" r="3"/><circle class="dot" cx="36" cy="30" r="3"/>',
+ symDrill:'<circle class="ink" cx="30" cy="30" r="9"/><path class="blue" d="M14 30H46M30 14V46"/>',
+ symCross:'<path class="blue" d="M16 30H44M30 16V44"/>',
+ delPoints:'<circle class="dot" cx="16" cy="40" r="3"/><circle class="dot" cx="28" cy="28" r="3"/><circle class="dot" cx="40" cy="18" r="3"/><path stroke="#e53935" stroke-width="3" d="M38 38L52 52M52 38L38 52"/>',
+ delLines:'<path class="ink" d="M10 44L34 14M18 48L42 18"/><path stroke="#e53935" stroke-width="3" d="M38 38L52 52M52 38L38 52"/>',
+ delFrame:'<path class="ink" stroke-dasharray="4 3" d="M8 10H44V42H8Z"/><circle class="dot" cx="18" cy="30" r="3"/><path class="blue" d="M22 20L36 34"/><path stroke="#e53935" stroke-width="3" d="M40 40L54 54M54 40L40 54"/>'
+});
 /** 0.9.118: the design engine palette reuses these drawings. */
 export function toolIcon(name){return Object.hasOwn(glyphs,name)?icon(name):'';}
 function icon(name){if(!Object.hasOwn(glyphs,name))throw Error('Missing tool icon: '+name);return `<svg viewBox="0 0 60 60" data-tool-icon="${name}" data-icon-revision="73" aria-hidden="true" focusable="false">${glyphs[name]}</svg>`;}
