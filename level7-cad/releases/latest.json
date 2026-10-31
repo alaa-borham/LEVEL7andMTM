@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.141",
- "notes": "ملفات قص ISO (Bullmer / FK / Yin) من ملف تعشيق DXF أو PLT",
+ "version": "0.9.142",
+ "notes": "PLT بعد التعشيق بجانب ISO",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "aa12868fe030971cada8df3070c21f5840a9611eb2c176bc927f443f7bbe6d93",
-   "size": 131860
+   "sha256": "26a6946847ee01c509c5b5aed8e5a76a4661f0a502f6cd1c7a0290ab2b762ccf",
+   "size": 132205
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BNMZgzjc.js",
-   "sha256": "cbc36b996557a27ba54c4e867ac9921fd5b1c00388a6cef8e37dcc16434fae74",
-   "size": 223524
+   "path": "assets/l7design/assets/index-BLXrdiWu.js",
+   "sha256": "3803ea53656441738b75a47a0cbf0d9352584f169f98a229974f65e44e4272ad",
+   "size": 224636
   },
   {
    "path": "assets/l7design/assets/index-tCW5ave4.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "ee2e404e3e72f4b9df32d3bdbb0253bb476181a8bf3f251e9c9df02b018cb194",
+   "sha256": "e6cb38747078e0e298b77d5fee609bb88ac270dff6283c22c364b2b99e54a57a",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "b22d902b53f5ffab95319bad9159e14b1632b494c6d98f85494d69b2fa73fa04",
+   "sha256": "62a9ecadbf8117d139d39bad1b2c7d4acc4a4728b72a85bb0b6cb5635df193e6",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "6b95352721eb1449bacfa846e0fea869043419163ddbfb56ef4136688c315510",
-   "size": 32139
+   "sha256": "602b5c217ce0bf636f34e99d86a62cf8a5f3a522d36b479026dbe7cb805f3859",
+   "size": 32181
   },
   {
    "path": "src/line-transform-ui.js",

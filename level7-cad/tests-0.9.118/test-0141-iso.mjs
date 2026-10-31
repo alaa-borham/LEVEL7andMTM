@@ -1,4 +1,4 @@
-// 0.9.141: ISO cutter file (Gerber ISO for Bullmer / FK / Yin) from a marker nested in another
+// 0.9.141: ISO and PLT cutter files (Gerber ISO for Bullmer / FK / Yin) from a marker nested in another
 // program (DXF). Usage: L7_SRC=<app dir> xvfb-run -a node test-0141-iso.mjs
 import path from'node:path';import fs from'node:fs/promises';import os from'node:os';import assert from'node:assert/strict';import{_electron}from'file:///opt/node-tools/node_modules/playwright/index.mjs';
 const src=process.env.L7_SRC;const env={...process.env,LOCALAPPDATA:await fs.mkdtemp(path.join(os.tmpdir(),'iso-'))};delete env.ELECTRON_RUN_AS_NODE;
@@ -24,5 +24,11 @@ try{
  assert.deepEqual(b.slice(0,5),['H1','M20','nested thobe/L=1000.0/W=500.0','N1','G71']);assert.equal(b.at(-1),'M0');
  assert.equal(b.filter(s=>s==='M43').length,2);assert.equal(b.filter(s=>s==='M14').length,4);assert(b.includes('X3000Y5000')&&b.includes('X10000Y0'),iso.slice(0,400));
  pass('ISO saved: H1 / M20 / N / G71 header, 2 drills (M43), 2 notch slits + 2 outlines (M14), 0.1 mm units, M0 at the end');
+ const outP=path.join(dir,'nested thobe cut.plt');await app.evaluate(({dialog},o)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:o});},outP);
+ await win.locator('[data-iso="plt"]').click();for(let k=0;k<60&&!(await fs.stat(outP).catch(()=>null));k++)await page.waitForTimeout(100);
+ const plt=await fs.readFile(outP,'utf8');
+ assert(plt.startsWith('IN;SP1;')&&plt.includes('SP2;')&&plt.trimEnd().endsWith('PU;SP0;'),plt.slice(0,200));
+ assert.equal((plt.split('SP2')[0].match(/PD/g)||[]).length,4);// pen 1: 2 notch slits + 2 outlines
+ pass('PLT saved from the same window: pen 1 cut lines (2 notches + 2 outlines), pen 2 sewing lines and drill crosses');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

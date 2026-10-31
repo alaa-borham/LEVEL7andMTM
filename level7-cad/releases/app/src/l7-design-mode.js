@@ -106,7 +106,7 @@ export function installDesignMode() {
     [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4'], ['lengths', letter('mm'), 'F8', 'إظهار أطوال الخطوط والمنحنيات · F8'], ['images', letter('🖼'), 'F9', 'صور الخلفية للتتبع (F9 إظهار/إخفاء)'], ['arrange', icon('dock'), 'Arrange', 'ترتيب البارتات: كل البارتات بصور كبيرة']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],
     [['new', icon('new'), 'New', 'تصميم جديد · Ctrl+N'], ['open', icon('open'), 'Open', 'فتح تصميم · Ctrl+O']],
-    [['marker', letter('✂'), 'Marker', 'التعشيق: كل بارتات الإنتاج بكل المقاسات والكميات (ملف AAMA واحد)'], ['iso', letter('ISO'), 'ISO', 'ملف قص ISO لماكينة القص (Bullmer / FK / Yin) من ملف تعشيق DXF أو PLT'], ['aama', letter('AAMA'), 'Ctrl+E', 'تصدير القطع DXF-AAMA للتعشيق · Ctrl+E'], ['dxf', letter('DXF'), 'DXF', 'تصدير خطوط البناء DXF'], ['plt', letter('PLT'), 'PLT', 'تصدير القطع PLT للبلوتر']]
+    [['marker', letter('✂'), 'Marker', 'التعشيق: كل بارتات الإنتاج بكل المقاسات والكميات (ملف AAMA واحد)'], ['iso', letter('ISO'), 'ISO/PLT', 'ملف القص بعد التعشيق: ISO لماكينة القص (Bullmer / FK / Yin) أو PLT، من ملف تعشيق DXF أو PLT'], ['aama', letter('AAMA'), 'Ctrl+E', 'تصدير القطع DXF-AAMA للتعشيق · Ctrl+E'], ['dxf', letter('DXF'), 'DXF', 'تصدير خطوط البناء DXF'], ['plt', letter('PLT'), 'PLT', 'تصدير القطع PLT للبلوتر']]
   ];
   const barBox = host.querySelector('.l7-design-bar');
   for (const group of bar) {

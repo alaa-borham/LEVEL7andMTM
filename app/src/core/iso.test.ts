@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyModel, type Model } from "./model";
 import { markerItems, toAamaDxf, toPlt } from "./export";
-import { parseMarker, parseMarkerDxf, toIsoCut } from "./iso";
+import { parseMarker, parseMarkerDxf, toIsoCut, toMarkerPlt } from "./iso";
 
 function design(): Model {
   const m = emptyModel("thobe");
@@ -74,5 +74,28 @@ describe("ISO cutter file from a marker", () => {
     expect(m.pieces.length).toBe(2);
     expect(m.pieces.every((p) => p.notches.length === 1)).toBe(true);
     expect(m.skipped).toBe(4); // sewing and grain lines of pen 2
+  });
+});
+
+describe("PLT of the nested marker", () => {
+  it("pen 1 cut lines in ISO order, pen 2 other lines and drill crosses, reads back the same", () => {
+    const g = (...kv: (string | number)[]) => kv.map(String).join("\n");
+    const dxf = g(0, "SECTION", 2, "ENTITIES",
+      0, "LWPOLYLINE", 8, 1, 90, 4, 70, 1, 10, 0, 20, 0, 10, 100, 20, 0, 10, 100, 20, 50, 10, 0, 20, 50,
+      0, "LINE", 8, 4, 10, 100, 20, 25, 11, 95, 21, 25,
+      0, "POINT", 8, 13, 10, 20, 20, 25,
+      0, "LINE", 8, 7, 10, 50, 20, 10, 11, 50, 21, 40,
+      0, "ENDSEC", 0, "EOF") + "\n";
+    const m = parseMarkerDxf(dxf);
+    expect(m.draw.length).toBe(1); // the grain line
+    const plt = toMarkerPlt(m, { notches: "slit", drawing: true });
+    expect(plt.startsWith("IN;SP1;PU4000,1000;PD3800,1000;")).toBe(true); // the notch slit first
+    expect(plt).toContain("PU0,0;PD4000,0,4000,2000,0,2000,0,0;"); // then the outline, closed
+    expect(plt).toContain("SP2;PU2000,400;PD2000,1600;"); // grain line with pen 2
+    expect(plt.trim().endsWith("PU;SP0;")).toBe(true);
+    expect(toMarkerPlt(m, { notches: "none", drawing: false })).toBe("IN;SP1;PU0,0;PD4000,0,4000,2000,0,2000,0,0;PU;SP0;\n");
+    const back = parseMarker("x.plt", plt);
+    expect(back.pieces.length).toBe(1);
+    expect(back.pieces[0].notches.length).toBe(1);
   });
 });

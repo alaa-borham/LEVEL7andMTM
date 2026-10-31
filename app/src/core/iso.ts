@@ -17,6 +17,7 @@ export interface Marker {
   length: number; // mm along x
   width: number; // mm along y
   skipped: number; // lines that are not cut (sewing, grain, internal lines, text)
+  draw: P[][]; // those lines (no text), drawn by a plotter with pen 2
 }
 
 export interface IsoOptions {
@@ -49,7 +50,7 @@ const closedOf = (pts: P[]): P[] | null => (pts.length >= 4 && near(pts[0], pts[
 
 /** Group loose geometry into pieces: outer closed outlines are pieces; closed outlines inside
  * them are cut-outs; notches and drills go to the piece that holds them. */
-function assemble(closed: P[][], notches: P[][], drills: P[], skipped: number, open: P[][]): Marker {
+function assemble(closed: P[][], notches: P[][], drills: P[], skipped: number, open: P[][], draw: P[][] = []): Marker {
   const sorted = closed.filter((c) => Math.abs(area(c)) > 1).sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)));
   const pieces: MarkerPiece[] = [];
   for (const c of sorted) {
@@ -71,7 +72,7 @@ function assemble(closed: P[][], notches: P[][], drills: P[], skipped: number, o
     const a = o[0], b = o[o.length - 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
     const p = len <= 25 ? pieces.find((q) => distToEdge(a, q.cut) < 0.6 || distToEdge(b, q.cut) < 0.6) : undefined;
     if (p) p.notches.push(distToEdge(a, p.cut) <= distToEdge(b, p.cut) ? o : [...o].reverse());
-    else skipped++;
+    else (skipped++, draw.push(o));
   }
   const all = pieces.flatMap((p) => p.cut);
   const xs = all.map((q) => q[0]), ys = all.map((q) => q[1]);
@@ -84,8 +85,9 @@ function assemble(closed: P[][], notches: P[][], drills: P[], skipped: number, o
     p.notches = p.notches.map((n) => n.map(sh));
     p.drills = p.drills.map(sh);
   }
+  draw = draw.map((d) => d.map(sh));
   pieces.sort((a, b) => Math.min(...a.cut.map((q) => q[0])) - Math.min(...b.cut.map((q) => q[0])) || Math.min(...a.cut.map((q) => q[1])) - Math.min(...b.cut.map((q) => q[1])));
-  return { pieces, length: all.length ? Math.max(...xs) - x0 : 0, width: all.length ? Math.max(...ys) - y0 : 0, skipped };
+  return { pieces, length: all.length ? Math.max(...xs) - x0 : 0, width: all.length ? Math.max(...ys) - y0 : 0, skipped, draw };
 }
 
 // ---------- DXF (AAMA / ASTM marker, or a plain DXF of closed outlines) ----------
@@ -128,6 +130,7 @@ export function parseMarkerDxf(text: string): Marker {
 
   const closed: P[][] = [], notches: P[][] = [], drills: P[] = [], open: P[][] = [];
   let skipped = 0;
+  const draw: P[][] = [];
   const all: { e: Ent; m: M3 }[] = [];
   const walk = (ents: Ent[], m: M3, depth: number) => {
     for (const e of ents) {
@@ -154,14 +157,14 @@ export function parseMarkerDxf(text: string): Marker {
       continue;
     }
     if (pts.length < 2) continue;
-    if (r === "skip") { skipped++; continue; }
+    if (r === "skip") { skipped++; draw.push(pts); continue; }
     if (r === "notch") { notches.push([pts[0], pts[pts.length - 1]]); continue; }
     const c = e.closed || e.type === "CIRCLE" ? pts : closedOf(pts);
     if (c) closed.push(c);
     else if (r === "any") open.push(pts);
-    else skipped++;
+    else (skipped++, draw.push(pts));
   }
-  return assemble(closed, notches, drills, skipped, open);
+  return assemble(closed, notches, drills, skipped, open, draw);
 }
 function num(e: Ent, code: number, dflt = 0): number { const f = e.v.find(([c]) => c === code); return f ? Number(f[1]) || 0 : dflt; }
 function str(e: Ent, code: number): string { return e.v.find(([c]) => c === code)?.[1] ?? ""; }
@@ -212,7 +215,7 @@ export function parseMarkerPlt(text: string): Marker {
   const use = pens.size > 1 && pens.has(1) ? paths.filter((p) => p.pen === 1) : paths;
   const closed: P[][] = [], open: P[][] = [];
   for (const { pts } of use) (closedOf(pts) ? closed.push(closedOf(pts)!) : open.push(pts));
-  return assemble(closed, [], [], paths.length - use.length, open);
+  return assemble(closed, [], [], paths.length - use.length, open, paths.filter((p) => !use.includes(p)).map((p) => p.pts));
 }
 
 export function parseMarker(name: string, text: string): Marker {
@@ -247,4 +250,30 @@ export function toIsoCut(marker: Marker, o: IsoOptions): string {
   });
   b.push("M0");
   return b.map((s) => s + "*").join(o.newline ? "\r\n" : "") + "\r\n";
+}
+
+/** The nested marker as HPGL for plotters and cutters that read PLT: pen 1 the cut lines
+ * (cut-outs, notches, outlines in the same order as the ISO file), pen 2 the other lines and a
+ * cross on each drill hole. 40 plotter units per mm, same origin as the ISO file. */
+export function toMarkerPlt(marker: Marker, o: { notches: "slit" | "none"; drawing: boolean }): string {
+  const U = 40;
+  const c: string[] = ["IN", "SP1"];
+  const pt = (p: P) => `${Math.round(p[0] * U)},${Math.round(p[1] * U)}`;
+  const path = (pts: P[], close: boolean) => {
+    if (pts.length < 2) return;
+    c.push(`PU${pt(pts[0])}`, `PD${[...pts.slice(1), ...(close ? [pts[0]] : [])].map(pt).join(",")}`);
+  };
+  for (const p of marker.pieces) {
+    for (const h of p.holes) path(h, true);
+    if (o.notches === "slit") for (const n of p.notches) path(n, false);
+    path(p.cut, true);
+  }
+  if (o.drawing) {
+    c.push("PU", "SP2");
+    for (const d of marker.draw) path(d, false);
+    for (const p of marker.pieces)
+      for (const [x, y] of p.drills) path([[x - 3, y], [x + 3, y]], false), path([[x, y - 3], [x, y + 3]], false);
+  }
+  c.push("PU", "SP0");
+  return c.join(";") + ";\n";
 }

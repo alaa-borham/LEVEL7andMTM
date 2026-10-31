@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.142
+
+The cutter-file window after nesting (command bar "ISO/PLT") also saves the nested marker as HPGL .plt: pen 1 the cut lines in the same order as the ISO file (cut-outs, notches, outline last), pen 2 sewing / grain / internal lines and a cross on each drill hole (optional), 40 units per mm, same origin as the ISO file.
+
 LEVEL7 and MTM 0.9.141
 
 LEVEL7 design mode, command bar "ISO": cutter file in the ISO (Gerber ISO) format read by Bullmer, FK and Yin cutters, from a marker nested in another program and saved as AAMA / ASTM DXF (blocks with position, rotation, scale and mirror; LWPOLYLINE / POLYLINE / LINE / ARC / CIRCLE) or HPGL .plt. Metric 5.1 (G71, 0.1 mm), origin at the lower-left corner of the marker, one N block per piece: drill holes (M43) first, then internal cut-outs, notches as knife slits (optional), the outline last; knife M14 / M15, M0 at the end. Sewing, grain and internal lines are not cut.

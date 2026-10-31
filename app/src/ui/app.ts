@@ -3,7 +3,7 @@ import { FUNCTION_NAMES, normalizeFormula, references } from "../core/formula";
 import { fromBase64, readCsv, readXlsx, writeXlsx } from "../core/xlsx";
 import { importXTable, xTableRows } from "../core/xtable";
 import { allSizeItems, markerItems, toAamaDxf, toPlt } from "../core/export";
-import { parseMarker, toIsoCut, type Marker } from "../core/iso";
+import { parseMarker, toIsoCut, toMarkerPlt, type Marker } from "../core/iso";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
@@ -2888,24 +2888,26 @@ export class App {
     const el = document.createElement("section");
     el.className = "z-assistant marker-win iso-win";
     el.dir = "rtl";
-    el.innerHTML = `<div class="za-head"><b>ملف قص ISO</b><button data-iso="close">×</button></div><div class="za-body">
+    el.innerHTML = `<div class="za-head"><b>ملف القص بعد التعشيق · ISO / PLT</b><button data-iso="close">×</button></div><div class="za-body">
       <p dir="rtl"><b>${esc(name)}</b></p>
       <ul class="mk-list"><li>القطع: <b>${m.pieces.length}</b></li><li>طول التعشيق × العرض: <b><bdi dir="ltr">${m.length.toFixed(1)} × ${m.width.toFixed(1)} mm</bdi></b></li>
       <li>نوتشات: ${n((p) => p.notches.length)} · فتحات داخلية: ${n((p) => p.holes.length)} · ثقوب: ${n((p) => p.drills.length)}</li>
       ${m.skipped ? `<li>خطوط لا تُقص (خياطة / نسيج / نص): ${m.skipped}</li>` : ""}</ul>
       <label class="field-inline"><input type="checkbox" data-iso="notch" checked/> قص النوتشات بالسكين</label>
-      <label class="field-inline"><input type="checkbox" data-iso="nl" checked/> كل أمر في سطر</label>
-      <p class="iso-hint">الصيغة: Gerber ISO متري (G71، وحدة 0.1 mm)، السكين M14 / M15، الثقوب M43. الداخل يُقص قبل حد القطعة.</p>
-      <div class="za-foot"><button class="primary" data-iso="save">حفظ ملف ISO</button></div></div>`;
+      <label class="field-inline"><input type="checkbox" data-iso="nl" checked/> ISO: كل أمر في سطر</label>
+      <label class="field-inline"><input type="checkbox" data-iso="draw" checked/> PLT: رسم خطوط الخياطة والنسيج وعلامات الثقوب (القلم 2)</label>
+      <p class="iso-hint">الصيغة: Gerber ISO متري (G71، وحدة 0.1 mm)، السكين M14 / M15، الثقوب M43. الداخل يُقص قبل حد القطعة.<br/>PLT: HPGL، القلم 1 للقص بنفس الترتيب، 40 وحدة / mm.</p>
+      <div class="za-foot"><button class="primary" data-iso="save">حفظ ISO</button> <button class="primary" data-iso="plt">حفظ PLT</button></div></div>`;
     document.body.append(el);
     el.addEventListener("click", (e) => {
       const t = (e.target as HTMLElement).closest<HTMLElement>("[data-iso]")?.dataset.iso;
       if (t === "close") el.remove();
-      if (t !== "save") return;
+      if (t !== "save" && t !== "plt") return;
       const q = (k: string) => el.querySelector<HTMLInputElement>(`[data-iso="${k}"]`)!.checked;
-      download(`${base}.iso`, toIsoCut(m, { name: base, notches: q("notch") ? "slit" : "none", newline: q("nl") }), "text/plain");
-      el.remove();
-      this.toast(`ملف ISO: ${m.pieces.length} قطعة`);
+      const notches = q("notch") ? "slit" : "none";
+      if (t === "save") download(`${base}.iso`, toIsoCut(m, { name: base, notches, newline: q("nl") }), "text/plain");
+      else download(`${base} cut.plt`, toMarkerPlt(m, { notches, drawing: q("draw") }), "application/vnd.hp-hpgl");
+      this.toast(`ملف ${t === "save" ? "ISO" : "PLT"}: ${m.pieces.length} قطعة`);
     });
   }
 
