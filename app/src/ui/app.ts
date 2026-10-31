@@ -1,4 +1,5 @@
 import { toGradedAama } from "../core/aama-graded";
+import { normalizeFormula } from "../core/formula";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, directionAt, dist, lineIntersection, polyLen, type Pt } from "../core/geometry";
@@ -111,6 +112,7 @@ export class App {
     autosave(this.model);
     if (panels) this.renderPanels();
     else this.refreshValues();
+    this.refreshForm?.();
     this.render();
   }
 
@@ -648,6 +650,15 @@ export class App {
   angleStep = 1;
   private autoPoint: number | null = null;
 
+  private rightDown: { x: number; y: number } | null = null;
+
+  /** Right click: confirm the open value box (or finish a multi-pick); with nothing
+   * pending it ends the tool, so the next operation can be chosen. */
+  private rightConfirm(): void {
+    if (this.form || this.collecting) this.confirmStep();
+    else if (this.tool && !this.picks.length) this.cancelTool();
+  }
+
   /** Embedded mode: the ✓ of the step card (Enter). */
   confirmStep(): void {
     if (this.form) ($("#tool-box").querySelector("[data-ok]") as HTMLButtonElement | null)?.click();
@@ -750,7 +761,8 @@ export class App {
         .join("") +
       `<p class="hint">تقبل الحقول أرقاماً أو معادلات مثل Z6 أو X3/2+10</p>` +
       `<div class="buttons"><button class="primary" data-ok>موافق</button><button data-cancel>إلغاء</button></div>`;
-    const vars = new Vars(withSize(this.model), undefined, this.res.z);
+    // fresh every time: measurements may be added or changed while the box is open
+    const vars = { eval: (src: string) => new Vars(withSize(this.model), undefined, this.res.z).eval(src) };
     const optional = new Set(f.fields.filter((x) => x.optional).map((x) => x.key));
     const preview = (inp: HTMLInputElement) => {
       const out = box.querySelector(`[data-preview="${inp.dataset.key}"]`) as HTMLElement;
@@ -783,7 +795,8 @@ export class App {
         return [`Z${v.id}`, `Z${v.id}${val !== undefined ? " = " + fmt(val) : ""}${v.name ? " · " + v.name : ""}`];
       }),
     ];
-    if (refs.length) {
+    this.refreshForm = () => box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => preview(inp));
+    if (true) {
       const listId = "xz-refs";
       box.insertAdjacentHTML("beforeend", `<datalist id="${listId}">${refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</datalist>`);
       box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => {
@@ -793,6 +806,14 @@ export class App {
         pick.title = "اختر قياس X أو متغير Z";
         pick.setAttribute("aria-label", "قائمة X و Z");
         pick.innerHTML = `<option value="">X / Z</option>` + refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+        pick.addEventListener("focus", () => {
+          const sizedNow = withSize(this.model);
+          const now: [string, string][] = [
+            ...sizedNow.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
+            ...this.model.variables.map((v): [string, string] => [`Z${v.id}`, `Z${v.id}${this.res.z.get(v.id) !== undefined ? " = " + fmt(this.res.z.get(v.id) as number) : ""}${v.name ? " · " + v.name : ""}`]),
+          ];
+          pick.innerHTML = `<option value="">X / Z</option>` + now.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+        });
         pick.addEventListener("change", () => {
           const ref = pick.value;
           pick.value = "";
@@ -871,8 +892,11 @@ export class App {
     this.updatePrompt();
   }
 
+  private refreshForm: (() => void) | null = null;
+
   private closeForm(): void {
     this.form = null;
+    this.refreshForm = null;
     const box = $("#tool-box");
     box.hidden = true;
     box.innerHTML = "";
@@ -882,15 +906,37 @@ export class App {
   private bindCanvas(): void {
     const svg = this.svg;
     svg.addEventListener("contextmenu", (e) => e.preventDefault());
+    // double-click a line, curve or point: open its step with its values (angle, length, X/Z ...)
+    svg.addEventListener("dblclick", (e) => {
+      const r = svg.getBoundingClientRect();
+      if (this.tool && !this.form && this.picks.length) this.backStep(); // undo the first click's pick
+      const h = this.hit("object", e.clientX - r.left, e.clientY - r.top);
+      const id = h && pickedId(h);
+      if (id === null || id === undefined) return;
+      let i = -1;
+      this.model.steps.forEach((st, k) => {
+        if (createdIds(st).includes(id)) i = k;
+      });
+      if (i < 0) return;
+      this.cancelTool();
+      if (stepFields(this.model.steps[i]).length) this.editStep(i);
+      else {
+        this.selectedStep = i;
+        this.renderSteps();
+        this.render();
+        this.toast(`الخطوة ${i + 1} ليس لها قيم للتعديل`);
+      }
+    });
     svg.addEventListener("mousedown", (e) => {
       svg.focus();
+      if (e.button === 2) this.rightDown = { x: e.clientX, y: e.clientY };
       if (e.button === 1 || e.button === 2) {
         this.pan = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
         svg.classList.add("panning");
         e.preventDefault();
         return;
       }
-      if (e.button !== 0) return;
+      if (e.button !== 0 || e.detail >= 2) return; // the second click of a double-click edits (below)
       if (this.form?.live?.submit) {
         this.form.live.submit();
         return;
@@ -903,7 +949,11 @@ export class App {
       else if (kind === "point" && this.tool && !this.collecting) this.onPick(this.freePointAt(this.toWorld(e.clientX - r.left, e.clientY - r.top)));
       else if (kind !== "canvas") this.toast(kind === "line" ? "انقر على خط" : "انقر على نقطة أو طرف خط");
     });
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
+      // right click without dragging = confirm the step (as in GRAFIS); dragging pans
+      const rd = this.rightDown;
+      this.rightDown = null;
+      if (e.button === 2 && rd && Math.hypot(e.clientX - rd.x, e.clientY - rd.y) < 5) this.rightConfirm();
       this.pan = null;
       svg.classList.remove("panning");
     });
@@ -1518,7 +1568,7 @@ export class App {
         }
         const row = this.model[key][Number(inp.dataset.i)] as unknown as Record<string, unknown>;
         if (inp.dataset.f === "value") {
-          const v = Number(inp.value);
+          const v = Number(normalizeFormula(inp.value).trim());
           if (inp.value === "" || Number.isNaN(v)) return;
           row.value = v;
         } else row[inp.dataset.f as string] = inp.value;

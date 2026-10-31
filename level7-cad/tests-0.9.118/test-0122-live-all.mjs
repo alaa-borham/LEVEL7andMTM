@@ -46,5 +46,19 @@ try{
  await page.keyboard.press('Escape');await tool('parallel');await page.mouse.click(...await at(100,0));await frame.locator('#tool-box [data-ok]').waitFor();
  await frame.locator('#tool-box input[data-key="dist"]').fill('X1');await f.evaluate(()=>{});await page.mouse.move(...await at(100,70),{steps:3});
  assert.equal(await f.evaluate(()=>document.querySelector('#tool-box input[data-key="dist"]').value),'X1');pass('a typed value is not changed by the mouse');
+ // 0.9.123: X added while the box is open is recognised; right click confirms; double-click edits.
+ await page.keyboard.press('Escape');await page.keyboard.press('Escape');await tool('lineAngle');await page.mouse.click(...await at(150,150));await frame.locator('#tool-box [data-ok]').waitFor();
+ await f.evaluate(()=>{const a=window.level7;a.model.measurements.push({id:2,name:'',value:80});a.changed();});
+ await frame.locator('#tool-box input[data-key="angle"]').fill('-90');await frame.locator('#tool-box input[data-key="length"]').fill('X2');
+ await f.waitForFunction(()=>!document.querySelector('#tool-box input[data-key="length"]').classList.contains('bad'));
+ const n0=await f.evaluate(()=>window.level7.model.steps.length);const [rx,ry]=await at(120,60);await page.mouse.click(rx,ry,{button:'right'});
+ await f.waitForFunction(n=>window.level7.model.steps.length===n,n0+0).catch(()=>{});await f.waitForFunction(()=>window.level7.model.steps.at(-1).op==='lineAngle'&&window.level7.model.steps.at(-1).length==='X2');
+ pass('X2 added while the box is open is accepted; right click confirms the line');
+ await page.mouse.click(rx,ry,{button:'right'});await page.waitForFunction(()=>!document.querySelector('[data-l7d-tool][aria-pressed="true"]'));pass('a second right click ends the tool');
+ const id=await f.evaluate(()=>window.level7.model.steps.at(-1).id);const [mx,my]=await at(150,110);await page.mouse.dblclick(mx,my);
+ await frame.locator('#tool-box input[data-key="length"]').waitFor();assert.equal(await frame.locator('#tool-box input[data-key="length"]').inputValue(),'X2');
+ await frame.locator('#tool-box input[data-key="length"]').fill('50');await frame.locator('#tool-box input[data-key="length"]').press('Enter');
+ await f.waitForFunction(id=>{const o=window.level7.res.objects.get(id);return Math.abs(Math.hypot(o.pts[1][0]-o.pts[0][0],o.pts[1][1]-o.pts[0][1])-50)<1e-6;},id);
+ pass('double-click on the line opens angle and length (X2) and changes it to 50 mm');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.122",
- "notes": "الرسم الحي في كل الأدوات: الموازي والطول والنقاط والزوايا والقص",
+ "version": "0.9.123",
+ "notes": "كليك يمين للاعتماد؛ دابل كليك لتعديل الخط؛ إصلاح X غير موجود",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "4e532b104a99bb32130144a614452e653a2b247fea547f2e0991eef7d79e9b9e",
-   "size": 121200
+   "sha256": "ddd30ee842bdedfdd401f9aafe0d85bb3b5cc3477096e601aa260ab07b6b1367",
+   "size": 121627
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 7884
   },
   {
-   "path": "assets/l7design/assets/index-DOPaLRqp.js",
-   "sha256": "73c0f3d499ccdabc5ac14a82d02ea20fb3f21dfa1b94bad0cab920dbbd16a740",
-   "size": 90982
+   "path": "assets/l7design/assets/index-Bbagq21g.js",
+   "sha256": "a6c7c50136f1e3b90747102ed211bb984c58439b8b6825e6e2835d0b09edf526",
+   "size": 92387
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "1b9f6662e3ec6dc0353d83f890b01bfbedeed7217d2741a7df31331bb7bc7502",
+   "sha256": "4cafab13842b6a5e47d37e98c545869ce34fe654a8cdab2ccab868f37ef986b4",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "9dee4e1f429aabe56e5a91667fb40a62c4d1770414e0c1518ad76a567222af1d",
+   "sha256": "a50d727edbe4660811c9f01120be7e72fc06c7e88479d603b3452672c6ab43f3",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "1c05152d17ad5c691c80f2b5afcba4bda7aa7571f08624d09360bfcf01d8bb8c",
-   "size": 18970
+   "sha256": "a2f3ea2381dd1e865de3251a384b6fbd777617d5921ea5d7128b10410523b61a",
+   "size": 19080
   },
   {
    "path": "src/line-transform-ui.js",

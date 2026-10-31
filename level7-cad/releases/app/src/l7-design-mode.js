@@ -161,7 +161,7 @@ export function installDesignMode() {
       guide.dataset.tool = t.key;
       guide.querySelector('.l7g-title').textContent = t.name;
       guide.querySelector('.l7g-pic').innerHTML = toolIcon(GLYPH[t.key] || 'point'); decorate(guide);
-      guide.querySelector('.l7g-text').textContent = (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' Esc للإلغاء.';
+      guide.querySelector('.l7g-text').textContent = (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' كليك يمين أو Enter للاعتماد، Esc للإلغاء. دابل كليك على أي عنصر لتعديل قيمه.';
     } else if (!t) delete guide.dataset.tool;
   };
   const openDesign = async () => {

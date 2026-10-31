@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.123
+
+LEVEL7 design mode: a right click (without dragging) confirms the step, a second one ends the tool; right-drag still pans. Double-click a line, curve or point to open its step with its values (angle, length, X/Z list) and change them. Measurements added while a value box is open are recognised at once (the box no longer reports "X2 not found"), and Arabic-Indic digits typed in the X table are read.
+
 LEVEL7 and MTM 0.9.122
 
 Live drawing in every tool of the LEVEL7 design mode: the result is drawn in the live colour while the value box is open, and before the last click when hovering the final element (intersection, trim/extend, corners, lines). The mouse sets the value for parallel (distance and side), point on line, point moved along a line, line length, round corner radius and chamfer distance; values round to a step that suits the zoom; a typed value stays fixed; a click on the drawing or Enter confirms.
