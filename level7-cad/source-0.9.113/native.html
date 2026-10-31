@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>LEVEL7 and MTM — Native MDL</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="stylesheet" href="src/native.css">
+  <link rel="stylesheet" href="src/point-construction.css">
+  <link rel="stylesheet" href="src/xz-workspace.css">
+  <link rel="stylesheet" href="src/parameter-layout.css">
+  <link rel="stylesheet" href="src/values-classic-layout.css">
+  <link rel="stylesheet" href="src/ux-0112.css">
+  <link rel="stylesheet" href="src/ui-0113.css">
+<style>#construction-options{font-size:11px;margin:5px 0 9px;line-height:1.6}#construction-options label{display:block;margin-bottom:5px}#construction-options input{display:block;width:100%;min-width:0;box-sizing:border-box;height:29px;font-size:12px}#construction-options small{display:block;margin-top:5px;color:#41627a}#construction-options #construction-error{color:#a22e21}</style></head>
+<body>
+  <svg class="symbol-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs><symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="icon-eye-off" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM3 3l18 18"/></symbol>
+      <symbol id="icon-new" viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5zM14 3v5h5M8 14h8M12 10v8"/></symbol>
+      <symbol id="icon-open" viewBox="0 0 24 24"><path d="M3 7h7l2 3h9l-3 10H3z"/><path d="M3 10V5h7l2 2h7v3"/></symbol>
+      <symbol id="icon-save" viewBox="0 0 24 24"><path d="M4 3h14l3 3v15H3V3z"/><path d="M7 3v7h10V3M7 21v-7h10v7"/></symbol>
+      <symbol id="icon-fit" viewBox="0 0 24 24"><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/><path d="M7 7h10v10H7z"/></symbol>
+      <symbol id="icon-point" viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="icon-line" viewBox="0 0 24 24"><path d="M5 19 19 5"/><rect x="3" y="17" width="4" height="4"/><rect x="17" y="3" width="4" height="4"/></symbol>
+      <symbol id="icon-move-line" viewBox="0 0 24 24"><path d="M3 18h10M8 13v10M14 4h7v7M21 4l-9 9M17 4h4v4"/><circle cx="3" cy="18" r="1.5"/><circle cx="13" cy="18" r="1.5"/></symbol>
+      <symbol id="icon-select" viewBox="0 0 24 24"><path d="m5 3 15 10-8 1-4 7z"/></symbol>
+      <symbol id="icon-history" viewBox="0 0 24 24"><path d="M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1"/></symbol>
+      <symbol id="icon-replay" viewBox="0 0 24 24"><path d="M7 3v18l14-9z"/></symbol>
+      <symbol id="icon-ruler" viewBox="0 0 24 24"><path d="M3 7h18v11H3zM6 7v6M10 7v4M14 7v6M18 7v4"/></symbol>
+      <symbol id="icon-curve" viewBox="0 0 24 24"><path d="M3 19C5 2 18 24 21 5"/></symbol>
+      <symbol id="icon-parallel" viewBox="0 0 24 24"><path d="M3 15 19 3M5 21 21 9"/></symbol>
+      <symbol id="icon-cut" viewBox="0 0 24 24"><path d="M5 3v18M3 12h18M15 7l-5 5 5 5"/></symbol>
+      <symbol id="icon-dart" viewBox="0 0 24 24"><path d="m3 21 9-17 9 17M12 4v17"/></symbol>
+      <symbol id="icon-corner" viewBox="0 0 24 24"><path d="M4 3v17h17M9 3v12h12"/></symbol>
+      <symbol id="icon-mirror" viewBox="0 0 24 24"><path d="M12 2v20M3 18 8 6v12zM21 18 16 6v12z"/></symbol>
+      <symbol id="icon-rotate" viewBox="0 0 24 24"><path d="M19 8A8 8 0 1 0 20 15M15 8h5V3"/></symbol>
+      <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M6 4 19 20M19 4 6 20"/></symbol>
+      <symbol id="icon-grade" viewBox="0 0 24 24"><path d="M3 21V9h9v12M7 21V5h9v16M11 21V2h10v19"/></symbol>
+      <symbol id="icon-undo" viewBox="0 0 24 24"><path d="M8 5 3 10l5 5M3 10h10a7 7 0 0 1 7 7v3"/></symbol>
+      <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 10v8M12 5v1"/></symbol>
+      <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 8a8 8 0 1 0 0 8M16 8h5V3"/></symbol>
+      <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M12 3v14M7 12l5 5 5-5M4 21h16"/></symbol>
+      <symbol id="icon-restore" viewBox="0 0 24 24"><path d="M8 3v13M3 11l5 5 5-5M16 3v13M11 11l5 5 5-5M3 21h18"/></symbol>
+      <symbol id="icon-dock" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 9h18M9 13h6"/></symbol>
+      <symbol id="icon-parts" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 9h18M8 4v16M8 14h13M8 19h13"/></symbol>
+      <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></symbol>
+    </defs>
+  </svg>
+
+  <main id="native-shell" class="native-shell">
+    <header class="app-topbar">
+      <div class="app-brand"><img src="assets/icon.svg" width="19" height="19" alt=""><strong>LEVEL7 and MTM</strong></div>
+      <div class="document-tab"><span id="document-name">No style open</span><span class="file-type">MDL</span></div>
+      <span id="mode-badge" class="mode-badge">MDL</span>
+    </header>
+    <div class="commandbar">
+    <nav class="menubar" aria-label="Main menu">
+      <details class="menu" name="main-menu"><summary>File</summary><div class="menu-popup">
+<button type="button" data-action="new-template" id="menu-new">New in current measurement system<kbd>Ctrl+N</kbd></button>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >New …</button>
+<hr>
+<button type="button" data-action="open" >Open …<kbd>Ctrl+O</kbd></button>
+<button type="button" data-action="open-any" >Open (in any folder)<kbd>Ctrl+Shift+O</kbd></button>
+<button type="button" data-action="save-current" id="menu-save-current" disabled>Save<kbd>Ctrl+S</kbd></button>
+<button type="button" data-action="save-as" id="menu-save" disabled>Save As …</button>
+<button type="button" data-action="close-document" id="menu-close-document" disabled>Close<kbd>Ctrl+F4</kbd></button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >File options …</button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Change Current System …<kbd>Ctrl+W</kbd></button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Plot/Print …<kbd>Ctrl+P</kbd></button>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Plotter/Printer Setup …</button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Start Marker making</button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Export pattern pieces …<kbd>Ctrl+E</kbd></button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Import Grade Rule Pattern …<kbd>Ctrl+I</kbd></button>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Import (reduced) …</button>
+<hr>
+<button type="button" disabled data-file-pending="true" title="غير متاح بعد" >Last opened files　›</button>
+<hr>
+<button type="button" data-action="exit-app" id="menu-exit">Exit LEVEL7 and MTM<kbd>Alt+F4</kbd></button>
+</div></details>
+      <details class="menu" name="main-menu"><summary>Edit</summary><div class="menu-popup">
+        <button type="button" data-action="history">Construction record…</button>
+        <button type="button" data-action="undo" id="menu-undo" disabled>Undo<kbd>Ctrl+Z</kbd></button><button type="button" data-action="redo" id="menu-redo" disabled>Redo<kbd>Ctrl+Y</kbd></button>
+        <hr><button type="button" data-action="tool-select">Select / inspect</button>
+        <button type="button" data-action="fit">Drag / Zoom — Centre</button>
+      </div></details>
+      <details class="menu" name="main-menu"><summary>Extras</summary><div class="menu-popup">
+        <button type="button" data-action="part-properties" id="menu-part-properties" disabled>Part properties…<kbd>Ctrl+T</kbd></button>
+        <button type="button" data-action="measurements">Measurement Charts…</button>
+        <button type="button" data-action="history">Construction record…</button>
+        <hr>
+        <button type="button" data-action="x-values" id="menu-x-values" disabled>X Values…<kbd>Ctrl+X</kbd></button>
+        <button type="button" data-action="z-values" id="menu-z-values" disabled>Z Values…<kbd>F11</kbd></button>
+      </div></details>
+      <details class="menu" name="main-menu"><summary>View</summary><div class="menu-popup">
+        <button type="button" data-action="fit">Centre screen<kbd>F6</kbd></button>
+        <button type="button" data-action="zoom-in">Zoom in<kbd>+</kbd></button>
+        <button type="button" data-action="zoom-out">Zoom out<kbd>−</kbd></button>
+        <button type="button" data-action="refresh">Refresh screen<kbd>F4</kbd></button>
+        </div></details>
+      <details class="menu" name="main-menu"><summary>History</summary><div class="menu-popup">
+        <button type="button" data-action="replay" id="menu-replay" disabled>Test Run Active Part</button>
+        </div></details>
+      <details class="menu" name="main-menu"><summary>Help</summary><div class="menu-popup menu-popup-end">
+        <button type="button" data-action="file-info">Supported MDL records…</button>
+        <button type="button" data-action="file-info">About this implementation</button>
+<button type="button" data-action="open-parametric-example" id="menu-parametric-example">X/Z example…</button>
+        <button type="button" data-action="check-local-updates" id="check-local-updates" hidden>فحص التحديثات</button>
+      </div></details>
+    </nav>
+
+    </div>
+    <div id="toolbox-dock" class="toolbox-dock">
+      <section id="cad-toolbox" class="cad-toolbox" data-placement="floating" aria-label="Quick command toolbox">
+        <div class="toolbox-titlebar"><div id="toolbox-drag-handle" class="toolbox-handle" tabindex="0" role="group" aria-label="Move command toolbox" aria-describedby="toolbox-move-help" title="Move toolbox / تحريك صندوق الأدوات · Drag or arrow keys; Shift: 1 px; Home: dock"><span class="grip-dots" aria-hidden="true">⠿</span><span>LEVEL7 · Commands</span></div><button type="button" id="toolbox-placement-toggle" class="toolbox-placement-toggle" title="Dock toolbox to top / تثبيت الأدوات بالأعلى" aria-label="Dock toolbox to top"><svg aria-hidden="true"><use href="#icon-dock"/></svg><span>Dock</span></button></div>
+        <p id="toolbox-move-help" class="visually-hidden">Drag to move. Arrow keys move 10 pixels; Shift moves 1 pixel. Home docks to top. Escape cancels a drag.</p>
+        <div class="toolbox-commands" role="toolbar" aria-label="File, view and native commands">
+          <div class="palette-group"><button type="button" class="palette-command" data-action="save-as" id="toolbar-save" title="Save As MDL / حفظ نسخة · Ctrl+Shift+S" aria-label="Save As MDL / حفظ نسخة · Ctrl+Shift+S" disabled><svg aria-hidden="true"><use href="#icon-save"/></svg><small>Save</small></button></div>
+          <div class="palette-group"><button type="button" class="palette-command" data-action="fit" title="Centre active part / توسيط القطعة النشطة · F6" aria-label="Centre active part / توسيط القطعة النشطة · F6"><svg aria-hidden="true"><use href="#icon-fit"/></svg><small>F6</small></button><button type="button" class="palette-command" id="show-all-parts-command" data-action="show-all-parts" title="Show all parts / إظهار جميع البارتات · F5" aria-label="Show all parts / إظهار جميع البارتات · F5" disabled><svg aria-hidden="true"><use href="#icon-eye"/></svg><small>F5</small></button><button type="button" class="palette-command" data-action="refresh" title="Refresh screen / تحديث العرض · F4" aria-label="Refresh screen / تحديث العرض · F4"><svg aria-hidden="true"><use href="#icon-refresh"/></svg><small>F4</small></button><button type="button" class="palette-command" data-action="history" title="Construction record / سجل الإنشاء" aria-label="Construction record / سجل الإنشاء"><svg aria-hidden="true"><use href="#icon-history"/></svg><small>Record</small></button></div>
+          <div class="palette-group"><button type="button" class="palette-command" data-action="reset" title="Preview previous record / عرض خطوات سابقة" aria-label="Preview previous record / عرض خطوات سابقة" disabled><svg aria-hidden="true"><use href="#icon-reset"/></svg><small>Reset</small></button><button type="button" class="palette-command" data-action="restore" title="Restore record / استعادة الخطوات" aria-label="Restore record / استعادة الخطوات" disabled><svg aria-hidden="true"><use href="#icon-restore"/></svg><small>Restore</small></button><button type="button" class="palette-command" data-action="replay" title="Test Run active part / إعادة حساب القطعة المعتمدة" aria-label="Test Run active part / إعادة حساب القطعة المعتمدة" disabled><svg aria-hidden="true"><use href="#icon-replay"/></svg><small>Run</small></button></div>
+          <div class="palette-group"><button type="button" class="palette-command" data-action="x-values" id="quick-x-values" title="X Values / قيم X · Ctrl+X" aria-label="X Values / قيم X · Ctrl+X" disabled><span class="palette-letter" aria-hidden="true">X</span><small>Ctrl+X</small></button><button type="button" class="palette-command" data-action="z-values" id="quick-z-values" title="Z Values / قيم Z · F11" aria-label="Z Values / قيم Z · F11" disabled><span class="palette-letter" aria-hidden="true">Z</span><small>F11</small></button><button type="button" class="palette-command" data-action="xz-workspace" id="quick-xz-workspace" title="تجربة X/Z على الرسم · 49 عنصرًا فقط"><span class="palette-letter" aria-hidden="true">XZ</span><small>Preview</small></button><button type="button" class="palette-command unavailable-command" id="unsupported-size-table" title="Native Size Table / جدول المقاسات والتدريج · Ctrl+G · غير متاح حاليًا / Not implemented" aria-label="Native Size Table / جدول المقاسات والتدريج · Ctrl+G · غير متاح حاليًا / Not implemented" disabled><svg aria-hidden="true"><use href="#icon-history"/></svg><small>Ctrl+G</small></button><button type="button" class="palette-command" data-action="measurements" title="Charts / size information / جداول القياسات ومعلومات المقاسات" aria-label="Charts / size information / جداول القياسات ومعلومات المقاسات"><svg aria-hidden="true"><use href="#icon-ruler"/></svg><small>Charts</small></button></div>
+          <div class="palette-group"><button type="button" class="palette-command" data-action="zoom-out" title="Zoom out / تصغير · −" aria-label="Zoom out / تصغير · −"><span class="palette-letter" aria-hidden="true">−</span><small>−</small></button><button type="button" class="palette-command" data-action="zoom-in" title="Zoom in / تكبير · +" aria-label="Zoom in / تكبير · +"><span class="palette-letter" aria-hidden="true">+</span><small>+</small></button></div>
+          <div class="palette-group"><button type="button" class="palette-command" data-action="undo" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><small>Undo</small></button><button type="button" class="palette-command redo-command" data-action="redo" title="Redo / إعادة · Ctrl+Y" aria-label="Redo / إعادة · Ctrl+Y" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><small>Redo</small></button><button type="button" class="palette-command" data-action="new-template" id="toolbar-new" title="New fixed N38 template / نموذج جديد · Ctrl+N" aria-label="New fixed N38 template / نموذج جديد · Ctrl+N"><svg aria-hidden="true"><use href="#icon-new"/></svg><small>New</small></button><button type="button" class="palette-command" data-action="open" title="Open MDL / فتح ملف · Ctrl+O" aria-label="Open MDL / فتح ملف · Ctrl+O"><svg aria-hidden="true"><use href="#icon-open"/></svg><small>Open</small></button></div>
+        </div>
+      </section>
+    </div>
+    <div class="work-area">
+      <aside class="parts-panel" aria-label="Parts">
+        <div class="panel-caption"><strong>Parts</strong><button type="button" class="parts-properties-command" id="parts-properties-command" data-action="part-properties" title="Part properties / خصائص وإدارة القطع · Ctrl+T" aria-label="Part properties / خصائص وإدارة القطع · Ctrl+T" disabled><svg aria-hidden="true"><use href="#icon-parts"/></svg></button><span id="part-count" class="count-badge">0</span></div>
+        <div class="parts-search"><svg class="inline-icon" aria-hidden="true"><use href="#icon-search"/></svg><input type="search" id="part-search" placeholder="Find a part…" aria-label="Filter parts by name or number" title="Search by part number or name" autocomplete="off" spellcheck="false" disabled><button type="button" id="clear-part-search" aria-label="Clear part search" title="Clear search" disabled>×</button></div>
+        <div id="parts-filter-feedback" class="parts-filter-feedback" aria-live="polite">No parts loaded</div>
+        <div class="parts-visibility-bar" aria-label="Part visibility"><button type="button" data-action="show-all-parts" title="إظهار جميع البارتات · F5" disabled><svg aria-hidden="true"><use href="#icon-eye"/></svg><span>الكل</span></button><button type="button" data-action="active-part-only" title="عرض البارت النشط فقط" disabled><svg aria-hidden="true"><use href="#icon-select"/></svg><span>النشط</span></button></div>
+        <div id="part-list" class="part-list"><div class="parts-empty">Open a file to see its parts</div></div>
+        <div class="parts-footer">MDL · mm</div>
+      </aside>
+      <section class="drawing-panel" aria-label="Pattern drawing area">
+        <div class="drawing-header"><div class="active-part"><span class="status-dot"></span><span id="active-part-name">No active part</span></div><div class="size-chip"><span>SIZE</span><strong id="active-size">—</strong></div></div>
+        <div id="cache-preview-caption" class="cache-preview-caption" hidden><span id="cache-render-summary"></span><span id="cache-file-summary"></span></div>
+        <div class="canvas-frame" id="canvas-frame">
+          <section id="dimension-inspection-palette" class="dimension-inspection-palette" dir="rtl" aria-label="Dimension / القياس" hidden><header><b>Dimension · القياس</b><button type="button" id="dimension-inspection-close" aria-label="إغلاق القياس">×</button></header><label>أداة القياس<select id="dimension-inspection-mode" aria-label="أداة القياس"></select></label><p>انقر المراجع على الرسم. عند اختيار ثلاث نقاط تكون الثانية رأس الزاوية.</p><output id="dimension-inspection-result" aria-live="polite"></output><small id="dimension-inspection-count"></small><p id="dimension-inspection-message" role="status"></p><div><button type="button" id="dimension-inspection-finish">حساب</button><button type="button" id="dimension-inspection-reset">إعادة الاختيار</button><button type="button" id="dimension-inspection-label" disabled>موضع النتيجة</button><button type="button" id="dimension-inspection-keep" disabled>إضافة للجدول</button></div><footer><span>القياسات: <b id="dimension-inspection-table-count">0</b></span><button type="button" id="dimension-inspection-export" disabled>حفظ جدول نصي</button></footer><small>قياس مؤقت للمقاس الأساسي من الإنشاء المحسوب. المنحنيات وفق مقاطع الإنشاء. الأبعاد المسجّلة لها أمر مستقل. لا تُضاف تعريفات أبعاد إلى ملف التصميم.</small></section><section id="curve-construction-palette" class="curve-construction-palette" aria-label="Curve construction" dir="rtl" hidden><header>Curve construction · بناء المنحنى</header><small id="curve-construction-size"></small><div class="curve-construction-menu"><button type="button" data-curve-mode="adjustment" data-construction-enabled title="سحب نقطة مساعدة أو تحريك الارتكاز الأوسط على مرجعه الأصلي">Adjustment · تعديل النقاط</button><button type="button" data-curve-mode="insert" data-construction-enabled title="أضف نقطة مساعدة حرة إلى تعريف المنحنى">Insert points · إضافة نقاط</button><button type="button" data-curve-mode="bind" data-construction-enabled title="تحويل النقطة المساعدة إلى ارتكاز مرتبط بمرجع سابق">Bind point · ربط نقطة</button><button type="button" data-curve-mode="unbind" data-construction-enabled title="تحويل الارتكاز الأوسط إلى نقطة مساعدة حرة">Unbind point · فك الربط</button><button type="button" data-curve-mode="delete" data-construction-enabled title="حذف نقطة مساعدة حرة من تعريف المنحنى">Delete point · حذف نقطة</button><button type="button" data-curve-mode="direction" data-construction-enabled>Set direction · اتجاه المماس</button><button type="button" data-curve-mode="chord-direction" data-construction-enabled title="تعيين اتجاه البداية إلى النهاية عند الطرف المحدد">Direction start/final</button><button type="button" data-curve-mode="delete-direction" data-construction-enabled title="تحرير اتجاه الطرف المحدد ضمن العائلة المدعومة">Delete direction · حذف الاتجاه</button></div><p id="curve-point-operation-note" role="status"></p><form id="curve-reference-form" hidden><p>اختر مرجعًا من الإنشاء السابق، أو انقر الخط الأزرق على الرسم.</p><label>المرجع<select id="curve-reference-target"></select></label><label>نوع الربط<select id="curve-reference-kind"><option value="fraction">نسبة على المرجع</option><option value="distance-start">مسافة من البداية</option><option value="distance-end">مسافة من النهاية</option></select></label><label id="curve-reference-distance-row" hidden>المسافة (مم)<input id="curve-reference-distance" type="text" inputmode="decimal" dir="ltr" value="30"></label><label id="curve-reference-fraction-row">الموضع على الخط (%)<input id="curve-reference-fraction" type="text" inputmode="decimal" dir="ltr" value="50"></label><button type="submit" data-construction-enabled>معاينة الربط</button></form><form id="curve-bound-value-form" hidden novalidate><label id="curve-bound-value-label" for="curve-bound-value"></label><small id="curve-bound-reference"></small><div class="curve-value-row"><input id="curve-bound-value" type="text" inputmode="decimal" dir="ltr" aria-label="موضع الارتكاز المرتبط"><button type="submit" data-construction-enabled>معاينة الموضع</button></div></form><form id="curve-construction-value-form" novalidate><label>قيمة نقطة التحكم<select id="curve-construction-value-select" aria-label="قيمة نقطة التحكم"></select></label><div class="curve-value-row"><input id="curve-construction-value" type="text" inputmode="decimal" dir="ltr" aria-label="قيمة التحكم"><button type="submit" data-construction-enabled>معاينة</button></div></form><small>اسحب النقطة الوردية أو مقبض المماس، ثم طبّق. المربعات الخضراء نقاط ارتكاز مرتبطة. في تعديل النقاط يمكن سحب الارتكاز الأوسط المتاح على مرجعه الأزرق مع بقاء الربط. إضافة وحذف النقاط ضمن النطاق المدعوم؛ الأوامر الرمادية غير متاحة لهذا التعريف.</small><footer><button type="button" id="curve-construction-apply" data-construction-enabled>✓ تطبيق</button><button type="button" id="curve-construction-cancel" data-construction-enabled>إلغاء</button></footer></section><svg id="native-canvas" viewBox="-100 -100 600 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Native MDL construction" tabindex="0"><g id="draft-axes"></g><g id="draft-geometry"></g><g id="draft-labels"></g><g id="draft-drawing" aria-hidden="true"></g></svg>
+          <div class="canvas-empty" id="canvas-empty"><p dir="rtl">افتح ملف MDL أو ابدأ نموذجًا جديدًا.</p><div class="empty-actions"><button type="button" data-action="new-template">New</button><button type="button" data-action="open">Open MDL</button><button type="button" data-action="open-parametric-example">X/Z example</button></div></div>
+          <div id="native-notice" class="native-notice" role="status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+      <aside class="command-panel" aria-label="Construction tools"><section id="direct-path-editor" class="tool-section direct-path-editor" dir="rtl" aria-label="تحرير العنصر بالدابل كليك" hidden><header><strong id="direct-path-title"></strong><button type="button" id="direct-path-close" aria-label="إنهاء التحرير">×</button></header><p id="direct-path-source"></p><form id="direct-path-form" novalidate><label>التعديل<select id="direct-path-mode"></select></label><div id="direct-path-fields"></div><p id="curve-construction-unavailable" role="status"></p><p id="direct-path-error" role="alert"></p><p id="direct-path-note" role="status"></p><div class="direct-path-actions"><button type="button" id="direct-path-preview">معاينة</button><button type="submit" id="direct-path-apply">تطبيق</button><button type="button" id="direct-path-cancel">إلغاء</button></div></form></section>
+        <section class="tool-section history-controls"><div class="section-heading"><h2>History</h2><output id="record-count" class="record-counter">000</output></div>
+          <div class="command-row"><button type="button" class="construction-tool" data-action="undo" id="undo-button" title="Undo / تراجع · Ctrl+Z" aria-label="Undo / تراجع · Ctrl+Z" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><span>Undo</span></button><button type="button" class="construction-tool redo-command" data-action="redo" id="redo-button" title="Redo / إعادة · Ctrl+Y" aria-label="Redo / إعادة · Ctrl+Y" disabled><svg aria-hidden="true"><use href="#icon-undo"/></svg><span>Redo</span></button><button type="button" class="construction-tool" data-action="reset" id="reset-button" title="Previous record / عرض السابق" aria-label="Previous record / عرض السابق" disabled><svg aria-hidden="true"><use href="#icon-reset"/></svg><span>Reset</span></button><button type="button" class="construction-tool" data-action="restore" id="restore-button" title="Restore record / استعادة" aria-label="Restore record / استعادة" disabled><svg aria-hidden="true"><use href="#icon-restore"/></svg><span>Restore</span></button></div>
+          <div class="reset-row"><label for="reset-count">Steps</label><input id="reset-count" type="number" min="1" max="9999" value="1" aria-label="Number of steps to reset"></div>
+          <button type="button" class="full-command" data-action="replay" id="replay-button" title="Test Run active supported part / إعادة حساب القطعة المعتمدة" disabled><svg class="inline-icon"><use href="#icon-replay"/></svg>Test Run</button>
+        </section>
+        <section class="tool-section"><div class="section-heading"><h2 id="tool-heading">Drawing</h2><span class="section-hint">mm</span></div>
+          <div class="tool-grid" role="toolbar" aria-label="Construction commands"><button type="button" class="construction-tool" data-action="tool-select" id="select-tool" title="Select / اختيار وفحص" aria-label="Select / اختيار وفحص" aria-pressed="false"><svg aria-hidden="true"><use href="#icon-select"/></svg><span>Select</span></button><button type="button" class="construction-tool" data-action="tool-point" id="point-tool" title="Edit existing point X/Y / تعديل نقطة موجودة" aria-label="Edit existing point X/Y / تعديل نقطة موجودة" aria-pressed="false" disabled><svg aria-hidden="true"><use href="#icon-point"/></svg><span>Edit</span></button><button type="button" class="construction-tool" data-action="tool-line" id="line-tool" title="Inspect existing line / فحص خط موجود" aria-label="Inspect existing line / فحص خط موجود" aria-pressed="false" disabled><svg aria-hidden="true"><use href="#icon-line"/></svg><span>Inspect</span></button></div>
+          <div class="tool-options" id="tool-options"><div class="draw-commands"><button type="button" class="construction-tool" data-action="draw-point" id="draw-point-command" title="Draw point / رسم نقطة بنقرة" aria-label="Draw point / رسم نقطة بنقرة" aria-pressed="false" disabled><svg aria-hidden="true"><use href="#icon-point"/></svg><span>Point · click</span></button><button type="button" class="construction-tool" data-action="draw-line" id="draw-line-command" title="Draw line / رسم خط بنقرتين دون نقاط مسبقة" aria-label="Draw line / رسم خط بنقرتين دون نقاط مسبقة" aria-pressed="false" disabled><svg aria-hidden="true"><use href="#icon-line"/></svg><span>Line · 2 clicks</span></button><button type="button" class="construction-tool" data-action="draw-polyline" id="draw-polyline-command" aria-label="Polyline / خطوط متصلة" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 25L12 8L20 23L28 6" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>خط متصل</span></button><button type="button" class="construction-tool" data-action="draw-rectangle" id="draw-rectangle-command" aria-label="Rectangle / مستطيل" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><rect x="5" y="8" width="22" height="16" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>مستطيل</span></button><button type="button" class="construction-tool" data-action="draw-polar" id="draw-polar-command" aria-label="طول وزاوية" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M5 25L26 6M5 25H26" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>طول وزاوية</span></button><button type="button" class="construction-tool" data-action="draw-parallel" id="draw-parallel-command" aria-label="نسخة موازية" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M5 21L24 5M9 27L28 11" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>نسخة موازية</span></button><button type="button" class="construction-tool" data-action="draw-perpendicular" id="draw-perpendicular-command" aria-label="عمود" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 24H28M16 24V4M16 18H22V24" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>عمود</span></button><button type="button" class="construction-tool" data-action="draw-midpoint" id="draw-midpoint-command" aria-label="منتصف" aria-pressed="false" disabled><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M4 16H28M16 10V22" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>منتصف</span></button></div><p class="direct-edit-hint">دابل كليك على الخط أو المنحنى لتحريره هنا.</p><details class="original-advanced-tools"><summary>أوامر إضافية</summary><button type="button" id="original-path-command" title="تحرير الأصل أو إنشاء نقطة مرتبطة عليه" disabled>∦ تحرير الأصل</button><button type="button" id="original-curve-command" disabled>⌁ نقاط تحكم المنحنى الأصلي</button></details><button type="button" id="dimension-inspection-command" disabled title="Dimension / المسافات والأطوال والزوايا والمساحة">↔ Dimension · قياس</button><button type="button" id="recorded-dimensions-command" disabled>↔ أبعاد الباترن المسجّلة</button><div class="construction-point-tools" role="group" aria-label="تحرير الخطوط"><button type="button" data-action="draw-resize" title="Lengthen / shorten — إطالة وتقصير خط جديد" disabled>↔<span>تغيير الطول</span></button><button type="button" data-action="draw-parallel-ends" title="إزاحة طرفي خط مستقيم بمسافتين" disabled>∦<span>مسافتان</span></button></div><div class="construction-point-tools" role="group" aria-label="Points and lines / النقاط والخطوط"><button type="button" data-action="draw-horizontal" title="Horizontal line / خط أفقي" disabled>↔<span>أفقي</span></button><button type="button" data-action="draw-vertical" title="Vertical line / خط رأسي" disabled>↕<span>رأسي</span></button><button type="button" data-action="draw-distance" title="Point at distance on a new editable line / نقطة بمسافة على خط جديد" disabled>•↦<span>مسافة</span></button><button type="button" data-action="draw-fraction" title="Point at percentage on a new editable line / نقطة بنسبة على خط جديد" disabled>•%<span>نسبة</span></button></div><output id="drawing-measure" style="display:block;min-height:2.5em;font-size:12px;padding:6px 0" aria-live="off"></output><div id="construction-options" hidden><div id="construction-polar-options"><label>الطول (مم)<input id="construction-length" type="number" min="0.000001" max="1000000" step="any" value="100"></label><label>الزاوية (°)<input id="construction-angle" type="number" min="-360" max="360" step="any" value="0"></label></div><div id="construction-parallel-options"><div id="parallel-distance-presets" role="group" aria-label="مسافات التوازي بالمليمتر"><button type="button" data-parallel-distance="5" aria-pressed="false">5</button><button type="button" data-parallel-distance="10" aria-pressed="false">10</button><button type="button" data-parallel-distance="15" aria-pressed="false">15</button><button type="button" data-parallel-distance="20" aria-pressed="false">20</button><button type="button" data-parallel-distance="25" aria-pressed="false">25</button><button type="button" data-parallel-distance="30" aria-pressed="false">30</button><button type="button" data-parallel-distance="40" aria-pressed="false">40</button><button type="button" data-parallel-distance="50" aria-pressed="false">50</button></div><label>المسافة (مم)<input id="construction-offset" type="text" inputmode="decimal" dir="ltr" placeholder="بالمؤشر"></label></div><div id="construction-parallel-ends-options" hidden><label>إزاحة البداية (مم)<input id="construction-offset-start" type="text" inputmode="decimal" dir="ltr" value="10"></label><label>إزاحة النهاية (مم)<input id="construction-offset-end" type="text" inputmode="decimal" dir="ltr" value="10"></label></div><div id="construction-resize-options" hidden><label>الطول / المقدار (مم)<input id="construction-resize-value" type="text" inputmode="decimal" dir="ltr" value="100"></label><label><input id="construction-resize-by" type="checkbox"> زيادة / نقصان بدل الطول النهائي</label><small>للخطوط الجديدة المعروفة فقط؛ انقر قرب الطرف المراد تغييره. الطرف المشترك يؤثر على الخطوط المتصلة به.</small></div><div id="construction-point-options" hidden><label>القيمة <input id="construction-point-value" type="text" inputmode="decimal" value="50" dir="ltr"></label><span id="construction-point-unit">%</span><label><input id="construction-from-end" type="checkbox"> من نهاية الخط</label></div><small id="construction-linked-note" hidden>ارتباط محفوظ بالخط الجديد. الخطوط الأصلية والمنحنيات غير مدعومة بهذه الأداة بعد.</small><small id="construction-hint"></small><small id="construction-snapshot">نتيجة عددية؛ لا ترتبط تلقائيًا بتغيّر الخط المرجعي.</small><small id="construction-error" role="status"></small></div><label class="drawing-grid-option"><input type="checkbox" id="drawing-grid" disabled><span>1 mm grid</span></label><p class="drawing-tip">Snap 8 px · Shift: H/V · Esc</p><details id="n38-drawing-bindings" class="n38-drawing-bindings" hidden><summary>Endpoint bindings…</summary><p>Optional · defaults to two free clicks</p><div class="n38-binding-grid"><label for="n38-bind-start-x">Start X</label><select id="n38-bind-start-x" disabled><option value="number">Canvas click</option></select><label for="n38-bind-start-y">Start Y</label><select id="n38-bind-start-y" disabled><option value="number">Canvas click</option></select><label for="n38-bind-end-x">End X</label><select id="n38-bind-end-x" disabled><option value="number">Canvas click</option></select><label for="n38-bind-end-y">End Y</label><select id="n38-bind-end-y" disabled><option value="number">Canvas click</option></select></div><small>A bound endpoint creates a new native point. Unbound endpoints retain snapping.</small></details></div>
+        </section>
+        <section class="tool-section selection-panel"><div class="section-heading"><h2>Selection</h2></div><div id="selection-info">No object selected</div></section>
+        <div class="command-footer"><button type="button" data-action="history" title="Construction record / سجل الإنشاء"><svg class="inline-icon"><use href="#icon-history"/></svg>Record</button><button type="button" data-action="file-info" title="MDL information / معلومات الملف"><svg class="inline-icon"><use href="#icon-info"/></svg>MDL info</button></div>
+      </aside>
+    </div>
+    <footer class="statusbar" aria-label="Status"><span id="status-text">Ready to create or open a pattern</span><span id="local-update-status" role="status" aria-live="polite" aria-label="Automatic local updates" hidden></span><span id="status-coordinates" hidden aria-hidden="true">X: — · Y: — mm</span><span id="status-scale">1:1</span><span id="status-record">000 / 000</span></footer>
+  </main>
+
+  <input type="file" id="mdl-file" accept=".mdl,.MDL" hidden>
+
+  <dialog id="history-dialog" class="native-dialog history-dialog" aria-labelledby="history-title">
+    <div class="dialog-caption"><h1 id="history-title">Construction record</h1><button type="button" data-action="close-dialog" aria-label="Close construction record">×</button></div>
+    <div class="dialog-body"><p class="dialog-intro" id="history-summary">Open an MDL file to inspect its construction record.</p><div class="table-scroll"><table class="native-table"><thead><tr><th scope="col">Step</th><th scope="col">Command</th><th scope="col">Input / dependency</th><th scope="col">Edit</th></tr></thead><tbody id="history-steps"></tbody></table></div></div>
+    <div class="dialog-actions"><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+  <dialog id="point-dialog" class="native-dialog point-dialog" aria-labelledby="point-title">
+    <div class="dialog-caption"><h1 id="point-title">Point — Absolute X / Y</h1><button type="button" data-action="close-dialog" aria-label="Close point editor">×</button></div>
+    <form id="point-form" class="point-form">
+      <div class="dialog-body"><p class="dialog-intro" id="point-record-label">Construction point</p><input id="point-index" type="hidden"><div class="coordinate-fields"><label for="point-x">X</label><input id="point-x" name="x" type="number" step="any" required><span>mm</span><label for="point-y">Y</label><input id="point-y" name="y" type="number" step="any" required><span>mm</span></div><p id="point-error" class="field-error" role="alert" hidden></p><p class="dialog-note">Dependent lines are recalculated from the construction record.</p></div>
+      <div class="dialog-actions"><button type="submit" id="point-apply">Apply</button><button type="button" data-action="close-dialog">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="alaa-point-dialog" class="native-dialog point-dialog" aria-labelledby="alaa-point-title">
+    <div class="dialog-caption"><h1 id="alaa-point-title">New ALAA point — absolute X / Y</h1><button type="button" data-action="close-dialog" aria-label="Close ALAA point editor">×</button></div>
+    <form id="alaa-point-form" class="point-form" novalidate>
+      <div class="dialog-body"><div class="coordinate-fields"><label for="alaa-point-x">X</label><input id="alaa-point-x" type="number" step="any" min="-1000000" max="1000000"><span>mm</span><label for="alaa-point-y">Y</label><input id="alaa-point-y" type="number" step="any" min="-1000000" max="1000000"><span>mm</span></div><p id="alaa-point-error" class="field-error" role="alert" hidden></p><p class="dialog-note" dir="rtl">القطعة 002 المحددة فقط: إحداثيات عددية للنقاط الجديدة، مع تحديث الخطوط الجديدة المرتبطة بها عند اعتماد ذلك. عناصر التصميم الأصلية ومعادلاته للقراءة. يُطبَّق التغيير كعملية تراجع واحدة.</p></div>
+      <div class="dialog-actions"><button type="submit" id="alaa-point-apply">Apply</button><button type="button" data-action="close-dialog">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="measurements-dialog" class="native-dialog measurements-dialog" aria-labelledby="measurements-title">
+    <div class="dialog-caption"><h1 id="measurements-title">Measurement chart</h1><button type="button" data-action="close-dialog" aria-label="Close measurement chart">×</button></div>
+    <div class="dialog-body"><p class="dialog-intro" id="measurement-summary">Native chart metadata · read only</p><div class="table-scroll"><table class="native-table"><thead><tr><th scope="col">Reference</th><th scope="col">Measurement</th><th scope="col">Value</th><th scope="col">Unit</th></tr></thead><tbody id="measurement-body"></tbody></table></div><p class="dialog-note">Measurement expressions and grading are not yet editable.</p></div>
+    <div class="dialog-actions"><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+  <dialog id="new-line-dialog" class="native-dialog new-line-dialog" aria-labelledby="new-line-title">
+    <div class="dialog-caption"><h1 id="new-line-title">Create line — existing points</h1><button type="button" data-action="close-dialog" aria-label="Close line creation">×</button></div>
+    <form id="new-line-form" class="new-line-form">
+      <div class="dialog-body"><div class="line-reference-fields"><label for="new-line-start">Start point</label><select id="new-line-start" name="start" required></select><label for="new-line-end">End point</label><select id="new-line-end" name="end" required></select></div><p id="new-line-error" class="field-error" role="alert" hidden></p><p class="dialog-note">The new line keeps references to its two construction points.</p></div>
+      <div class="dialog-actions"><button type="submit" id="new-line-apply">Create</button><button type="button" data-action="close-dialog">Cancel</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="file-info-dialog" class="native-dialog info-dialog" aria-labelledby="file-info-title">
+    <div class="dialog-caption"><h1 id="file-info-title">MDL information</h1><button type="button" data-action="close-dialog" aria-label="Close MDL information">×</button></div>
+    <div class="dialog-body"><pre id="file-info-content">Open an MDL file to inspect its structure.
+
+This independent implementation supports verified absolute points and dependent line records, with point/line creation in eligible existing files. Other constructions remain read only.</pre></div>
+    <div class="dialog-actions"><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+
+  <dialog id="x-values-dialog" class="native-dialog values-dialog" aria-labelledby="x-values-title">
+    <div class="dialog-caption"><h1 id="x-values-title">X Values · Global / Active part</h1><button type="button" data-action="close-dialog" aria-label="Close X Values">×</button></div>
+    <div class="dialog-body">
+      <p id="x-values-part" class="dialog-intro"></p>
+      <div class="x-scope-toolbar">
+        <fieldset><legend>List / القائمة</legend><label><input id="x-scope-global" type="radio" name="x-scope" value="global"> Global · عام <output id="x-scope-global-count">0</output></label><label><input id="x-scope-local" type="radio" name="x-scope" value="local" checked> Active part · القطعة النشطة <output id="x-scope-local-count">0</output></label></fieldset>
+        <label class="x-scope-part" for="x-values-part-select">Part / القطعة<select id="x-values-part-select"></select></label>
+        <fieldset class="x-view-options"><legend>View / العرض</legend><label><input type="radio" name="x-list-view" value="edit" checked> Edit view</label><label><input type="radio" name="x-list-view" value="short"> Short view</label><label><input type="radio" name="x-list-view" value="interpolation"> Interpolation view / الاستيفاء</label></fieldset>
+      </div>
+      <h2 id="x-scope-heading"></h2><p id="x-scope-description" dir="rtl"></p>
+      <div class="values-encoding"><label for="x-values-encoding">Comment encoding</label><select id="x-values-encoding"><option value="windows-1256">Arabic — Windows-1256</option><option value="windows-1252">Western — Windows-1252</option></select></div>
+      <p id="x-values-summary" class="dialog-intro"></p><p id="n38-x-scope" class="n38-scope"></p><button type="button" id="n38-add-x" class="n38-add-parameter" hidden disabled>Add local X1…</button>
+      <div class="x-list-controls"><label for="x-current-index">Current selection / القيمة المحددة <input id="x-current-index" type="number" min="1" max="80" step="1" aria-label="Select X index"></label><label><input id="x-all-sizes" type="checkbox" checked> All sizes / جميع المقاسات</label><button type="button" id="x-edit-entry" disabled>Edit Entry / تعديل القيمة</button></div>
+      <div class="x-list-layout"><div class="table-scroll x-grouped-scroll"><table class="native-table values-table"><thead><tr><th scope="col">Scope</th><th scope="col">X index</th><th scope="col">Size key</th><th scope="col">Stored value</th><th scope="col">Comment</th><th scope="col">State</th></tr></thead><tbody id="x-values-body"></tbody></table></div><aside class="x-size-panel"><label for="x-size-list">Sizes / المقاسات</label><select id="x-size-list" size="8" aria-label="Filter X size"></select><p dir="rtl">اختر مقاسًا لعرض قيمه. الصف الافتراضي مستقل عن قيم المقاسات.</p></aside></div>
+      <p id="x-scope-empty" class="dialog-note" dir="rtl" hidden></p>
+      <button type="button" class="values-empty-example" id="x-values-empty-example" data-action="open-parametric-example" hidden>Open verified X/Z example / فتح المثال المعتمد</button>
+      <p id="x-values-warnings" class="values-warnings"></p>
+      <p id="x-values-readonly-note" class="dialog-note" dir="rtl">قراءة فعلية للقيم المخزنة في الملف. صفوف المقاسات معروضة كما هي؛ لا يُستنتج منها معامل فعّال أو قيمة محسوبة. التعديل وإعادة الحساب العام غير متاحين.</p>
+      <p id="x-values-edit-note" class="dialog-note" dir="rtl" hidden>هذا النموذج المحدد يدعم تعديل X1 المحلي فقط وإعادة حساب النقطة 2004 من صيغة Z1 المعتمدة. جميع المعرفات والسجلات الأصلية محفوظة. لا يتيح ذلك تعديل معاملات التصاميم العامة.</p>
+    </div>
+    <div class="dialog-actions"><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+  <dialog id="z-values-dialog" class="native-dialog values-dialog z-values-dialog" aria-labelledby="z-values-title">
+    <div class="dialog-caption"><h1 id="z-values-title">Z Values — stored native definitions</h1><button type="button" data-action="close-dialog" aria-label="Close Z Values">×</button></div>
+    <div class="dialog-body">
+      <p id="z-values-part" class="dialog-intro"></p>
+      <div class="values-encoding"><label for="z-values-encoding">Comment encoding</label><select id="z-values-encoding"><option value="windows-1256">Arabic — Windows-1256</option><option value="windows-1252">Western — Windows-1252</option></select></div>
+      <p id="z-values-summary" class="dialog-intro"></p><p id="n38-z-scope" class="n38-scope"></p><button type="button" id="n38-add-z" class="n38-add-parameter" hidden disabled>Add local Z1…</button>
+      <div id="z-values-legacy-table" class="table-scroll"><table class="native-table values-table"><thead><tr><th scope="col">Z index</th><th scope="col">Record step</th><th scope="col">Stored formula</th><th scope="col">Comment</th><th scope="col">Flags</th><th scope="col">Geometric references · raw bytes</th><th scope="col">State</th></tr></thead><tbody id="z-values-body"></tbody></table></div>
+      <section id="z-inspector" class="z-inspector" aria-label="Native Z definitions" hidden>
+        <div class="z-inspector-context"><strong id="z-inspector-context"></strong><span id="z-inspector-value-status" role="status"></span></div>
+        <div class="z-inspector-toolbar"><label for="z-inspector-search">Find Z / بحث</label><input id="z-inspector-search" type="search" placeholder="Z number, formula or comment" autocomplete="off"><button type="button" id="z-inspector-clear" aria-label="Clear Z search">×</button><span id="z-inspector-count" aria-live="polite"></span></div>
+        <div class="table-scroll z-inspector-table-scroll"><table class="native-table z-inspector-table"><colgroup><col class="z-step-column"><col class="z-formula-column"><col class="z-comment-column"><col class="z-value-column"><col class="z-bound-column"><col class="z-bound-column"></colgroup><thead><tr><th scope="col">Rstep</th><th scope="col">Formula / المعادلة</th><th scope="col">Text / الوصف</th><th scope="col">Value / القيمة</th><th scope="col" title="Stored minimum is not decoded">Min</th><th scope="col" title="Stored maximum is not decoded">Max</th></tr></thead><tbody id="z-inspector-body"></tbody></table></div>
+        <section class="z-inspector-selection" aria-label="Selected Z definition">
+          <div class="z-inspector-selection-heading"><strong id="z-inspector-selected">Select a definition</strong><button type="button" id="z-inspector-edit" disabled title="No verified writer for this native construction">Edit / تعديل</button></div>
+          <p id="z-inspector-formula" class="z-inspector-formula"></p>
+          <p id="z-inspector-value-source" class="z-inspector-value-source"></p>
+          <p id="z-inspector-edit-reason" class="z-inspector-edit-reason" dir="rtl">تعديل صيغ هذا التصميم وحفظ نتائجها غير متاحين بعد؛ يلزم إثبات توافقهما مع سجل الإنشاء الأصلي.</p>
+          <div class="z-inspector-details"><details id="z-inspector-history"><summary>Stored comment history / سجل التعليقات</summary><pre id="z-inspector-history-text"></pre></details><details id="z-inspector-raw"><summary>Flags &amp; geometry references / المراجع الهندسية</summary><pre id="z-inspector-raw-text"></pre></details></div>
+        </section>
+      </section>
+      <button type="button" class="values-empty-example" id="z-values-empty-example" data-action="open-parametric-example" hidden>Open verified X/Z example / فتح المثال المعتمد</button>
+      <p id="z-values-warnings" class="values-warnings"></p>
+      <p id="z-values-readonly-note" class="dialog-note" dir="rtl">تعريفات Z وصيغها وتعليقاتها محفوظة في سجل الإنشاء. لا تُنفذ الصيغ هنا ولا تُعرض قيمة عددية حالية مُفترضة. المراجع الهندسية والأعلام للفحص فقط؛ التعديل وإعادة الحساب غير متاحين.</p>
+      <p id="z-values-edit-note" class="dialog-note" dir="rtl" hidden>هذا النموذج المحدد يدعم صيغتي Z1 المعتمدتين فقط: X1*2 وX1*3، مع إعادة حساب النقطة 2004. لا تُعرض أعداد السجل التاريخية على أنها قيمة Z الحالية، ولا يُنفذ أي تعبير عام.</p>
+    </div>
+    <div class="dialog-actions"><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+  <dialog id="native-parameter-dialog" class="native-dialog parameter-editor-dialog" aria-labelledby="native-parameter-title">
+    <div class="dialog-caption"><h1 id="native-parameter-title">Verified native parameter</h1><button type="button" data-action="close-dialog" aria-label="Close native parameter editor">×</button></div>
+    <form id="native-parameter-form" class="parameter-editor-form" novalidate>
+      <div class="dialog-body">
+        <p id="native-parameter-scope" class="dialog-intro"></p>
+        <div id="native-parameter-x-fields" class="parameter-editor-fields"><label for="native-parameter-x">Local X1</label><input id="native-parameter-x" type="number" step="any"><span>mm</span></div>
+        <div id="native-parameter-z-fields" class="parameter-editor-fields" hidden><label for="native-parameter-formula">Z1 formula</label><select id="native-parameter-formula"></select></div>
+        <p id="native-parameter-error" class="field-error" role="alert" hidden></p>
+        <p class="dialog-note" dir="rtl">يُعاد حساب النقطة المرتبطة 2004 في هذا النموذج المعتمد فقط. تُحفظ الصيغة ومرجع Z الأصلي وسجل الإنشاء، ويمكن التراجع بعملية Undo واحدة. تحرير بقية التصاميم والمعاملات غير متاح.</p>
+      </div>
+      <div class="dialog-actions"><button type="submit" id="native-parameter-apply">Apply</button><button type="button" data-action="close-dialog">Cancel</button></div>
+    </form>
+  </dialog>
+
+
+  <dialog id="n38-parameter-dialog" class="native-dialog parameter-editor-dialog" aria-labelledby="n38-parameter-title">
+    <div class="dialog-caption"><h1 id="n38-parameter-title">Local N38 parameter</h1><button type="button" data-action="close-dialog" aria-label="Close N38 parameter editor">×</button></div>
+    <form id="n38-parameter-form" class="parameter-editor-form" novalidate><div class="dialog-body">
+      <div id="n38-parameter-value-field" class="n38-parameter-field"><label for="n38-parameter-value">Stored local scalar</label><input id="n38-parameter-value" type="number" min="-1000" max="1000" step="any"></div>
+      <div id="n38-parameter-formula-field" class="n38-parameter-field" hidden><label for="n38-parameter-formula">Formula</label><input id="n38-parameter-formula" type="text" maxlength="64" autocomplete="off" spellcheck="false"><small>+ − * / and parentheses · defined local X1/X2 and earlier Z references only.</small></div>
+      <p id="n38-parameter-error" class="field-error" role="alert" hidden></p><p id="n38-parameter-note" class="dialog-note" dir="rtl">إنشاء وتعديل محلي مقيد لنموذج N38 المعتمد فقط.</p>
+    </div><div class="dialog-actions"><button type="submit" id="n38-parameter-apply">Apply</button><button type="button" data-action="close-dialog">Cancel</button></div></form>
+  </dialog>
+  <dialog id="n38-point-dialog" class="native-dialog parameter-editor-dialog" aria-labelledby="n38-point-title">
+    <div class="dialog-caption"><h1 id="n38-point-title">N38 point inputs</h1><button type="button" data-action="close-dialog" aria-label="Close N38 point editor">×</button></div>
+    <form id="n38-point-form" class="parameter-editor-form" novalidate><div class="dialog-body"><div class="n38-point-fields">
+      <label for="n38-point-x-source">X input</label><select id="n38-point-x-source"><option value="number">Number</option></select><input id="n38-point-x" data-n38-number="x" type="number" step="any" aria-label="Numeric X coordinate in millimetres">
+      <label for="n38-point-y-source">Y input</label><select id="n38-point-y-source"><option value="number">Number</option></select><input id="n38-point-y" data-n38-number="y" type="number" step="any" aria-label="Numeric Y coordinate in millimetres">
+    </div><p id="n38-point-error" class="field-error" role="alert" hidden></p><p class="dialog-note" dir="rtl">اختر رقمًا أو مرجع معامل معتمد لكل محور. يبقى المرجع محفوظًا داخل سجل النقطة؛ تعديل المعامل يعيد حساب النقاط والخطوط المرتبطة.</p></div><div class="dialog-actions"><button type="submit" id="n38-point-apply">Apply</button><button type="button" data-action="close-dialog">Cancel</button></div></form>
+  </dialog>
+
+
+  <dialog id="part-properties-dialog" class="native-dialog part-manager-dialog" aria-labelledby="part-properties-title">
+    <div class="dialog-caption"><h1 id="part-properties-title">Parts · خصائص القطع</h1><button type="button" data-action="close-dialog" aria-label="Close part properties">×</button></div>
+    <div class="dialog-body part-manager-layout">
+      <section class="part-manager-list" aria-label="Native parts and properties">
+        <div class="part-manager-filter"><label for="part-properties-search">Find part</label><input id="part-properties-search" type="search" placeholder="Number or name…" autocomplete="off" spellcheck="false"><output id="part-properties-count">0 parts</output></div>
+        <div class="table-scroll part-manager-table"><table class="native-table" role="grid" aria-label="Native part list"><thead><tr><th scope="col" title="Native mother-part marker">*</th><th scope="col">No</th><th scope="col">Part name</th><th scope="col" title="Native construction-record count">RS</th><th scope="col" title="Stored object count">Obj</th></tr></thead><tbody id="part-properties-body"></tbody></table></div>
+        <p class="part-manager-key-hint">Select a row to inspect · ↑ ↓ navigate · Enter activates the part</p>
+        <section class="part-production-panel" aria-labelledby="part-production-heading"><h2 id="part-production-heading">Part properties / خصائص القطعة</h2>
+          <p id="production-note" class="unsupported-note" dir="rtl"></p>
+          <fieldset id="production-flags"><legend>Part type / نوع القطعة</legend><label><input id="production-draft" type="radio" name="part-type" value="draft"> Draft part (not to be cut)</label><label><input id="production-part" type="radio" name="part-type" value="production"> Production part</label><label><input id="production-marker" type="checkbox"> Marker and export</label><label><input id="production-stitch" type="checkbox"> Stitch part</label></fieldset>
+          <div class="production-fields"><label>Material / الخامة<select id="production-material"></select></label><div class="production-amounts"><label>Amount · normal<input id="production-normal" type="number" min="0" max="99" step="1"></label><label>mirrored<input id="production-mirrored" type="number" min="0" max="99" step="1"></label><label>Total per style<input id="production-total" readonly></label></div><label>Part category<select id="production-category"></select></label><label>Last edit<input id="production-date" readonly></label><label>Source style<input disabled placeholder="غير متاح — المصدر الأصلي لم يُقرأ بعد"></label></div>
+          <button id="production-apply" type="button">Apply properties / تطبيق الخصائص</button>
+        </section>
+        <details class="part-properties-section"><summary>File details / تفاصيل الملف</summary><dl id="part-properties-known" class="part-properties-fields"></dl><dl id="part-properties-unavailable" class="part-properties-fields" hidden></dl><pre id="part-properties-source"></pre><p id="part-properties-warnings" class="values-warnings"></p></details>
+      </section>
+      <section class="part-manager-preview" aria-label="Selected part preview">
+        <h2 id="part-properties-selected">Selected part</h2><div class="part-values-actions"><button id="part-properties-x" type="button">X · قيم القطعة</button><button id="part-properties-z" type="button">Z · المعادلات</button></div><p class="part-values-hint" dir="rtl">يفتح X أو Z للقطعة المحددة ويفعّلها في مساحة الرسم.</p><svg id="part-properties-preview" viewBox="-10 -110 160 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Selected part drawing preview"></svg><p id="part-properties-preview-caption"></p><p class="dialog-note" dir="rtl">معاينة الرسم المخزّن قد تكون جزئية. اختيار صف يعرض خصائص القطعة؛ النقر المزدوج يفعّلها.</p>
+      </section>
+    </div>
+    <div class="dialog-actions"><span id="part-properties-action-status" class="part-properties-action-status" aria-live="polite">Read-only metadata · activating a part changes the working view only</span><button type="button" id="part-properties-activate">Activate part</button><button type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+
+  <script type="module" src="src/native-app.js"></script>
+  <script type="module" src="src/ui-0113-start.js"></script>
+<dialog id="original-path-dialog" class="native-dialog original-path-dialog" aria-labelledby="original-path-title" dir="rtl"><form id="original-path-form" class="point-form" novalidate><header class="dialog-caption"><h1 id="original-path-title">تحرير خط أو منحنى أصلي</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p id="original-path-intro">إزاحة الأصل مع بقاء هويته وإعادة حساب البارتات التابعة المدعومة.</p><label>العملية<select id="original-path-operation"><option value="offset">إزاحة الأصل</option><option value="fraction">نقطة مرتبطة بنسبة</option><option value="distance">نقطة مرتبطة بمسافة</option></select></label><label>العنصر <select id="original-path-select"></select></label><div id="original-offset-fields"><label>إزاحة البداية (مم)<input id="original-offset-start" type="text" inputmode="decimal" dir="ltr"></label><label>إزاحة النهاية (مم)<input id="original-offset-end" type="text" inputmode="decimal" dir="ltr"></label><p>المسافة الموجبة إلى يمين اتجاه العنصر. تُحفظ الخطوة في سجل الإنشاء. إذا تعذّر حساب أي بارت متأثر، يُرفض التعديل دون فصل الروابط.</p></div><div id="original-linked-point-fields" hidden><label><span id="original-linked-unit">النسبة (%)</span><input id="original-linked-value" type="text" inputmode="decimal" dir="ltr" value="50"></label><label class="original-linked-direction"><input type="checkbox" id="original-linked-from-end">من نهاية العنصر</label><p>تُحفظ النقطة مرتبطة بمعرّف الخط أو المنحنى الأصلي. تتحرك عند إعادة حساب المصدر؛ المسافة تبقى داخل طول العنصر.</p></div><p>يمكنك إزاحة الأصل أو إنشاء نقطة مرتبطة عليه. استخدم زر نقاط تحكم المنحنى لتعديل تعريف منحنى مدعوم. بقية الأدوات لم تكتمل. حفظ هندسة التصاميم التي تحتوي عمليات غير مدعومة كاملةً ما زال غير متاح.</p><p id="original-path-error" class="field-error" role="alert"></p></div><footer class="dialog-actions"><button type="submit" id="original-path-apply">تطبيق</button><button type="button" data-action="close-dialog">إلغاء</button></footer></form></dialog><dialog id="original-curve-dialog" class="native-dialog original-path-dialog" aria-labelledby="original-curve-title" dir="rtl"><form id="original-curve-form" class="point-form" novalidate><header class="dialog-caption"><h1 id="original-curve-title">نقاط تحكم المنحنى الأصلي</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p>غيّر موضع نقطة التحكم على المنحنى الأساسي وارتفاعها النسبي أو اتجاه المماس. تبقى مراجع نقاط الارتكاز وروابط البارتات محفوظة.</p><label>تعريف المنحنى<select id="original-curve-select"></select></label><div id="original-curve-fields"></div><svg id="original-curve-preview" role="img" aria-label="مقارنة المنحنى قبل وبعد التعديل"></svg><p id="original-curve-preview-note" role="status"></p><p>للمنحنيات المدعومة في سجل البارت الحالي والمقاس الأساسي. إذا تعذّر حساب بارت متأثر أو حفظ جميع عناصره، يُرفض التعديل. حفظ هندسة التصميم كاملةً وبقية أدوات المنحنيات لم يكتمل.</p><p id="original-curve-error" class="field-error" role="alert"></p></div><footer class="dialog-actions"><button type="button" id="original-curve-preview-command">معاينة</button><button type="submit" id="original-curve-apply">تطبيق</button><button type="button" data-action="close-dialog">إلغاء</button></footer></form></dialog><dialog id="recorded-dimensions-dialog" class="native-dialog recorded-dimensions-dialog" dir="rtl" aria-labelledby="recorded-dimensions-title"><header class="dialog-caption"><h1 id="recorded-dimensions-title">أبعاد الباترن المسجّلة</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p id="recorded-dimensions-summary"></p><div class="table-scroll"><table class="native-table"><thead><tr><th>القياس</th><th>الرمز</th><th>النوع</th><th>القيمة (مم)</th><th>المضاعف</th><th>العرض المقرب</th><th>الحالة</th></tr></thead><tbody id="recorded-dimensions-body"></tbody></table></div><p class="dialog-note">تُحسب القيم من الخطوط والمنحنيات الأصلية ومراجع القياس، وتُحدّث عند فتح الجدول بعد تعديل X/Z. القيم غير المدعومة لا تُستبدل بقيم قديمة. هذا عرض وتصدير للقياسات. يُحدَّث رسم الأبعاد المستقيمة المدعومة وحفظها عند تحرير الأصل؛ إنشاء أبعاد جديدة وبقية أشكال الأبعاد والحفظ الكامل ما زالت غير متاحة.</p><p id="recorded-dimensions-message" role="status"></p></div><footer class="dialog-actions"><button type="button" id="recorded-dimensions-export">حفظ الجدول النصي</button><button type="button" data-action="close-dialog">إغلاق</button></footer></dialog></body>
+</html>
+
+

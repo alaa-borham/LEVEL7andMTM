@@ -164,3 +164,33 @@ These need GRAFIS itself. Save each as a small `.mdl`:
 3. **Seam-allowance corners:** Corner 10 (mirror), Corner 20 (mitred) and Corner 30 (vent), each on a simple rectangle **built with plain lines** (Line 10 with typed values). The current test file builds the rectangle with Parallel 100 and Line 10 picks that the engine cannot replay yet.
 4. **ALAA2026.mdl saved in 2–3 other sizes or customers**, to check grading and MTM. Today it is verified in the base size only.
 5. **Any missing tool:** its GRAFIS name, a screenshot of its options window, and a small `.mdl` that uses it two or three times with different values.
+
+## 7. 0.9.113 (automatic updates and new interface)
+
+Report: `level7-cad/REPORT-0.9.113.md`. Source: `level7-cad/source-0.9.113/`. Diff against 0.9.112: `level7-cad/0.9.112-to-0.9.113.diff`. Update files: `level7-cad/LEVEL7-and-MTM-0.9.113-update.zip`.
+
+### Automatic updates
+
+- **Code:** `desktop/remote-update.cjs`. It is wired in `desktop/main.cjs`:
+  - it uses a dedicated session `level7-updates`, because the default session blocks all non-local requests;
+  - IPC channels `update:status` and `update:check`;
+  - it installs on `will-quit`.
+- **Renderer bridge:** `desktop/preload.cjs` exposes `getLocalUpdateStatus`, `checkLocalUpdates` and `onLocalUpdateStatus`. The 0.9.111 renderer already had matching UI for these.
+- **Manifest:** `level7-cad/releases/latest.json` on branch `main`, with a fallback to branch `claude/tender-pasteur-bwjzzi`. The files are in `level7-cad/releases/app/`.
+- **Publishing a release:** run `node level7-cad/tools/make-release.mjs <source> level7-cad/releases "<notes>"`, then commit.
+- **Rules:**
+  - Only an allow-list of paths can be updated: `src/`, `desktop/`, `assets/`, `examples/`, `native.html`, `index.html`, `package.json` and `README*.md`.
+  - Every file is verified by size and SHA-256 at download and again at install.
+  - The previous files are backed up; a failed copy restores them.
+  - A read-only program folder reports an error and installs nothing.
+- **Testing:** set the environment variable `L7_UPDATE_MANIFEST_URL` to point at a local server. The tests are in `level7-cad/tests-0.9.113/`.
+
+### Interface
+
+- **Theme:** `src/ui-0113.css` (presentation only).
+- **Captions and help card:** `src/ui-guide-0113.js`, started by `src/ui-0113-start.js`. It adds `data-caption` (Arabic) to icon-only `.grafis-icon-option` buttons, and a `#tool-guide` card that describes the tool under the pointer. Disabled tools stay disabled and are described as unavailable.
+
+### Please run on Windows
+
+1. All UI tests, plus `tests-0.9.113/test-0113-ui.mjs`, against `LEVEL7 and MTM.exe`.
+2. The packaged update test, with a local server (`tests-0.9.113/test-update-packaged.mjs`), on Windows.

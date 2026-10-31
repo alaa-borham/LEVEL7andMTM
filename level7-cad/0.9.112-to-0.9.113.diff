@@ -1,0 +1,377 @@
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/README.md dev/README.md
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/README.md	2026-10-30 23:09:44.353004374 +0000
++++ dev/README.md	2026-10-31 04:57:36.109877011 +0000
+@@ -1,3 +1,7 @@
++LEVEL7 and MTM 0.9.113
++
++Automatic updates: the program checks the LEVEL7 and MTM repository at start and every six hours, downloads only the changed application files, verifies each with SHA-256, and installs them after the next normal exit (documents and user data are never touched; a failed install restores the previous files). Status and a manual check are in the status bar. New interface theme: navy/gold title bar, card-style tool icons with Arabic captions, and a help card that names the tool under the pointer and says whether it is available. Commands, IDs and capability guards are unchanged.
++
+ LEVEL7 and MTM 0.9.112
+ 
+ Display name changes from LEVEL7 CAD to LEVEL7 and MTM, with a new icon (L7, tape-measure arc, MTM); the user-data folder keeps its old name so existing profiles remain. Redo is added (Edit menu, command bar, history panel, Ctrl+Y / Ctrl+Shift+Z) with the same part-link guard as Undo; any new edit clears it. Document commands (Save, Save As, Close, X/Z, part views) start disabled, so an empty workspace or the state right after Close never offers Save. The X window is narrower and its list grows with its rows instead of reserving a tall empty area. Double-click curve editing shows a single Apply/Cancel pair (the palette repeated the same handlers). Each Points and lines drawing option has its own title. Geometry fix: a tapered parallel (seam allowance) on a sampled curve now applies its first value at the end of the source path, as GRAFIS does; ALAA2026.mdl part 7 matches the GRAFIS-stored geometry within 0.0064 mm (was up to 2.5 mm). Round corner (EK_c004_02): trims up to 40 mm are now accepted (verified on right-angle GRAFIS test corners of 10/20/30/40 mm), and on curved sources the rounded curve is split on the ray from the intersection of the source tangents at the trim points; ALAA2026.mdl part 65 now replays fully and every object of the file is within 0.2 mm of the GRAFIS-stored geometry (part 65 worst 0.133 mm). Native MDL formats and link guards are unchanged. 22 broad Grafis option groups remain pending and further options are state- or scope-limited; full Grafis parity is not claimed.
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/main.cjs dev/desktop/main.cjs
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/main.cjs	2026-10-30 20:22:44.000000000 +0000
++++ dev/desktop/main.cjs	2026-10-31 04:49:30.321420783 +0000
+@@ -7,6 +7,7 @@
+ const { pathToFileURL, fileURLToPath } = require('node:url');
+ const { randomBytes,createHash } = require('node:crypto');
+ const{createNativeSaveTargets}=require('./native-save-targets.cjs');
++const { createRemoteUpdater } = require('./remote-update.cjs');
+ 
+ const APP_ROOT = path.resolve(__dirname, '..');
+ const INDEX_FILE = path.join(APP_ROOT, 'native.html');
+@@ -401,10 +402,21 @@
+   Menu.setApplicationMenu(null);
+   lockSession(session.defaultSession);
+   registerIpc();
++  registerUpdates();
+   await createWindow();
++  if (updater.enabled) { setTimeout(() => void updater.check(), 8000); setInterval(() => void updater.check(), 6 * 60 * 60 * 1000); }
+ }).catch(error => {
+   dialog.showErrorBox('LEVEL7 and MTM could not start', error.message);
+   app.quit();
+ });
+ 
++// 0.9.113 automatic updates: see remote-update.cjs. Verified files install after a normal exit.
++let updater = null;
++function registerUpdates() {
++  updater = createRemoteUpdater({ app, net: session.fromPartition('level7-updates', { cache: false }), appRoot: APP_ROOT, dataRoot: DATA_ROOT, notify: state => mainWindow?.webContents.send('update:status', state) });
++  ipcMain.handle('update:status', event => { assertMainSender(event); return updater.status(); });
++  ipcMain.handle('update:check', event => { assertMainSender(event); return updater.check(); });
++}
++app.on('will-quit', () => { if (updater) updater.installOnExit(); });
++
+ app.on('window-all-closed', () => app.quit());
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/preload.cjs dev/desktop/preload.cjs
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/preload.cjs	2026-10-30 17:25:36.000000000 +0000
++++ dev/desktop/preload.cjs	2026-10-31 04:49:18.350979101 +0000
+@@ -15,6 +15,9 @@
+   },
+   finishClose: (token, saved) => ipcRenderer.invoke('pattern:finish-close', { token, saved: saved === true }),
+   requestClose:()=>ipcRenderer.invoke('pattern:request-close'),
++  getLocalUpdateStatus: () => ipcRenderer.invoke('update:status'),
++  checkLocalUpdates: () => ipcRenderer.invoke('update:check'),
++  onLocalUpdateStatus: handler => { if (typeof handler !== 'function') throw new Error('A status handler is required.'); const listener = (_event, state) => handler(state); ipcRenderer.on('update:status', listener); return () => ipcRenderer.removeListener('update:status', listener); },
+   openMdl: () => ipcRenderer.invoke('pattern:open-mdl'),
+   copyText: text => ipcRenderer.invoke('pattern:copy-text', {text}),
+   saveMdl: options => ipcRenderer.invoke('pattern:save-mdl', {
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/remote-update.cjs dev/desktop/remote-update.cjs
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/desktop/remote-update.cjs	1970-01-01 00:00:00.000000000 +0000
++++ dev/desktop/remote-update.cjs	2026-10-31 04:59:15.875654676 +0000
+@@ -0,0 +1,114 @@
++'use strict';
++// 0.9.113 automatic updates. The program reads a release manifest from the
++// LEVEL7 and MTM repository, downloads only the application files whose
++// SHA-256 differs from the installed ones, verifies every file, and installs
++// them after the next normal exit (the running program is never patched).
++// Only application files are touched: documents and user data are not.
++const fs = require('node:fs');
++const fsp = require('node:fs/promises');
++const path = require('node:path');
++const { createHash } = require('node:crypto');
++
++const REPO_RAW = 'https://raw.githubusercontent.com/alaa-borham/LEVEL7andMTM';
++const CHANNELS = ['main', 'claude/tender-pasteur-bwjzzi'];
++const MANIFEST_PATH = 'level7-cad/releases/latest.json';
++const ALLOWED = /^(?:native\.html|index\.html|package\.json|README[^/]*\.md|(?:src|desktop|assets|examples)\/[A-Za-z0-9._\-\/]+)$/;
++const MAX_FILES = 2000, MAX_FILE = 16 * 1024 * 1024, MAX_TOTAL = 64 * 1024 * 1024;
++
++const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
++const versionParts = v => String(v || '').split('.').map(n => Number.parseInt(n, 10) || 0);
++function newer(a, b) { const x = versionParts(a), y = versionParts(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; }
++function safeRelative(p) { return typeof p === 'string' && ALLOWED.test(p) && !p.split('/').some(s => s === '..' || s === '.' || s === '') ; }
++
++function createRemoteUpdater({ app, net, appRoot, dataRoot, notify }) {
++  const root = path.join(dataRoot, 'Updates');
++  const currentVersion = app.getVersion();
++  const manifestOverride = process.env.L7_UPDATE_MANIFEST_URL || '';
++  const enabled = app.isPackaged || !!manifestOverride;
++  let state = enabled ? { state: 'current', currentVersion, message: 'لم يُفحص بعد.' } : { state: 'disabled', currentVersion, message: 'التحديث التلقائي يعمل في النسخة المبنية فقط.' };
++  let busy = null, staged = null;
++  const publish = next => { state = { currentVersion, ...next }; try { notify?.(state); } catch {} return state; };
++
++  async function fetchBytes(url, limit) {
++    if (!manifestOverride && !url.startsWith(REPO_RAW + '/')) throw Error('مصدر تحديث غير مسموح.');
++    const response = await net.fetch(url, { cache: 'no-store', redirect: 'error' });
++    if (!response.ok) throw Error(`HTTP ${response.status}`);
++    const bytes = Buffer.from(await response.arrayBuffer());
++    if (bytes.length > limit) throw Error('الملف أكبر من الحد المسموح.');
++    return bytes;
++  }
++  async function readManifest() {
++    const urls = manifestOverride ? [manifestOverride] : CHANNELS.map(c => `${REPO_RAW}/${c}/${MANIFEST_PATH}`);
++    let lastError = null;
++    for (const url of urls) {
++      try {
++        const manifest = JSON.parse((await fetchBytes(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), 2 * 1024 * 1024)).toString('utf8'));
++        if (manifest?.product !== 'LEVEL7 and MTM' || typeof manifest.version !== 'string' || !Array.isArray(manifest.files) || manifest.files.length > MAX_FILES) throw Error('ملف الإصدار غير صالح.');
++        for (const f of manifest.files) if (!safeRelative(f?.path) || !/^[a-f0-9]{64}$/.test(f?.sha256 || '') || !Number.isInteger(f?.size) || f.size < 0 || f.size > MAX_FILE) throw Error('ملف الإصدار يحتوي مساراً غير مسموح.');
++        return { manifest, base: manifest.baseUrl || url.slice(0, url.lastIndexOf('/')) + '/app' };
++      } catch (error) { lastError = error; }
++    }
++    throw lastError || Error('تعذر قراءة ملف الإصدار.');
++  }
++  async function localHash(rel) { try { return sha256(await fsp.readFile(path.join(appRoot, ...rel.split('/')))); } catch { return null; } }
++
++  async function check() {
++    if (!enabled) return state;
++    if (busy) return busy;
++    busy = (async () => {
++      publish({ state: 'checking', message: 'يفحص وجود تحديث…' });
++      try {
++        const { manifest, base } = await readManifest();
++        if (!newer(manifest.version, currentVersion)) { staged = null; return publish({ state: 'current', version: manifest.version, message: `البرنامج محدّث (${currentVersion}).` }); }
++        try { await fsp.access(appRoot, fs.constants.W_OK); } catch { return publish({ state: 'error', version: manifest.version, message: 'مجلد البرنامج للقراءة فقط، فلا يمكن تثبيت التحديث تلقائياً. انقل البرنامج إلى مجلد قابل للكتابة.' }); }
++        const dir = path.join(root, 'staged-' + manifest.version.replace(/[^0-9.]/g, ''));
++        await fsp.rm(dir, { recursive: true, force: true }); await fsp.mkdir(dir, { recursive: true });
++        const changed = []; let total = 0;
++        for (const f of manifest.files) {
++          if (await localHash(f.path) === f.sha256) continue;
++          const bytes = await fetchBytes(`${base}/${f.path.split('/').map(encodeURIComponent).join('/')}?v=${manifest.version}`, MAX_FILE);
++          if (bytes.length !== f.size || sha256(bytes) !== f.sha256) throw Error('فشل التحقق من الملف ' + f.path + '؛ لم يُثبّت شيء');
++          total += bytes.length; if (total > MAX_TOTAL) throw Error('حجم التحديث أكبر من الحد المسموح.');
++          const target = path.join(dir, 'files', ...f.path.split('/'));
++          await fsp.mkdir(path.dirname(target), { recursive: true }); await fsp.writeFile(target, bytes);
++          changed.push(f);
++        }
++        await fsp.writeFile(path.join(dir, 'manifest.json'), JSON.stringify({ version: manifest.version, changed, notes: manifest.notes || '' }, null, 1));
++        staged = { dir, version: manifest.version, changed };
++        return publish({ state: 'ready', version: manifest.version, message: `الإصدار ${manifest.version} جاهز (${changed.length} ملف). يُثبَّت تلقائياً عند إغلاق البرنامج.${manifest.notes ? '\n' + manifest.notes : ''}` });
++      } catch (error) {
++        return publish({ state: 'error', message: 'تعذر فحص التحديث: ' + (error?.message || error) + '. البرنامج الحالي لم يتغير.' });
++      } finally { busy = null; }
++    })();
++    return busy;
++  }
++
++  // Runs synchronously while the program exits. Every staged file was verified
++  // when it was downloaded and is verified again here; replaced files are backed
++  // up first so a failed copy restores the previous version.
++  function installOnExit() {
++    if (!staged) return false;
++    const backup = path.join(root, `backup-${currentVersion}-${Date.now()}`), done = [];
++    try {
++      for (const f of staged.changed) {
++        const from = path.join(staged.dir, 'files', ...f.path.split('/')), bytes = fs.readFileSync(from);
++        if (sha256(bytes) !== f.sha256) throw Error('staged file changed: ' + f.path);
++      }
++      for (const f of staged.changed) {
++        const target = path.join(appRoot, ...f.path.split('/')), from = path.join(staged.dir, 'files', ...f.path.split('/'));
++        if (fs.existsSync(target)) { const b = path.join(backup, ...f.path.split('/')); fs.mkdirSync(path.dirname(b), { recursive: true }); fs.copyFileSync(target, b); }
++        fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(from, target); done.push(f);
++      }
++      fs.writeFileSync(path.join(root, 'last-install.json'), JSON.stringify({ from: currentVersion, to: staged.version, files: done.map(f => f.path), backup, time: new Date().toISOString() }, null, 1));
++      fs.rmSync(staged.dir, { recursive: true, force: true }); staged = null; return true;
++    } catch (error) {
++      for (const f of done) { const b = path.join(backup, ...f.path.split('/')); try { if (fs.existsSync(b)) fs.copyFileSync(b, path.join(appRoot, ...f.path.split('/'))); } catch {} }
++      try { fs.writeFileSync(path.join(root, 'last-install-error.json'), JSON.stringify({ from: currentVersion, to: staged?.version, error: String(error?.message || error), time: new Date().toISOString() }, null, 1)); } catch {}
++      return false;
++    }
++  }
++
++  return { status: () => state, check, installOnExit, enabled };
++}
++
++module.exports = { createRemoteUpdater, newer, safeRelative };
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/native.html dev/native.html
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/native.html	2026-10-30 22:13:50.000000000 +0000
++++ dev/native.html	2026-10-31 04:56:00.883437538 +0000
+@@ -12,7 +12,8 @@
+   <link rel="stylesheet" href="src/xz-workspace.css">
+   <link rel="stylesheet" href="src/parameter-layout.css">
+   <link rel="stylesheet" href="src/values-classic-layout.css">
+-  <link rel="stylesheet" href="src/ux-0112.css">
++  <link rel="stylesheet" href="src/ux-0112.css">
++  <link rel="stylesheet" href="src/ui-0113.css">
+ <style>#construction-options{font-size:11px;margin:5px 0 9px;line-height:1.6}#construction-options label{display:block;margin-bottom:5px}#construction-options input{display:block;width:100%;min-width:0;box-sizing:border-box;height:29px;font-size:12px}#construction-options small{display:block;margin-top:5px;color:#41627a}#construction-options #construction-error{color:#a22e21}</style></head>
+ <body>
+   <svg class="symbol-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+@@ -111,7 +112,7 @@
+         <button type="button" data-action="file-info">Supported MDL records…</button>
+         <button type="button" data-action="file-info">About this implementation</button>
+ <button type="button" data-action="open-parametric-example" id="menu-parametric-example">X/Z example…</button>
+-        <button type="button" data-action="check-local-updates" id="check-local-updates" hidden>Check local updates</button>
++        <button type="button" data-action="check-local-updates" id="check-local-updates" hidden>فحص التحديثات</button>
+       </div></details>
+     </nav>
+ 
+@@ -316,7 +317,8 @@
+     <div class="dialog-actions"><span id="part-properties-action-status" class="part-properties-action-status" aria-live="polite">Read-only metadata · activating a part changes the working view only</span><button type="button" id="part-properties-activate">Activate part</button><button type="button" data-action="close-dialog">Close</button></div>
+   </dialog>
+ 
+-  <script type="module" src="src/native-app.js"></script>
++  <script type="module" src="src/native-app.js"></script>
++  <script type="module" src="src/ui-0113-start.js"></script>
+ <dialog id="original-path-dialog" class="native-dialog original-path-dialog" aria-labelledby="original-path-title" dir="rtl"><form id="original-path-form" class="point-form" novalidate><header class="dialog-caption"><h1 id="original-path-title">تحرير خط أو منحنى أصلي</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p id="original-path-intro">إزاحة الأصل مع بقاء هويته وإعادة حساب البارتات التابعة المدعومة.</p><label>العملية<select id="original-path-operation"><option value="offset">إزاحة الأصل</option><option value="fraction">نقطة مرتبطة بنسبة</option><option value="distance">نقطة مرتبطة بمسافة</option></select></label><label>العنصر <select id="original-path-select"></select></label><div id="original-offset-fields"><label>إزاحة البداية (مم)<input id="original-offset-start" type="text" inputmode="decimal" dir="ltr"></label><label>إزاحة النهاية (مم)<input id="original-offset-end" type="text" inputmode="decimal" dir="ltr"></label><p>المسافة الموجبة إلى يمين اتجاه العنصر. تُحفظ الخطوة في سجل الإنشاء. إذا تعذّر حساب أي بارت متأثر، يُرفض التعديل دون فصل الروابط.</p></div><div id="original-linked-point-fields" hidden><label><span id="original-linked-unit">النسبة (%)</span><input id="original-linked-value" type="text" inputmode="decimal" dir="ltr" value="50"></label><label class="original-linked-direction"><input type="checkbox" id="original-linked-from-end">من نهاية العنصر</label><p>تُحفظ النقطة مرتبطة بمعرّف الخط أو المنحنى الأصلي. تتحرك عند إعادة حساب المصدر؛ المسافة تبقى داخل طول العنصر.</p></div><p>يمكنك إزاحة الأصل أو إنشاء نقطة مرتبطة عليه. استخدم زر نقاط تحكم المنحنى لتعديل تعريف منحنى مدعوم. بقية الأدوات لم تكتمل. حفظ هندسة التصاميم التي تحتوي عمليات غير مدعومة كاملةً ما زال غير متاح.</p><p id="original-path-error" class="field-error" role="alert"></p></div><footer class="dialog-actions"><button type="submit" id="original-path-apply">تطبيق</button><button type="button" data-action="close-dialog">إلغاء</button></footer></form></dialog><dialog id="original-curve-dialog" class="native-dialog original-path-dialog" aria-labelledby="original-curve-title" dir="rtl"><form id="original-curve-form" class="point-form" novalidate><header class="dialog-caption"><h1 id="original-curve-title">نقاط تحكم المنحنى الأصلي</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p>غيّر موضع نقطة التحكم على المنحنى الأساسي وارتفاعها النسبي أو اتجاه المماس. تبقى مراجع نقاط الارتكاز وروابط البارتات محفوظة.</p><label>تعريف المنحنى<select id="original-curve-select"></select></label><div id="original-curve-fields"></div><svg id="original-curve-preview" role="img" aria-label="مقارنة المنحنى قبل وبعد التعديل"></svg><p id="original-curve-preview-note" role="status"></p><p>للمنحنيات المدعومة في سجل البارت الحالي والمقاس الأساسي. إذا تعذّر حساب بارت متأثر أو حفظ جميع عناصره، يُرفض التعديل. حفظ هندسة التصميم كاملةً وبقية أدوات المنحنيات لم يكتمل.</p><p id="original-curve-error" class="field-error" role="alert"></p></div><footer class="dialog-actions"><button type="button" id="original-curve-preview-command">معاينة</button><button type="submit" id="original-curve-apply">تطبيق</button><button type="button" data-action="close-dialog">إلغاء</button></footer></form></dialog><dialog id="recorded-dimensions-dialog" class="native-dialog recorded-dimensions-dialog" dir="rtl" aria-labelledby="recorded-dimensions-title"><header class="dialog-caption"><h1 id="recorded-dimensions-title">أبعاد الباترن المسجّلة</h1><button type="button" data-action="close-dialog" aria-label="إغلاق">×</button></header><div class="dialog-body"><p id="recorded-dimensions-summary"></p><div class="table-scroll"><table class="native-table"><thead><tr><th>القياس</th><th>الرمز</th><th>النوع</th><th>القيمة (مم)</th><th>المضاعف</th><th>العرض المقرب</th><th>الحالة</th></tr></thead><tbody id="recorded-dimensions-body"></tbody></table></div><p class="dialog-note">تُحسب القيم من الخطوط والمنحنيات الأصلية ومراجع القياس، وتُحدّث عند فتح الجدول بعد تعديل X/Z. القيم غير المدعومة لا تُستبدل بقيم قديمة. هذا عرض وتصدير للقياسات. يُحدَّث رسم الأبعاد المستقيمة المدعومة وحفظها عند تحرير الأصل؛ إنشاء أبعاد جديدة وبقية أشكال الأبعاد والحفظ الكامل ما زالت غير متاحة.</p><p id="recorded-dimensions-message" role="status"></p></div><footer class="dialog-actions"><button type="button" id="recorded-dimensions-export">حفظ الجدول النصي</button><button type="button" data-action="close-dialog">إغلاق</button></footer></dialog></body>
+ </html>
+ 
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/package.json dev/package.json
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/package.json	2026-10-30 20:22:34.000000000 +0000
++++ dev/package.json	2026-10-31 04:57:36.108607582 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.112",
++  "version": "0.9.113",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/native-app.js dev/src/native-app.js
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/native-app.js	2026-10-30 22:13:50.000000000 +0000
++++ dev/src/native-app.js	2026-10-31 04:49:39.782830621 +0000
+@@ -154,13 +154,13 @@
+   if (!hasLocalUpdates()) return;
+   const knownStates = ['disabled','checking','current','ready','error'];
+   localUpdateState = knownStates.includes(result?.state) ? result : {state:'error',message:'Local update status is unavailable.'};
+-  const labels = {disabled:'Unavailable',checking:'Checking…',current:'Current',ready:`${localUpdateState.version || 'Update'} ready`,error:'Check failed'};
++  const labels = {disabled:'غير مفعّل',checking:'جارٍ الفحص…',current:'محدّث',ready:`${localUpdateState.version || 'تحديث'} جاهز · يُثبّت عند الإغلاق`,error:'تعذر الفحص'};
+   const output = $('#local-update-status'), button = $('#check-local-updates');
+   output.hidden = false; output.dataset.state = localUpdateState.state;
+-  text(output, `Local updates · ${labels[localUpdateState.state]}`);
+-  output.title = `Automatic local updates${localUpdateState.currentVersion ? ` · installed ${localUpdateState.currentVersion}` : ''}\n${localUpdateState.message || ''}`;
++  text(output, `التحديثات · ${labels[localUpdateState.state]}`);
++  output.title = `التحديث التلقائي${localUpdateState.currentVersion ? ` · الإصدار المثبت ${localUpdateState.currentVersion}` : ''}\n${localUpdateState.message || ''}`;
+   button.hidden = false; button.disabled = localUpdateBusy || ['disabled','checking'].includes(localUpdateState.state);
+-  button.title = localUpdateState.message || 'Check locally prepared releases. A verified update installs after the next normal exit.';
++  button.title = localUpdateState.message || 'فحص وجود إصدار جديد الآن. التحديث الموثّق يُثبّت تلقائياً عند الإغلاق.';
+ }
+ async function refreshLocalUpdates(check = false) {
+   if (!hasLocalUpdates() || localUpdateBusy) return;
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-0113-start.js dev/src/ui-0113-start.js
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-0113-start.js	1970-01-01 00:00:00.000000000 +0000
++++ dev/src/ui-0113-start.js	2026-10-31 04:56:00.866174862 +0000
+@@ -0,0 +1,2 @@
++import {installInterfaceGuide} from './ui-guide-0113.js';
++installInterfaceGuide();
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-0113.css dev/src/ui-0113.css
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-0113.css	1970-01-01 00:00:00.000000000 +0000
++++ dev/src/ui-0113.css	2026-10-31 04:56:50.840299120 +0000
+@@ -0,0 +1,71 @@
++/* LEVEL7 and MTM 0.9.113 interface theme. Presentation only: no command, ID or
++   enabled state changes. Brand: navy #0b2338, gold #e3b341, sky #1f9bd6, mint #2bb3a6. */
++:root{--l7-navy:#0b2338;--l7-navy-2:#143a5c;--l7-gold:#e3b341;--l7-gold-soft:#fff6dc;--l7-sky:#1f9bd6;--l7-sky-soft:#e6f4fc;--l7-mint:#2bb3a6;--l7-ink:#2c3e50;--l7-line:#d5dde4;--l7-panel:#f6f8fa;--l7-card:#ffffff;--l7-radius:10px;--l7-shadow:0 1px 2px rgba(11,35,56,.08),0 2px 8px rgba(11,35,56,.06)}
++
++/* Title bar and menu */
++.ui-0113 .app-topbar{background:linear-gradient(90deg,var(--l7-navy),var(--l7-navy-2));color:#fff;border-bottom:0;height:34px;min-height:34px}
++.ui-0113 .app-brand strong{color:#fff;letter-spacing:.3px}
++.ui-0113 .app-brand img{width:22px;height:22px;border-radius:6px}
++.ui-0113 .document-tab{color:#e9f2f8}
++.ui-0113 .document-tab .file-type,.ui-0113 .mode-badge{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);border-radius:6px}
++.ui-0113 .menubar{background:#fff;border-bottom:1px solid var(--l7-line)}
++.ui-0113 .menu summary{border-radius:6px;transition:background .15s}
++.ui-0113 .menu summary:hover,.ui-0113 .menu[open] summary{background:var(--l7-sky-soft);color:var(--l7-navy)}
++.ui-0113 .menu-popup{border-radius:10px;box-shadow:0 10px 30px rgba(11,35,56,.18);border-color:var(--l7-line);overflow:hidden}
++.ui-0113 .menu-popup button:not(:disabled):hover{background:var(--l7-sky-soft)}
++
++/* Floating command bar */
++.ui-0113 .cad-toolbox{border-radius:14px;border:1px solid var(--l7-line);box-shadow:0 8px 24px rgba(11,35,56,.22);overflow:hidden;background:#fff}
++.ui-0113 .cad-toolbox button{border-radius:8px;transition:background .15s,transform .15s,box-shadow .15s}
++.ui-0113 .cad-toolbox button:not(:disabled):hover{background:var(--l7-sky-soft);box-shadow:inset 0 0 0 1px #9fd2ef;transform:translateY(-1px)}
++
++/* Side panels */
++.ui-0113 .command-panel,.ui-0113 .parts-panel{background:var(--l7-panel)}
++.ui-0113.grafis-grouped .work-area{grid-template-columns:132px minmax(0,1fr) 252px}
++.ui-0113.grafis-grouped .native-shell.parts-hidden .work-area{grid-template-columns:0 minmax(0,1fr) 252px}
++.ui-0113 .tool-section{border-bottom:1px solid var(--l7-line)}
++.ui-0113 .section-heading h2{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--l7-navy);display:flex;align-items:center;gap:6px}
++.ui-0113 .section-heading h2::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--l7-gold)}
++.ui-0113 .construction-tool{border-radius:9px;transition:background .15s,box-shadow .15s}
++.ui-0113 .construction-tool:not(:disabled):hover{background:var(--l7-sky-soft);box-shadow:inset 0 0 0 1px #9fd2ef}
++.ui-0113 .construction-tool[aria-pressed="true"]{background:var(--l7-navy);color:#fff;box-shadow:none}
++.ui-0113 .construction-tool[aria-pressed="true"] svg{stroke:#fff}
++
++/* Tool cards (category and option icons) */
++.ui-0113 .grafis-category-grid,.ui-0113 .grafis-option-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:4px 0}
++.ui-0113 .grafis-icon-option{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:auto;min-height:60px;padding:6px 4px 5px;background:var(--l7-card);border:1px solid var(--l7-line);border-radius:var(--l7-radius);box-shadow:var(--l7-shadow);transition:transform .15s,box-shadow .15s,border-color .15s,background .15s}
++.ui-0113 .grafis-icon-option svg{width:30px;height:30px;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
++.ui-0113 .grafis-icon-option[data-caption]::after{content:attr(data-caption);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;font:600 10.5px/1.25 "Segoe UI",Tahoma,Arial,sans-serif;color:#40525f;text-align:center;direction:rtl}
++.ui-0113 .grafis-icon-option:not(:disabled):hover{transform:translateY(-2px);border-color:var(--l7-sky);box-shadow:0 6px 16px rgba(31,155,214,.22)}
++.ui-0113 .grafis-icon-option:focus-visible{outline:2px solid var(--l7-gold);outline-offset:2px}
++.ui-0113 .grafis-icon-option[aria-pressed="true"],.ui-0113 .grafis-icon-option[aria-expanded="true"]{background:var(--l7-gold-soft);border-color:var(--l7-gold);box-shadow:0 0 0 2px rgba(227,179,65,.35)}
++.ui-0113 .grafis-icon-option:disabled{opacity:.42;filter:grayscale(.6);box-shadow:none;background:#f1f3f5}
++.ui-0113 .grafis-icon-option[data-tool-pending]::before{content:"قريباً";position:absolute;top:3px;inset-inline-start:3px;font:700 8.5px/1 "Segoe UI",Tahoma,sans-serif;color:#7a5b00;background:#ffe9a8;border-radius:5px;padding:2px 4px}
++.ui-0113 [data-drawing-family-panel] .grafis-icon-option{height:auto;min-height:66px}
++
++/* Glyph palette */
++.ui-0113 .grafis-icon-option .ink{stroke:#3a4b5a}
++.ui-0113 .grafis-icon-option .blue{stroke:var(--l7-sky)}
++.ui-0113 .grafis-icon-option .green{stroke:#1f9d6b;fill:#1f9d6b}
++.ui-0113 .grafis-icon-option .red{stroke:#e5484d}
++.ui-0113 .grafis-icon-option .gold{stroke:var(--l7-gold)}
++.ui-0113 .grafis-icon-option .dot{fill:var(--l7-navy);stroke:var(--l7-navy)}
++
++/* Category header */
++.ui-0113 .grafis-category-header{background:linear-gradient(90deg,var(--l7-navy),var(--l7-navy-2));color:#fff;border-radius:10px;padding:5px 8px;margin-bottom:6px}
++.ui-0113 .grafis-category-header button{background:rgba(255,255,255,.14);border-color:transparent;border-radius:8px}
++.ui-0113 .grafis-category-header button svg .blue,.ui-0113 .grafis-category-header button svg path{stroke:#fff}
++
++/* Guidance card */
++.tool-guide{position:sticky;bottom:0;z-index:5;display:grid;gap:2px;margin:8px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,#fff,#f0f7fc);border:1px solid #cfe5f3;box-shadow:var(--l7-shadow);font-size:12px;line-height:1.4}
++.tool-guide-title{color:var(--l7-navy);font-size:13px}
++.tool-guide-sub{color:#5f7383;direction:ltr;text-align:right;font-size:11px}
++.tool-guide-sub:empty{display:none}
++.tool-guide-state{color:#1f6f99}
++.tool-guide[data-available="false"]{background:linear-gradient(135deg,#fff,#fbf6ea);border-color:#ecd9a5}
++.tool-guide[data-available="false"] .tool-guide-state{color:#8a6400}
++
++/* Status bar */
++.ui-0113 .statusbar{background:#fff;border-top:1px solid var(--l7-line)}
++.ui-0113 #local-update-status[data-state="ready"]{color:#0f7a4f;font-weight:700}
++.ui-0113 #local-update-status[data-state="error"]{color:#b4232a}
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-guide-0113.js dev/src/ui-guide-0113.js
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.112/src/ui-guide-0113.js	1970-01-01 00:00:00.000000000 +0000
++++ dev/src/ui-guide-0113.js	2026-10-31 04:56:50.839877917 +0000
+@@ -0,0 +1,53 @@
++/** 0.9.113 interface guidance. Purely presentational: adds a short Arabic caption
++ * under icon-only tool buttons and a help card that explains the tool under the
++ * pointer or keyboard focus. Commands, IDs, titles and capability guards are
++ * untouched; a disabled tool is described as unavailable, never enabled. */
++const arabic = /[؀-ۿ]/;
++const pendingNote = 'غير متاح بعد';
++function parts(title) {
++  const pieces = String(title || '').split(/\s+[·/]\s+/).map(s => s.trim()).filter(Boolean);
++  const ar = pieces.filter(p => arabic.test(p) && p !== pendingNote);
++  const en = pieces.filter(p => !arabic.test(p));
++  return { ar: ar.join(' · '), en: en.join(' · '), pending: pieces.includes(pendingNote) };
++}
++function caption(button) {
++  const { ar, en } = parts(button.getAttribute('title') || button.getAttribute('aria-label'));
++  const text = (ar || en).replace(/\s*\(.*?\)\s*/g, ' ').split(/[،؛:;—]/)[0].replace(/\s+[A-Za-z][\w+-]*$/,'').trim();
++  return text.length > 34 ? text.slice(0, 33).trim() + '…' : text;
++}
++function iconOnly(button) { return [...button.children].every(c => c.tagName.toLowerCase() === 'svg' || c.classList.contains('grafis-sr-only')); }
++function label(root = document) {
++  for (const b of root.querySelectorAll('.grafis-icon-option')) {
++    if (!iconOnly(b)) { delete b.dataset.caption; continue; }
++    const c = caption(b); if (b.dataset.caption !== c) b.dataset.caption = c;
++  }
++}
++function describe(button) {
++  const { ar, en, pending } = parts(button.getAttribute('title') || button.getAttribute('aria-label') || button.textContent);
++  const state = pending || button.dataset.toolPending !== undefined ? 'غير متاح بعد في هذا الإصدار'
++    : button.disabled ? 'غير متاح الآن: افتح ملفاً أو اختر بارتاً أو عنصراً يدعم هذه الأداة'
++    : button.getAttribute('aria-expanded') !== null ? 'اضغط لعرض أدوات هذه المجموعة'
++    : 'اضغط لاستخدام الأداة';
++  return { title: ar || en || 'أداة', sub: ar && en ? en : '', state, available: !button.disabled && !pending };
++}
++export function installInterfaceGuide() {
++  const panel = document.querySelector('.command-panel');
++  if (!panel || document.querySelector('#tool-guide')) return;
++  const card = document.createElement('aside');
++  card.id = 'tool-guide'; card.className = 'tool-guide'; card.dir = 'rtl'; card.setAttribute('aria-live', 'polite');
++  card.innerHTML = '<strong class="tool-guide-title">مرّر المؤشر على أي أداة</strong><span class="tool-guide-sub"></span><span class="tool-guide-state">يظهر هنا اسمها وطريقة استخدامها.</span>';
++  const anchor = panel.querySelector('.selection-panel');
++  panel.insertBefore(card, anchor || null);
++  const [t, s, st] = card.children;
++  const show = target => {
++    const b = target?.closest?.('.grafis-icon-option, .construction-tool, #cad-toolbox button, .command-footer button');
++    if (!b) return;
++    const d = describe(b); t.textContent = d.title; s.textContent = d.sub; st.textContent = d.state; card.dataset.available = String(d.available);
++  };
++  document.addEventListener('pointerover', e => show(e.target), { passive: true });
++  document.addEventListener('focusin', e => show(e.target));
++  label();
++  new MutationObserver(records => { if (records.some(r => r.type === 'childList' || r.attributeName === 'title')) label(); })
++    .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['title'] });
++  document.body.classList.add('ui-0113');
++}

@@ -1,0 +1,18 @@
+import{spline}from'./natural-parametric-spline.mjs';
+const v=b=>new DataView(b.buffer,b.byteOffset,b.byteLength),need=(b,m)=>{if(!b)throw Error(m);};
+export function encodeRaster0Record({id,sourceId,reverse=false,count=2}){need([id,sourceId].every(n=>Number.isInteger(n)&&n>=2001&&n<60000)&&typeof reverse==='boolean'&&Number.isInteger(count)&&count>=2&&count<=401,'Invalid Raster0 selection');const b=new Uint8Array(32),q=v(b);[109,101,sourceId,reverse?65535:0,count,1,id].forEach((n,i)=>q.setUint16(i*2,n,true));return b;}
+export function readRaster0Record(raw){if(!(raw instanceof Uint8Array)||raw.length!==32)return null;const q=v(raw),args={sourceId:q.getUint16(4,true),id:q.getUint16(12,true),reverse:q.getUint16(6,true)===65535,count:q.getUint16(8,true)};try{const b=encodeRaster0Record(args);return raw.every((n,i)=>n===b[i])?args:null;}catch{return null;}}
+function curveFulcrums(meta){
+ need(meta?.family==='qq-two-fixed-v1'&&meta.supports?.length===4,'Unverified Raster0 curve family');const c=spline(meta.supports),total=c.h.reduce((a,b)=>a+b,0),count=2*Math.floor((Math.floor(total/2)-1)/2);need(count>=2&&count<=398,'Raster0 curve outside sampling range');
+ const at=t=>{for(let i=0;i<c.h.length;i++){if(t<=c.h[i]+1e-5)return c.at(i,Math.max(0,Math.min(1,t/c.h[i]))).map(Math.fround);t-=c.h[i];}throw Error('Raster0 sampling interval');};let t=0;const dt=Math.fround(total/count),grid=Array.from({length:count+1},(_,i)=>{const p=at(i===count?total:t);t=Math.fround(t+dt);return p;}),deviation=(p,a,b)=>{const d=b.map((n,k)=>n-a[k]),l=d.reduce((s,n)=>s+n*n,0);need(l>1e-14,'Degenerate Raster0 chord');const f=p.reduce((s,n,k)=>s+(n-a[k])*d[k],0)/l;return Math.hypot(...p.map((n,k)=>n-a[k]-f*d[k]));},rows=[grid[0]];
+ // Native fulcrums use an even construction grid. Grow trial intervals by
+ // doubling, then discard a redundant join only if every interior sample
+ // remains inside the construction tolerance (including S-bend extrema).
+ const indices=[0];for(let j=0;j<count;){let step=1;while(j+step<count&&deviation(grid[j+step],grid[j],grid[Math.min(count,j+2*step)])<.08)step*=2;j=Math.min(count,j+step);indices.push(j);}
+ for(let i=1;i<indices.length-1;i++){if(grid.slice(indices[i-1]+1,indices[i+1]).every(p=>deviation(p,grid[indices[i-1]],grid[indices[i+1]])<.08)){indices.splice(i,1);i--;}}
+ rows.splice(0,rows.length,...indices.map(i=>grid[i]));if(Math.hypot(...meta.start.map((n,k)=>n-rows[0][k]))>1e-7)rows.unshift(meta.start.slice());if(Math.hypot(...meta.end.map((n,k)=>n-rows.at(-1)[k]))>1e-7)rows.push(meta.end.slice());return rows;
+}
+export function canRaster0Source(source){return !!source&&!source.hidden&&(!source.geometryKind&&source.points?.length===2||source.geometryKind==='sampled-curve'&&source.rasterConstruction?.family==='qq-two-fixed-v1'&&source.directionPolyline?.family==='qq-two-relative-end-v1'&&source.samplingToleranceMm===.0001&&['interactive-two-endpoint-curve','replace-curve'].includes(source.operation));}
+export function raster0Points(source,reverse,declaredCount){need(canRaster0Source(source),'Raster0 source is unavailable or outside the verified construction family');let p;if(source.geometryKind){p=curveFulcrums(source.rasterConstruction);}else{p=source.points.map(p=>p.map(Math.fround));}
+ need(p.length>=2&&p.length<=401&&p.flat().every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6)&&p.every((q,i)=>!i||Math.hypot(...q.map((n,k)=>n-p[i-1][k]))>1e-7),'Degenerate Raster0 path');// Native Test Run changes the actual point count while retaining this historical count hint.
+ if(declaredCount!==undefined)need(Number.isInteger(declaredCount)&&declaredCount>=2&&declaredCount<=401,'Invalid historical Raster0 count');return reverse?p.reverse():p;}

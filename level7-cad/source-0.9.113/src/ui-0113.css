@@ -1,0 +1,71 @@
+/* LEVEL7 and MTM 0.9.113 interface theme. Presentation only: no command, ID or
+   enabled state changes. Brand: navy #0b2338, gold #e3b341, sky #1f9bd6, mint #2bb3a6. */
+:root{--l7-navy:#0b2338;--l7-navy-2:#143a5c;--l7-gold:#e3b341;--l7-gold-soft:#fff6dc;--l7-sky:#1f9bd6;--l7-sky-soft:#e6f4fc;--l7-mint:#2bb3a6;--l7-ink:#2c3e50;--l7-line:#d5dde4;--l7-panel:#f6f8fa;--l7-card:#ffffff;--l7-radius:10px;--l7-shadow:0 1px 2px rgba(11,35,56,.08),0 2px 8px rgba(11,35,56,.06)}
+
+/* Title bar and menu */
+.ui-0113 .app-topbar{background:linear-gradient(90deg,var(--l7-navy),var(--l7-navy-2));color:#fff;border-bottom:0;height:34px;min-height:34px}
+.ui-0113 .app-brand strong{color:#fff;letter-spacing:.3px}
+.ui-0113 .app-brand img{width:22px;height:22px;border-radius:6px}
+.ui-0113 .document-tab{color:#e9f2f8}
+.ui-0113 .document-tab .file-type,.ui-0113 .mode-badge{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25);border-radius:6px}
+.ui-0113 .menubar{background:#fff;border-bottom:1px solid var(--l7-line)}
+.ui-0113 .menu summary{border-radius:6px;transition:background .15s}
+.ui-0113 .menu summary:hover,.ui-0113 .menu[open] summary{background:var(--l7-sky-soft);color:var(--l7-navy)}
+.ui-0113 .menu-popup{border-radius:10px;box-shadow:0 10px 30px rgba(11,35,56,.18);border-color:var(--l7-line);overflow:hidden}
+.ui-0113 .menu-popup button:not(:disabled):hover{background:var(--l7-sky-soft)}
+
+/* Floating command bar */
+.ui-0113 .cad-toolbox{border-radius:14px;border:1px solid var(--l7-line);box-shadow:0 8px 24px rgba(11,35,56,.22);overflow:hidden;background:#fff}
+.ui-0113 .cad-toolbox button{border-radius:8px;transition:background .15s,transform .15s,box-shadow .15s}
+.ui-0113 .cad-toolbox button:not(:disabled):hover{background:var(--l7-sky-soft);box-shadow:inset 0 0 0 1px #9fd2ef;transform:translateY(-1px)}
+
+/* Side panels */
+.ui-0113 .command-panel,.ui-0113 .parts-panel{background:var(--l7-panel)}
+.ui-0113.grafis-grouped .work-area{grid-template-columns:132px minmax(0,1fr) 252px}
+.ui-0113.grafis-grouped .native-shell.parts-hidden .work-area{grid-template-columns:0 minmax(0,1fr) 252px}
+.ui-0113 .tool-section{border-bottom:1px solid var(--l7-line)}
+.ui-0113 .section-heading h2{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--l7-navy);display:flex;align-items:center;gap:6px}
+.ui-0113 .section-heading h2::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--l7-gold)}
+.ui-0113 .construction-tool{border-radius:9px;transition:background .15s,box-shadow .15s}
+.ui-0113 .construction-tool:not(:disabled):hover{background:var(--l7-sky-soft);box-shadow:inset 0 0 0 1px #9fd2ef}
+.ui-0113 .construction-tool[aria-pressed="true"]{background:var(--l7-navy);color:#fff;box-shadow:none}
+.ui-0113 .construction-tool[aria-pressed="true"] svg{stroke:#fff}
+
+/* Tool cards (category and option icons) */
+.ui-0113 .grafis-category-grid,.ui-0113 .grafis-option-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:4px 0}
+.ui-0113 .grafis-icon-option{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:auto;min-height:60px;padding:6px 4px 5px;background:var(--l7-card);border:1px solid var(--l7-line);border-radius:var(--l7-radius);box-shadow:var(--l7-shadow);transition:transform .15s,box-shadow .15s,border-color .15s,background .15s}
+.ui-0113 .grafis-icon-option svg{width:30px;height:30px;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.ui-0113 .grafis-icon-option[data-caption]::after{content:attr(data-caption);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:100%;font:600 10.5px/1.25 "Segoe UI",Tahoma,Arial,sans-serif;color:#40525f;text-align:center;direction:rtl}
+.ui-0113 .grafis-icon-option:not(:disabled):hover{transform:translateY(-2px);border-color:var(--l7-sky);box-shadow:0 6px 16px rgba(31,155,214,.22)}
+.ui-0113 .grafis-icon-option:focus-visible{outline:2px solid var(--l7-gold);outline-offset:2px}
+.ui-0113 .grafis-icon-option[aria-pressed="true"],.ui-0113 .grafis-icon-option[aria-expanded="true"]{background:var(--l7-gold-soft);border-color:var(--l7-gold);box-shadow:0 0 0 2px rgba(227,179,65,.35)}
+.ui-0113 .grafis-icon-option:disabled{opacity:.42;filter:grayscale(.6);box-shadow:none;background:#f1f3f5}
+.ui-0113 .grafis-icon-option[data-tool-pending]::before{content:"قريباً";position:absolute;top:3px;inset-inline-start:3px;font:700 8.5px/1 "Segoe UI",Tahoma,sans-serif;color:#7a5b00;background:#ffe9a8;border-radius:5px;padding:2px 4px}
+.ui-0113 [data-drawing-family-panel] .grafis-icon-option{height:auto;min-height:66px}
+
+/* Glyph palette */
+.ui-0113 .grafis-icon-option .ink{stroke:#3a4b5a}
+.ui-0113 .grafis-icon-option .blue{stroke:var(--l7-sky)}
+.ui-0113 .grafis-icon-option .green{stroke:#1f9d6b;fill:#1f9d6b}
+.ui-0113 .grafis-icon-option .red{stroke:#e5484d}
+.ui-0113 .grafis-icon-option .gold{stroke:var(--l7-gold)}
+.ui-0113 .grafis-icon-option .dot{fill:var(--l7-navy);stroke:var(--l7-navy)}
+
+/* Category header */
+.ui-0113 .grafis-category-header{background:linear-gradient(90deg,var(--l7-navy),var(--l7-navy-2));color:#fff;border-radius:10px;padding:5px 8px;margin-bottom:6px}
+.ui-0113 .grafis-category-header button{background:rgba(255,255,255,.14);border-color:transparent;border-radius:8px}
+.ui-0113 .grafis-category-header button svg .blue,.ui-0113 .grafis-category-header button svg path{stroke:#fff}
+
+/* Guidance card */
+.tool-guide{position:sticky;bottom:0;z-index:5;display:grid;gap:2px;margin:8px;padding:9px 11px;border-radius:12px;background:linear-gradient(135deg,#fff,#f0f7fc);border:1px solid #cfe5f3;box-shadow:var(--l7-shadow);font-size:12px;line-height:1.4}
+.tool-guide-title{color:var(--l7-navy);font-size:13px}
+.tool-guide-sub{color:#5f7383;direction:ltr;text-align:right;font-size:11px}
+.tool-guide-sub:empty{display:none}
+.tool-guide-state{color:#1f6f99}
+.tool-guide[data-available="false"]{background:linear-gradient(135deg,#fff,#fbf6ea);border-color:#ecd9a5}
+.tool-guide[data-available="false"] .tool-guide-state{color:#8a6400}
+
+/* Status bar */
+.ui-0113 .statusbar{background:#fff;border-top:1px solid var(--l7-line)}
+.ui-0113 #local-update-status[data-state="ready"]{color:#0f7a4f;font-weight:700}
+.ui-0113 #local-update-status[data-state="error"]{color:#b4232a}

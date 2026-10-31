@@ -1,0 +1,12 @@
+import path from'node:path';import fs from'node:fs/promises';import assert from'node:assert/strict';import{_electron}from'file:///opt/node-tools/node_modules/playwright/index.mjs';
+const root='/home/user/work/updtest',appDir=root+'/app',exe='/home/user/work/dev/node_modules/electron/dist/electron';
+const env={...process.env,L7_UPDATE_MANIFEST_URL:'http://127.0.0.1:8765/latest.json'};delete env.ELECTRON_RUN_AS_NODE;
+const before=JSON.parse(await fs.readFile(appDir+'/package.json','utf8')).version;
+const app=await _electron.launch({executablePath:exe,args:['--no-sandbox',appDir],env,timeout:60000});const page=await app.firstWindow();page.setDefaultTimeout(30000);
+await page.waitForFunction(()=>{const o=document.querySelector('#local-update-status');return o&&!o.hidden&&/جاهز/.test(o.textContent);});
+console.log('STATUS',await page.locator('#local-update-status').textContent());
+console.log('PASS update detected, downloaded and verified while running; app files unchanged:',JSON.parse(await fs.readFile(appDir+'/package.json','utf8')).version===before);
+await app.evaluate(({app})=>app.quit());await new Promise(r=>setTimeout(r,3000));
+const after=JSON.parse(await fs.readFile(appDir+'/package.json','utf8')).version;const readme=await fs.readFile(appDir+'/README.md','utf8');
+assert.equal(after,'0.9.999');assert(readme.includes('UPDATE-TEST-MARKER'));console.log('PASS installed on exit',before,'->',after);
+const log=JSON.parse(await fs.readFile('/home/user/work/work/level7-desktop-data/Updates/last-install.json','utf8'));console.log('installed files',log.files.length,log.files.slice(0,5));

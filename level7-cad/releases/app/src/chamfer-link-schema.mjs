@@ -1,0 +1,9 @@
+/** Append-only Corner40/Undo proof. Every previous selector/parameter stays exact. */
+const eq=(a,b)=>a?.length===b?.length&&a.every((n,i)=>n===b[i]),v=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
+export function appendedChamferReferences(a,b){try{
+ if(a.identity!==b.identity||b.history.length!==a.history.length+32||!eq(a.history,b.history.subarray(0,a.history.length))||b.references.length!==a.references.length+104||!eq(a.references,b.references.subarray(0,a.references.length)))return false;
+ const raw=b.history.subarray(-32),h=v(raw),id=h.getUint16(6,true),record=b.history.length/32;if(h.getUint16(0,true)!==101||h.getUint16(2,true)!==104||h.getUint16(8,true)!==0||h.getUint16(10,true)!==20||!['GraPrg_GK_EK_c042_02','GraPrg_GK_EK_c041_02'].includes(String.fromCharCode(...raw.subarray(12)))||id<2001||id>=59997)return false;
+ const key=`3.${a.partId}.3.${h.getUint16(4,true)}`;if(a.parameters.has(key)||!b.parameters.has(key)||b.parameters.size!==a.parameters.size+1||![...a.parameters].every(([k,p])=>eq(p,b.parameters.get(k))))return false;
+ const suffix=b.references.subarray(a.references.length);for(const[at,length,type,kind]of[[0,24,5,101],[24,40,3,1],[64,40,3,2]]){const r=suffix.subarray(at,at+length),q=v(r);if(q.getUint32(0,true)*8!==length||q.getUint16(4,true)!==(type===3?256:0)||q.getUint16(6,true)!==1||q.getUint16(8,true)!==type||q.getUint16(10,true)!==record||q.getUint32(12,true)!==kind)return false;if(type===5){if(q.getUint32(16,true)!==id||q.getUint32(20,true)!==0)return false;}else if(q.getUint16(16,true)!==0||q.getUint16(18,true)<2001||q.getUint16(18,true)>=60000||q.getUint16(20,true)!==2||q.getUint16(22,true)!==255||!Number.isFinite(q.getFloat32(28,true)))return false;}
+ return v(suffix).getUint32(16,true)===id&&v(suffix).getUint16(42,true)!==v(suffix).getUint16(82,true);
+ }catch{return false;}}

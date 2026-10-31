@@ -1,0 +1,5 @@
+import{cornerDistanceChoices}from'./corner-distance-bindings.mjs';
+export function mountCornerDistancePicker(input,{document,partId,sizeKey,record},min,max,binding=0,choices){
+ input.parentElement.querySelector('[data-corner-input-source]')?.remove();const select=window.document.createElement('select');select.id=input.id+'-source';select.dataset.cornerInputSource=input.id;select.setAttribute('aria-label','مصدر المعامل: قيمة أو X أو Z');select.append(new Option('قيمة عددية', '0'));for(const r of choices??cornerDistanceChoices(document,{partId,sizeKey,record},min,max))select.append(new Option(r.name+' = '+r.value,r.code));select.value=String(binding);const sync=()=>{const code=Number(select.value);input.readOnly=code!==0;if(code){const row=[...select.options].find(o=>Number(o.value)===code);input.value=Number(row.textContent.split(' = ')[1]);}};select.addEventListener('change',sync);input.after(select);sync();return select;
+}
+export function cornerInputOperand(input){const s=window.document.getElementById(input.id+'-source'),code=Number(s?.value||0);return code?{kind:code<200?'x':'z',index:code<200?code:code-200}:null;}

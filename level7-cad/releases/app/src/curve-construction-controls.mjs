@@ -1,0 +1,37 @@
+import{replayCurveReplacement}from'./replace-curve-kernel.mjs';
+import {pointAtDistance} from './linear-history-kernel.mjs';
+import {pointOnConstructionCurve} from './curve-direction-kernel.mjs';
+import {constructionPoints} from './parallel-path-kernel.mjs';
+import {readQqRows,simpleBindingProfile,referenceRows} from './qq-reference-schema.mjs';
+import {serializeMdl} from './native-mdl.js';
+import {replaceOriginalBlocks} from './original-geometry-edit.mjs';
+import {inspectOriginalCurveControls} from './original-curve-controls.mjs';
+import {createPartHistoryCalculation} from './part-history-engine.mjs';
+import {replayQQCurve} from './multi-anchor-curve-kernel.mjs';
+const need=(x,m)=>{if(!x)throw Error(m);};
+export function inspectCurveConstruction(doc,{partId,record,sizeKey}){
+ const definition=inspectOriginalCurveControls(doc,{partId,sizeKey}).curves.find(d=>d.record===record);need(definition,'تعريف نقاط التحكم غير مدعوم.');const bytes=serializeMdl(doc),block=key=>{const rows=doc.blocks.filter(b=>b.id.join('.')===key);need(rows.length===1,'Ambiguous curve construction block');return bytes.subarray(rows[0].payloadOffset,rows[0].endOffset);},history=block(`3.${partId}.2.0`);need(record>=1&&record*32<=history.length,'Invalid curve construction record');
+ const prefix=replaceOriginalBlocks(doc,new Map([[`3.${partId}.2.0`,history.slice(0,(record-1)*32)]])),before=createPartHistoryCalculation(prefix,{sizeKey}).get(partId);need(before.historyFullyExecuted||record===1&&before.emptyHistory&&before.objects.length===0,'تعذّر حساب مراجع نقاط التحكم الأصلية.');
+ const call=history.slice((record-1)*32,record*32),replay=String.fromCharCode(...call.subarray(12))==='GraPrg_GK_QQ_c002_04'?replayCurveReplacement:replayQQCurve,result=replay({historyRecord:call,record,parameters:block(definition.parameterKey),references:block(`3.${partId}.4.0`),objects:before.objects,zValues:before.scalarRows.filter(z=>z.status==='calculated-unverified'&&z.recordStep<=record),includeControls:true});need(result.controlConstruction,'إظهار نقاط هذا النوع من المنحنيات لم يكتمل بعد.');
+ const q=readQqRows(block(definition.parameterKey));const metadata={...result.controlConstruction,directionModes:result.controlConstruction.angleIndices.map(i=>q.get(i-5)),nativeAngles:result.controlConstruction.angleIndices.map(i=>q.get(i)),referenceTargets:before.objects.filter(o=>!o.geometryKind||o.geometryKind==='sampled-curve'&&[.0001,.08].includes(o.samplingToleranceMm)&&o.directionPolyline).flatMap(o=>{try{return[{id:o.id,...(!o.geometryKind&&o.points.length===2?{distanceEligible:true}:{}),points:(o.geometryKind?constructionPoints(o):o.points).map(p=>p.slice())}];}catch{return[];}}).filter(o=>o.points.length>=1&&o.points.length<=801),curve:result.directionPolyline.points.map(p=>p.slice()),controls:definition.controls.map(c=>({...c})),partId,record,objectId:definition.objectId,sizeKey};
+ try{const p=simpleBindingProfile(block(definition.parameterKey),{allowNaturalBound:true});if(p.bound){const selected=referenceRows(block(`3.${partId}.4.0`)).filter(r=>{const v=new DataView(r.raw.buffer,r.raw.byteOffset,r.raw.byteLength);return v.getUint16(6,true)===1&&v.getUint16(10,true)===record&&v.getUint16(8,true)===6&&v.getUint32(12,true)===3;});if(selected.length===1){const v=new DataView(selected[0].raw.buffer,selected[0].raw.byteOffset,selected[0].raw.byteLength),id=v.getUint16(24,true),target=metadata.referenceTargets.find(t=>t.id===id);if(v.getUint16(16,true)===2&&v.getUint16(18,true)===512&&v.getUint16(26,true)===0&&target?.points.length>=2)metadata.referenceAnchors=[{anchorIndex:1,sourceObjectId:id,fraction:v.getFloat32(28,true),points:target.points.map(p=>p.slice())}];else if(v.getUint16(16,true)===4&&[512,767].includes(v.getUint16(18,true))&&v.getUint16(26,true)===0&&target?.distanceEligible){const distanceMm=v.getFloat32(28,true),length=Math.hypot(target.points[1][0]-target.points[0][0],target.points[1][1]-target.points[0][1]),fromStart=v.getUint16(18,true)===767;if(distanceMm>=0&&distanceMm<=Math.fround(length))metadata.referenceAnchors=[{anchorIndex:1,sourceObjectId:id,fraction:fromStart?distanceMm/length:1-distanceMm/length,bindingKind:fromStart?'distance-start':'distance-end',distanceMm,points:target.points.map(p=>p.slice())}];}}}}catch{/* Other selectors remain read-only and require explicit native rebind. */}
+ if(metadata.referenceAnchors&&[q.get(30),q.get(60)].includes(0))metadata.referenceAnchors=metadata.referenceAnchors.map(a=>({...a,preserveNaturalDirection:true}));
+ return metadata;
+}
+export function dragCurveConstruction(model,{kind,index,point}){
+ need(Array.isArray(point)&&point.length===2&&point.every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6),'Invalid control cursor');let edits;
+ if(kind==='helper'){
+  const h=model.helpers[index];need(h,'Unknown helper control');const q=projectCurvePoint(model.basePath,point);edits=[{index:h.fractionIndex,value:q.fraction},{index:h.heightIndex,value:q.height}];
+ }else{need(kind==='direction'&&Number.isInteger(index)&&index>=0&&index<model.anchors.length,'Unknown tangent control');const anchor=model.anchors[index],v=[point[0]-anchor[0],point[1]-anchor[1]];need(Math.hypot(...v)>1e-6,'اتجاه المماس يحتاج مسافة من نقطة الارتكاز.');const field=model.controls.find(c=>c.index===model.angleIndices[index]);need(field,'اتجاه هذه النقطة مرتبط أو غير قابل للتحرير.');const angle=Math.atan2(v[1],v[0])*180/Math.PI-(index===model.anchors.length-1?180:0),delta=((angle-model.angles[index]+540)%360)-180;edits=[{index:field.index,value:field.value+delta}];}
+ for(const edit of edits){const c=model.controls.find(c=>c.index===edit.index);need(c&&edit.value>=c.min&&edit.value<=c.max,'موضع نقطة التحكم خارج النطاق المدعوم؛ لم يُطبق التعديل.');}return edits;
+}
+
+export function projectCurvePoint(basePath,point){need(Array.isArray(point)&&point.length===2&&point.every(n=>Number.isFinite(n)&&Math.abs(n)<=1e6),'Invalid support cursor');
+  const p=basePath;need(p?.length>=2,'Unknown helper guide');const lengths=p.slice(1).map((b,i)=>Math.hypot(b[0]-p[i][0],b[1]-p[i][1])),total=lengths.reduce((a,b)=>a+b,0);need(total>1e-6,'Degenerate control guide');let best=null,start=0;
+  for(let i=0;i<lengths.length;i++){const a=p[i],b=p[i+1],length=lengths[i],u=[(b[0]-a[0])/length,(b[1]-a[1])/length],raw=(point[0]-a[0])*u[0]+(point[1]-a[1])*u[1],t=Math.max(0,Math.min(length,raw)),q=[a[0]+u[0]*t,a[1]+u[1]*t],distance=Math.hypot(point[0]-q[0],point[1]-q[1]);if(!best||distance<best.distance)best={distance,fraction:(start+t)/total*100,height:((point[0]-q[0])*u[1]-(point[1]-q[1])*u[0])/total*100};start+=length;}
+  return {fraction:best.fraction,height:best.height};
+}
+
+export function projectReferenceAnchor(model,{anchorIndex,point}){
+ const anchor=model.referenceAnchors?.find(a=>a.anchorIndex===anchorIndex);need(anchor,'هذه النقطة لا تقبل السحب على مرجع أصلي معروف.');const p=anchor.points,q=projectCurvePoint(p,point),fraction=Math.fround(Math.max(0,Math.min(1,q.fraction/100))),length=p.slice(1).reduce((n,b,i)=>n+Math.hypot(b[0]-p[i][0],b[1]-p[i][1]),0);if(anchor.bindingKind){const fromStart=anchor.bindingKind==='distance-start',distanceMm=Math.fround(length*(fromStart?fraction:1-fraction));return{type:'move-bound',sourceObjectId:anchor.sourceObjectId,fraction,distanceMm,point:pointAtDistance(p,distanceMm,fromStart)};}return{type:anchor.preserveNaturalDirection?'move-bound-fraction':'bind',sourceObjectId:anchor.sourceObjectId,fraction,point:pointOnConstructionCurve(p,length*fraction,true)};
+}

@@ -1,0 +1,28 @@
+import{SEAM50_PARAMETERS}from'./native-seam50-template.mjs';
+import{SEAM20_PARAMETERS,SEAM30_PARAMETERS}from'./native-pattern-seam-template.mjs';
+import{seamRows,seamParameters,readSeam10,seam10Geometry}from'./native-seam10.mjs';
+const need=(x,m)=>{if(!x)throw Error(m);},v=b=>new DataView(b.buffer,b.byteOffset,b.length),eq=(a,b)=>a.length===b.length&&a.every((n,i)=>n===b[i]);
+export const patternSeamMacro=family=>family===20?'GraPrg_GK_NA_c002_01':family===30?'GraPrg_GK_NA_c003_00':family===50?'GraPrg_GK_NA_c005_00':null;
+export function patternSeamParameters({family,coverage=100,offset=family===20?1.5:5,start=0,width=family===20?6:family===50?3:10}={},sizeKey='___N38_0'){
+ need(patternSeamMacro(family),'Unknown seam family');seamParameters({coverage,offset,start},sizeKey);need(typeof width==='number'&&Number.isFinite(width)&&width>=.01&&width<=500,'عرض الغرزة من 0.01 حتى 500 مم.');
+ const bytes=(family===20?SEAM20_PARAMETERS:family===50?SEAM50_PARAMETERS:SEAM30_PARAMETERS).slice(),old=new TextEncoder().encode('___N38_0'),name=new TextEncoder().encode(sizeKey);for(let i=0;i<=bytes.length-8;i++)if(old.every((n,j)=>bytes[i+j]===n))bytes.set(name,i);
+ for(const row of seamRows(bytes)){const q=v(row),i=q.getInt16(4,true);if([12,13,14,15].includes(i))q.setFloat32(16,({12:coverage,13:offset,14:width,15:start})[i],true);}return bytes;
+}
+export function readPatternSeam(input){
+ const macro=String.fromCharCode(...input.historyRecord.subarray(12)),family=[20,30,50].find(f=>patternSeamMacro(f)===macro);need(family,'Unknown patterned seam call');const defaults=new Map();
+ for(const row of seamRows(input.parameters)){const q=v(row),i=q.getInt16(4,true);if(row.length>=24&&[12,13,14,15].includes(i)&&row.subarray(6,14).every(n=>n===32)){need(!defaults.has(i),'Duplicate seam value');defaults.set(i,q.getFloat32(16,true));}}
+ need(defaults.size===4,'Missing patterned seam values');const values={family,coverage:defaults.get(12),offset:defaults.get(13),width:defaults.get(14),start:defaults.get(15)};need(eq(input.parameters,patternSeamParameters(values,input.sizeKey)),'خيارات الغرزة أو مصادر قيمها غير مدعومة بعد.');
+ const call=input.historyRecord.slice();call.set(new TextEncoder().encode('GraPrg_GK_NA_c001_00'),12);const plan=readSeam10({...input,historyRecord:call,parameters:seamParameters(values,input.sizeKey)});need(plan.id<(family===20?59997:59999),'Seam identity limit');return{...plan,...values};
+}
+export function patternSeamObjects(source,plan){
+ const{family,id,record,reverse,coverage,offset,start,width}=plan;patternSeamParameters(plan);seam10Geometry(source,plan);
+ const[a,b]=reverse?source.points.slice().reverse():source.points,d=b.map((n,k)=>n-a[k]),L=Math.hypot(...d),normal=[-d[1]/L,d[0]/L],at=(f,o)=>a.map((n,k)=>Math.fround(n+d[k]*f-normal[k]*o)),path=o=>[at(start/100,o),at(coverage/100,o)];
+ const make=(i,points,hidden=false)=>({id:id+i,points,record,operation:`seam${family}${hidden?'-helper':''}`,dependencies:[source.id],nativeFlags:hidden?4294574594:family===20?262658:66050,...(hidden?{hidden:true}:family===20?{nativeDisplayState:4}:{geometryKind:'polyline',nativePolylineParity:true,nativeDisplayState:1}),...(family===50&&!hidden?{nativeManufacturingOutline:{family:'seam50',type:101}}:{}),patternSeamConstruction:{...plan,firstId:id}});
+ if(family===20){const mid=offset+width/2;return[make(0,path(mid),true),make(1,path(offset)),make(2,path(offset+width)),make(3,path(mid),true)];}
+ // Native stitch-count arithmetic uses single precision. Rounding the span
+ // avoids losing a stitch at half-width boundaries after rotated endpoints.
+ if(family===50){const span=Math.fround(L*(coverage-start)/100),waves=Math.round(Math.fround(span/(3*width)));need(waves>=1&&waves<=56,'عدد موجات الخياطة من 1 حتى 56 ضمن النطاق المدعوم.');const points=[],profile=[0,.4,.5,.4,0,-.4,-.5,-.4];for(let i=0;i<=8*waves;i++){if(i>0&&i<8*waves&&i%8===0)continue;points.push(at((start+(coverage-start)*i/(8*waves))/100,offset+width/2-width*profile[i%8]));}return[make(0,points),make(1,path(offset+width/2),true)];}
+ need(family===30,'Unknown seam geometry');const span=Math.fround(L*(coverage-start)/100),segments=2*Math.round(Math.fround(span/width))+1;need(segments>=3&&segments<=8191,'طول الغرزة بالنسبة للعرض ينتج عدد نقاط غير مدعوم.');const points=Array.from({length:segments+1},(_,i)=>at((start+(coverage-start)*i/segments)/100,offset+(i%2?0:width)));return[make(0,points),make(1,path(offset),true)];
+}
+export function replayPatternSeam(input){const plan=readPatternSeam(input),objects=patternSeamObjects(input.objects.find(o=>o.id===plan.sourceId),plan);need(objects.every(o=>!input.objects.some(p=>p.id===o.id)),'Duplicate patterned seam identity');return objects;}
+export function appendedPatternSeam(a,b,sizeKey){try{if(b.history.length!==a.history.length+32||!eq(a.history,b.history.subarray(0,a.history.length))||!eq(a.references,b.references.subarray(0,a.references.length)))return false;const raw=b.history.subarray(a.history.length),key=`3.${a.partId}.3.${v(raw).getUint16(4,true)}`;if(a.parameters.has(key)||!b.parameters.has(key)||b.parameters.size!==a.parameters.size+1||[...a.parameters].some(([k,p])=>!eq(p,b.parameters.get(k)??new Uint8Array())))return false;if(!sizeKey){const names=seamRows(b.parameters.get(key)).filter(r=>r.length===24&&v(r).getInt16(4,true)===12&&!r.subarray(6,14).every(n=>n===32)).map(r=>String.fromCharCode(...r.subarray(6,14)));if(names.length!==1)return false;sizeKey=names[0];}return readPatternSeam({historyRecord:raw,record:b.history.length/32,parameters:b.parameters.get(key),references:b.references.subarray(a.references.length),sizeKey});}catch{return false;}}

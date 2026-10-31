@@ -1,0 +1,56 @@
+// Independent N38 parts only. Every part is projected through the existing strict
+// point/reference-line validator; unknown metadata and inter-part history refuse.
+import {parseMdl,serializeMdl,getNativeN38TemplateBytes} from './native-mdl.js';
+import * as single from './native-n38-parametric-engine.js';
+import {decodeProductionPayload,productionListRow} from './native-production-properties.js';
+import{createPartHistoryCalculation}from'./part-history-engine.mjs';
+import{readCachedPreview}from'./native-cache-preview.js';
+function originalIndependentCapability(doc){
+ const bytes=serializeMdl(doc),h=doc.blocks.find(b=>b.id.join('.')==='3.1.2.0'),refs=doc.blocks.find(b=>b.id.join('.')==='3.1.4.0');need(h&&refs,'Missing independent original definitions');const history=bytes.subarray(h.payloadOffset,h.endOffset);
+ for(let at=0;at<history.length;at+=32){const q=view(history.subarray(at,at+32)),op=q.getUint16(0,true),name=String.fromCharCode(...history.subarray(at+12,at+32));need(op!==112&&!(op===101&&name.startsWith('GraPrg_GK_TO_')),'Inter-part construction is not an independent part');}
+ const pool=bytes.subarray(refs.payloadOffset,refs.endOffset);for(let at=0;at<pool.length;){const q=view(pool.subarray(at)),n=q.getUint32(0,true)*8;need(n>=16&&at+n<=pool.length,'Unknown independent references');if(n===40&&q.getUint16(4,true)===256&&q.getUint16(6,true)===1&&q.getUint16(8,true)===3)need(q.getUint16(16,true)===0,'Explicit part references cannot be renumbered');at+=n;}
+ const model=createPartHistoryCalculation(doc,{sizeKey:'___N38_0'}).get(1),preview=readCachedPreview(doc,{partId:1});need(model.historyFullyExecuted&&!preview.unsupported.length&&!preview.reserved.length&&preview.objects.length===model.objects.length&&model.objects.every(o=>preview.objects.some(p=>p.objectId===o.id)),'Original part needs a completely supported history and cache');return{eligible:true,originalHistoryOnly:true};
+}
+const template=getNativeN38TemplateBytes(), td=parseMdl(template), cache=new WeakMap();
+const key=b=>b.id.join('.'), copy=b=>new Uint8Array(b), view=b=>new DataView(b.buffer,b.byteOffset,b.byteLength);
+const enc=new TextEncoder(), dec=new TextDecoder('windows-1252');
+const eq=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
+const need=(v,m)=>{if(!v)throw Error(m);};
+const payload=(bytes,b)=>bytes.slice(b.payloadOffset,b.endOffset);
+const tpl=k=>payload(template,td.blocks.find(b=>key(b)===k));
+function check(b,length=b.length){let n=0,d=view(b);for(let i=4;i<length;i+=2){n=(n+Math.imul(i/2+1,d.getInt16(i,true)))|0;if(n>=1024000000)n-=1024000000;}return n>>>0;}
+function block(id,p){need(p.length%8===0,'Unaligned part block');let b=new Uint8Array(32+p.length),d=view(b);d.setUint32(4,b.length/8,true);b.set(enc.encode('BLO5kenn'),8);id.forEach((n,i)=>d.setUint32(16+4*i,n,true));b.set(p,32);d.setUint32(0,check(b),true);return b;}
+function join(sections){let b=new Uint8Array(88+sections.reduce((n,s)=>n+s.length,0));b.set(template.subarray(0,80));let i=80;for(const s of sections){b.set(s,i);i+=s.length;}b.set(template.subarray(-8),i);view(b).setUint32(4,(b.length-8)/8,true);view(b).setUint32(0,check(b,80),true);return parseMdl(b);}
+function list(rows){let original=dec.decode(tpl('2.1.0.0')),begin=original.indexOf('#TLIST\r\n')+8,end=original.indexOf('#ENDINFO');let s=Uint8Array.from(original.slice(0,begin)+rows.join('\r\n')+'\r\n'+original.slice(end).replace(/\0+$/,''),c=>c.charCodeAt(0)),b=new Uint8Array(Math.ceil(s.length/8)*8);b.set(s);return b;}
+function validName(name){need(typeof name==='string'&&/^[\x20-\x7e]{1,23}$/.test(name)&&name.trim()===name,'اسم البارت: من 1 إلى 23 حرفًا لاتينيًا أو رقمًا، دون مسافات في الطرفين.');return name;}
+const header=p=>p.blocks.find(b=>b.id[2]===1&&b.id[3]===0).body;
+function identity(h){return [view(h).getUint32(76,true),view(h).getUint32(80,true)].map(n=>n.toString(16).padStart(8,'0')).join('').toUpperCase();}
+function row(p,i){const h=header(p),history=p.blocks.find(b=>b.id[2]===2&&b.id[3]===0).body,raw='   '+String(i).padStart(3,'0')+' x '+p.name.padEnd(23,' ')+String(history.length/32).padStart(5,' ')+String(view(h).getUint32(8,true)/5).padStart(4,' ')+'            ID='+identity(h);return productionListRow(raw,decodeProductionPayload(p.blocks.find(b=>b.id[2]===6&&b.id[3]===6).body));}
+function build(parts,active=1){let sections=[];for(const b of td.blocks.filter(b=>b.id[0]!==3)){let p=tpl(key(b));if(key(b)==='1.1.0.0')view(p).setUint32(0,active,true);if(key(b)==='2.1.0.0')p=list(parts.map((p,i)=>row(p,i+1)));sections.push(block(b.id,p));}parts.forEach((p,i)=>p.blocks.forEach(b=>sections.push(block([3,i+1,b.id[2],b.id[3]],b.body))));return join(sections);}
+function canonical(p){let q={name:'NN',blocks:p.blocks.map(b=>({id:[...b.id],body:b.id[2]===6&&b.id[3]===6?tpl('3.1.6.6'):copy(b.body)}))},h=header(q),th=tpl('3.1.1.0');const properties=decodeProductionPayload(p.blocks.find(b=>b.id[2]===6&&b.id[3]===6).body);need(properties.records.every(r=>[1,4,5].includes(r.type)),'Unknown owned-part properties');h.set(th.subarray(76,84),76);h.set(th.subarray(101,124),101);return build([q]);}
+async function inspect(doc){if(cache.has(doc))return cache.get(doc);const pending=(async()=>{
+ const bytes=serializeMdl(doc);need(doc.variant==='VA','Only the owned N38 family supports part operations.');need(eq(bytes.subarray(8,80),template.subarray(8,80)),'Unknown file header.');
+ const globals=doc.blocks.filter(b=>b.id[0]!==3),tg=td.blocks.filter(b=>b.id[0]!==3);need(globals.length===tg.length&&globals.every((b,i)=>key(b)===key(tg[i])),'Unknown global blocks.');
+ for(const b of globals){if(key(b)==='2.1.0.0')continue;let p=payload(bytes,b),t=tpl(key(b));if(key(b)==='1.1.0.0'){need(p.length===t.length,'Unknown style header');view(p).setUint32(0,1,true);}need(eq(p,t),'Part operations require an owned N38 file with unchanged global metadata.');}
+ const ids=[...new Set(doc.blocks.filter(b=>b.id[0]===3).map(b=>b.id[1]))];need(ids.length>=1&&ids.length<=99&&ids.every((id,i)=>id===i+1),'Contiguous independent parts 1–99 required.');
+ const parts=[],seen=new Set();for(const id of ids){const blocks=doc.blocks.filter(b=>b.id[0]===3&&b.id[1]===id).map(b=>({id:[...b.id],body:payload(bytes,b)}));const h=blocks.find(b=>b.id[2]===1&&b.id[3]===0)?.body;need(h?.length===152,'Unknown part header');const name=dec.decode(h.subarray(101,124)).trimEnd();validName(name);const uid=identity(h);need(!seen.has(uid),'Duplicate part identity');seen.add(uid);const p={name,blocks},projection=canonical(p),rawCap=await single.inspectExperimentalParametricEngine(projection),cap=rawCap.eligible?rawCap:originalIndependentCapability(projection);need(cap.eligible,cap.reason||'Unsupported part history');parts.push({...p,projection,cap});}
+ const active=view(payload(bytes,globals[0])).getUint32(0,true);need(active>=1&&active<=parts.length,'Invalid active part');const rebuilt=serializeMdl(build(parts,active));need(eq(rebuilt,bytes),'Unknown list, block order, or metadata; part operations refused.');return{parts};})();cache.set(doc,pending);return pending;}
+export async function inspectOwnedParts(doc){try{const s=await inspect(doc);return{eligible:true,count:s.parts.length};}catch(e){return{eligible:false,reason:e.message};}}
+function fresh(p,name){const q={name:validName(name),blocks:p.blocks.map(b=>({id:[...b.id],body:copy(b.body)}))};let id=crypto.getRandomValues(new Uint8Array(8));header(q).set(id,76);header(q).set(enc.encode(name.padEnd(23,' ')),101);return q;}
+export async function changeOwnedParts(doc,{action,partId,name}){const s=await inspect(doc),parts=[...s.parts],index=partId-1;need(Number.isInteger(partId)&&parts[index],'Select an existing part');let active=partId;
+ if(action==='add'||action==='insert'){need(parts.length<99,'Maximum 99 independent parts');const empty={name:'NN',blocks:td.blocks.filter(b=>b.id[0]===3).map(b=>({id:[...b.id],body:payload(template,b)}))},at=action==='add'?parts.length:index;parts.splice(at,0,fresh(empty,name||'Part '+(parts.length+1)));active=at+1;}
+ else if(action==='duplicate'){need(parts.length<99,'Maximum 99 independent parts');parts.splice(index+1,0,fresh(parts[index],name||parts[index].name));active=partId+1;}
+ else if(action==='rename'){const p=parts[index];parts[index]={...p,name:validName(name),blocks:p.blocks.map(b=>({id:[...b.id],body:copy(b.body)}))};header(parts[index]).set(enc.encode(name.padEnd(23,' ')),101);}
+ else if(action==='delete'){need(parts.length>1,'Keep at least one part');parts.splice(index,1);active=Math.min(partId,parts.length);}
+ else if(action==='up'||action==='down'){const target=index+(action==='up'?-1:1);need(target>=0&&target<parts.length,'Part is already at the list boundary');[parts[index],parts[target]]=[parts[target],parts[index]];active=target+1;}
+ else throw Error('Unknown part action');const document=build(parts,active);await inspect(document);return{document,partId:active};}
+export async function inspectExperimentalParametricEngine(doc,{partId=1}={}){const original=await single.inspectExperimentalParametricEngine(doc,{partId});if(original.eligible)return original;try{const s=await inspect(doc),p=s.parts[partId-1];need(p,'Part absent');if(p.cap.originalHistoryOnly)return original;return{...p.cap,scope:'Independent owned N38 parts; local X1..X80 and Z1..Z99',ownedMultipleParts:true,partId};}catch{return original;}}
+async function apply(method,doc,options={}){const original=await single.inspectExperimentalParametricEngine(doc,{partId:options.partId??1});if(original.eligible)return single[method](doc,options);const s=await inspect(doc),id=options.partId??1,p=s.parts[id-1];need(p,'Part absent');const result=await single[method](p.projection,{...options,partId:1}),bytes=serializeMdl(result.document);const q={name:p.name,blocks:result.document.blocks.filter(b=>b.id[0]===3).map(b=>({id:[...b.id],body:payload(bytes,b)}))};header(q).set(header(p).subarray(76,84),76);header(q).set(header(p).subarray(101,124),101);q.blocks.find(b=>b.id[2]===6&&b.id[3]===6).body=copy(p.blocks.find(b=>b.id[2]===6&&b.id[3]===6).body);const parts=[...s.parts];parts[id-1]=q;const document=build(parts,id);await inspect(document);return{...result,document,bytes:serializeMdl(document)};}
+export const setExperimentalEngineX=(d,o)=>apply('setExperimentalEngineX',d,o),setExperimentalEngineZ=(d,o)=>apply('setExperimentalEngineZ',d,o),appendExperimentalBoundPoint=(d,o)=>apply('appendExperimentalBoundPoint',d,o),updateExperimentalBoundPoint=(d,o)=>apply('updateExperimentalBoundPoint',d,o),appendExperimentalBoundSegment=(d,o)=>apply('appendExperimentalBoundSegment',d,o),recalculateExperimentalEngine=(d,o)=>apply('recalculateExperimentalEngine',d,o);
+export const moveExperimentalLine=(d,o)=>apply('moveExperimentalLine',d,o);
+export const reshapeExperimentalLine=(d,o)=>apply('reshapeExperimentalLine',d,o);
+export const reshapeExperimentalPartPoints=(d,o={})=>apply('reshapeExperimentalPartPoints',d,{partId:o.partId??1,points:Array.isArray(o.points)?o.points.map(p=>({...p})):o.points});
+
+
+export const appendExperimentalLinkedPoint=(d,o)=>apply('appendExperimentalLinkedPoint',d,o);
+export const updateExperimentalLinkedPoint=(d,o)=>apply('updateExperimentalLinkedPoint',d,o);
