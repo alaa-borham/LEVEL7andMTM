@@ -1,9 +1,11 @@
 import { toGradedAama } from "../core/aama-graded";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
-import { closestOnPolyline, dist, type Pt } from "../core/geometry";
+import { closestOnPolyline, directionAt, dist, lineIntersection, polyLen, type Pt } from "../core/geometry";
 import {
   createdIds,
+  nearerEnd,
+  sideOf,
   emptyModel,
   newId,
   fillGrading,
@@ -38,7 +40,7 @@ interface FormState {
   onOk: (v: Record<string, string>) => void;
   /** Live drawing: the line follows the mouse from `from`; angle and length fill in
    * until typed by hand, and a click on the drawing confirms. */
-  live?: { from: Pt; follow?: (at: Pt) => void; submit?: () => void };
+  live?: { from?: Pt; values?: (at: Pt, cur: Record<string, string>) => Record<string, string> | null; follow?: (at: Pt) => void; submit?: () => void };
 }
 
 export class App {
@@ -226,35 +228,43 @@ export class App {
     this.svg.innerHTML = parts.join("");
   }
 
-  /** Rubber-band preview of the line being drawn, with its length and angle. */
+  /** Live preview: the result of the open tool in the live colour, plus for a line by
+   * angle the dashed length circle and an angle/length label, and for a line between two
+   * points a rubber band to the mouse. */
   private liveSvg(): string {
-    let from: Pt | null = null, to: Pt | null = null, circle = false;
-    if (this.form?.live) {
-      const box = $("#tool-box");
-      const val = (k: string) => {
-        try {
-          return new Vars(withSize(this.model), undefined, this.res.z).eval((box.querySelector(`input[data-key="${k}"]`) as HTMLInputElement).value);
-        } catch {
-          return NaN;
-        }
-      };
-      const a = (val("angle") * Math.PI) / 180, L = val("length");
-      if (!Number.isFinite(a) || !(L > 0)) return "";
-      from = this.form.live.from;
-      to = [from[0] + L * Math.cos(a), from[1] + L * Math.sin(a)];
-      circle = true;
-    } else if (this.tool?.key === "line" && this.picks.length === 1 && this.picks[0].kind === "point" && !this.form) {
-      from = this.pointOf(this.picks[0].ref);
-      to = this.hover?.kind === "point" ? this.pointOf(this.hover.ref) : this.mouse;
+    const out: string[] = [];
+    const scr = (p: Pt) => this.toScreen(p).map((v) => v.toFixed(1)).join(",");
+    const label = (a: Pt, b: Pt, angle = true) => {
+      const L = dist(a, b), deg = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+      const [x, y] = this.toScreen(b);
+      return `<text class="live-label" x="${x + 8}" y="${y - 8}" direction="ltr">\u2066${angle ? fmt(Math.round(deg * 10) / 10) + "° · " : ""}${fmt(Math.round(L * 10) / 10)} mm\u2069</text>`;
+    };
+    const objs = this.previewObjects();
+    for (const o of objs) {
+      if (o.kind === "point") {
+        const [x, y] = this.toScreen(o.pts[0]);
+        out.push(`<circle cx="${x}" cy="${y}" r="4.5" fill="none" stroke="var(--live)" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2" fill="var(--live)"/>`);
+      } else {
+        out.push(`<polyline points="${o.pts.map(scr).join(" ")}" fill="none" stroke="var(--live)" stroke-width="2.2"/>`);
+      }
     }
-    if (!from || !to) return "";
-    const [x1, y1] = this.toScreen(from), [x2, y2] = this.toScreen(to);
-    const L = dist(from, to), deg = (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI;
-    const out = [`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--live)" stroke-width="2"/>`, `<circle cx="${x1}" cy="${y1}" r="3.5" fill="var(--live)"/>`];
-    if (circle) out.push(`<circle cx="${x1}" cy="${y1}" r="${Math.hypot(x2 - x1, y2 - y1).toFixed(1)}" fill="none" stroke="var(--muted)" stroke-dasharray="4 4"/>`);
-    const ux = (x2 - x1) / (Math.hypot(x2 - x1, y2 - y1) || 1), uy = (y2 - y1) / (Math.hypot(x2 - x1, y2 - y1) || 1);
-    out.push(`<path d="M${x2} ${y2} l${(-10 * ux + 5 * uy).toFixed(1)} ${(-10 * uy - 5 * ux).toFixed(1)} M${x2} ${y2} l${(-10 * ux - 5 * uy).toFixed(1)} ${(-10 * uy + 5 * ux).toFixed(1)}" stroke="var(--live)" stroke-width="2" fill="none"/>`);
-    out.push(`<text class="live-label" x="${x2 + 8}" y="${y2 - 8}" direction="ltr">\u2066${fmt(Math.round(deg * 10) / 10)}° · ${fmt(Math.round(L * 10) / 10)} mm\u2069</text>`);
+    const t = this.tool;
+    const live = this.form?.live;
+    if (t?.key === "lineAngle" && live?.from && objs[0]?.kind === "line") {
+      const from = live.from, to = objs[0].pts[objs[0].pts.length - 1];
+      const [x1, y1] = this.toScreen(from), [x2, y2] = this.toScreen(to);
+      out.push(`<circle cx="${x1}" cy="${y1}" r="${Math.hypot(x2 - x1, y2 - y1).toFixed(1)}" fill="none" stroke="var(--muted)" stroke-dasharray="4 4"/>`);
+      out.push(label(from, to));
+    } else if (t?.key === "line" && this.picks.length === 1 && this.picks[0].kind === "point" && !this.form) {
+      const from = this.pointOf(this.picks[0].ref);
+      const to = this.hover?.kind === "point" ? this.pointOf(this.hover.ref) : this.mouse;
+      if (!objs.length) out.push(`<polyline points="${scr(from)} ${scr(to)}" stroke="var(--live)" stroke-width="2" fill="none"/>`);
+      out.push(label(from, to));
+    } else if ((t?.key === "cornerRound" || t?.key === "cornerChamfer") && live?.from) {
+      const [x, y] = this.toScreen(live.from);
+      out.push(`<circle cx="${x}" cy="${y}" r="3" fill="var(--muted)"/>`);
+    }
+    for (const o of objs) if (o.kind === "line" && t?.key !== "lineAngle" && t?.key !== "line" && o.pts.length === 2) out.push(label(o.pts[0], o.pts[1], false));
     return out.join("");
   }
 
@@ -513,9 +523,125 @@ export class App {
       this.commit({});
       return;
     }
-    const p0 = this.picks[0];
-    const live = t.key === "lineAngle" && p0?.kind === "point" ? { from: this.pointOf(p0.ref) } : undefined;
-    this.openForm({ title: t.name, fields, onOk: (v) => this.commit(v), live });
+    this.openForm({ title: t.name, fields, onOk: (v) => this.commit(v), live: this.liveFor(t) });
+  }
+
+  /** Live drawing: which field values the mouse position gives for the open tool. */
+  private liveFor(t: Tool): FormState["live"] {
+    // values from the mouse are rounded to a step that suits the zoom (about one pixel)
+    const q = [0.1, 0.5, 1, 5, 10].find((v) => v * this.scale >= 1) ?? 10;
+    const r1 = (x: number) => String(Math.round(Math.round(x / q) * q * 10) / 10);
+    const pk = this.picks;
+    const lineObj = (i: number) => (pk[i]?.kind === "line" ? this.res.objects.get((pk[i] as Extract<Pick, { kind: "line" }>).obj) : undefined);
+    const ptOf = (i: number) => (pk[i]?.kind === "point" ? this.pointOf((pk[i] as Extract<Pick, { kind: "point" }>).ref) : undefined);
+    switch (t.key) {
+      case "lineAngle": {
+        const from = ptOf(0);
+        if (!from) return undefined;
+        return {
+          from,
+          values: (at) => {
+            const dx = at[0] - from[0], dy = at[1] - from[1];
+            let ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+            if (this.angleStep > 0) ang = Math.round(ang / this.angleStep) * this.angleStep;
+            ang = Math.round(ang * 10) / 10;
+            if (ang <= -180) ang += 360;
+            const len = Math.hypot(dx, dy);
+            const v: Record<string, string> = { angle: String(ang) };
+            if (len > 0) v.length = r1(len);
+            return v;
+          },
+        };
+      }
+      case "pointOn": {
+        const o = lineObj(0);
+        if (!o) return undefined;
+        const L = polyLen(o.pts);
+        return {
+          values: (at, cur) => {
+            let d = closestOnPolyline(o.pts, at).s;
+            if (cur.from === "end") d = L - d;
+            return { dist: cur.unit === "%" ? r1((d / L) * 100) : r1(d) };
+          },
+        };
+      }
+      case "pointMove": {
+        const from = ptOf(0), o = lineObj(1);
+        if (!from || !o) return undefined;
+        const [ux, uy] = directionAt(o.pts, 0);
+        return { values: (at) => ({ dist: r1((at[0] - from[0]) * ux + (at[1] - from[1]) * uy) }) };
+      }
+      case "parallel": {
+        const o = lineObj(0);
+        if (!o) return undefined;
+        return { values: (at) => ({ dist: r1(closestOnPolyline(o.pts, at).d), side: String(sideOf(o, at)) }) };
+      }
+      case "setLength": {
+        const o = lineObj(0);
+        if (!o) return undefined;
+        const L = polyLen(o.pts), end = o.pts[o.pts.length - 1], [ux, uy] = directionAt(o.pts, L);
+        return {
+          values: (at) => {
+            const c = closestOnPolyline(o.pts, at);
+            const len = c.s >= L - 1e-6 ? L + (at[0] - end[0]) * ux + (at[1] - end[1]) * uy : c.s;
+            return len > 0 ? { length: r1(len) } : null;
+          },
+        };
+      }
+      case "cornerRound":
+      case "cornerChamfer": {
+        const a = lineObj(0), b = lineObj(1);
+        if (!a || !b) return undefined;
+        const pa = pk[0] as Extract<Pick, { kind: "line" }>, pb = pk[1] as Extract<Pick, { kind: "line" }>;
+        const seg = (o: GObj, near: Pt): [Pt, Pt] => {
+          const n = o.pts.length;
+          return nearerEnd(o, near) === "end" ? [o.pts[n - 2], o.pts[n - 1]] : [o.pts[1], o.pts[0]];
+        };
+        const [qa, ea] = seg(a, pa.at), [qb, eb] = seg(b, pb.at);
+        const X = lineIntersection(qa, ea, qb, eb);
+        if (!X) return undefined;
+        const va: Pt = [qa[0] - X[0], qa[1] - X[1]], vb: Pt = [qb[0] - X[0], qb[1] - X[1]];
+        const theta = Math.acos(Math.max(-1, Math.min(1, (va[0] * vb[0] + va[1] * vb[1]) / (Math.hypot(...va) * Math.hypot(...vb) || 1))));
+        return {
+          from: X,
+          values: (at) => {
+            const d = dist(at, X);
+            return { size: r1(t.key === "cornerRound" ? d * Math.tan(theta / 2) : d) };
+          },
+        };
+      }
+      default:
+        return undefined;
+    }
+  }
+
+  /** What the open tool would create or change: from the value box while it is open,
+   * or from the element under the pointer before the last click. Drawn in the live colour. */
+  private previewObjects(): GObj[] {
+    const t = this.tool;
+    if (!t?.build) return [];
+    let picks = this.picks;
+    let values: Record<string, string> | null = null;
+    if (this.form) {
+      values = {};
+      $("#tool-box").querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => ((values as Record<string, string>)[el.dataset.key as string] = el.value.trim()));
+    } else if (!t.multi && !this.collecting && this.hover && picks.length === t.picks.length - 1 && t.picks[picks.length].kind === this.hover.kind) {
+      picks = [...picks, this.hover];
+    } else return [];
+    try {
+      const model = parseModel(JSON.stringify(this.model));
+      const ctx = { model, res: this.res, picks, extra: this.extra };
+      if (!values) {
+        values = {};
+        for (const f of t.fields?.(ctx) ?? []) values[f.key] = f.value;
+      }
+      model.steps.push(t.build(ctx, values));
+      const r = evaluateModel(model), last = model.steps.length - 1;
+      if (r.stepErrors.has(last)) return [];
+      return [...r.objects.values()].filter((o) => o.step === last);
+    } catch {
+      return [];
+    }
   }
 
   /** Angle step for live drawing, in degrees (0 = free). */
@@ -682,6 +808,7 @@ export class App {
     if (f.live) {
       const live = f.live;
       const step = document.createElement("label");
+      if (this.tool?.key !== "lineAngle") step.hidden = true;
       step.className = "field";
       step.innerHTML = `<span>خطوة الزاوية</span><select data-angle-step>${[0, 1, 5, 15, 45, 90]
         .map((v) => `<option value="${v}"${v === this.angleStep ? " selected" : ""}>${v ? v + "°" : "حرة"}</option>`)
@@ -692,22 +819,25 @@ export class App {
         live.follow?.(this.mouse);
       });
       const hint = box.querySelector(".hint") as HTMLElement;
-      hint.textContent = "حرّك الماوس: الخط يتبعه والقيم تتحدث. اكتب قيمة لتثبيتها، ثم انقر على الرسم أو Enter.";
+      hint.textContent = "حرّك الماوس: النتيجة تتبعه والقيم تتحدث. اكتب قيمة لتثبيتها، ثم انقر على الرسم أو Enter.";
       const typed = new Set<string>();
-      const input = (k: string) => box.querySelector(`input[data-key="${k}"]`) as HTMLInputElement;
-      for (const k of ["angle", "length"]) input(k).addEventListener("input", () => typed.add(k));
+      box.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => typed.add(el.dataset.key as string)));
       live.follow = (at) => {
-        const dx = at[0] - live.from[0], dy = at[1] - live.from[1];
-        let ang = (Math.atan2(dy, dx) * 180) / Math.PI;
-        if (this.angleStep > 0) ang = Math.round(ang / this.angleStep) * this.angleStep;
-        ang = Math.round(ang * 10) / 10;
-        if (ang <= -180) ang += 360;
-        const len = Math.round(Math.hypot(dx, dy) * 10) / 10;
-        if (!typed.has("angle")) (input("angle").value = String(ang)), preview(input("angle"));
-        if (!typed.has("length") && len > 0) (input("length").value = String(len)), preview(input("length"));
+        const cur: Record<string, string> = {};
+        box.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => (cur[el.dataset.key as string] = el.value));
+        const v = live.values?.(at, cur);
+        for (const [k, val] of Object.entries(v ?? {})) {
+          if (typed.has(k)) continue;
+          const el = box.querySelector(`[data-key="${k}"]`) as HTMLInputElement | HTMLSelectElement | null;
+          if (!el) continue;
+          el.value = val;
+          if (el.classList.contains("expr")) preview(el as HTMLInputElement);
+        }
         this.render();
       };
     }
+    box.addEventListener("input", () => this.render());
+    box.addEventListener("change", () => this.render());
     const ok = () => {
       const v: Record<string, string> = {};
       let bad = false;

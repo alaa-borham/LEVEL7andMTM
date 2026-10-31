@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.122
+
+Live drawing in every tool of the LEVEL7 design mode: the result is drawn in the live colour while the value box is open, and before the last click when hovering the final element (intersection, trim/extend, corners, lines). The mouse sets the value for parallel (distance and side), point on line, point moved along a line, line length, round corner radius and chamfer distance; values round to a step that suits the zoom; a typed value stays fixed; a click on the drawing or Enter confirms.
+
 LEVEL7 and MTM 0.9.121
 
 LEVEL7 design mode, live drawing: "line by angle and length" follows the mouse from its start point with a dashed length circle and an angle/length label; angle step (free, 1, 5, 15, 45, 90°); typed values stay fixed; a click on the drawing or Enter confirms. "Line between two points" shows a rubber band with length and angle. Step card with picture, explanation, ✓ (confirm) and ‹ (back one step; removes a point the click created). Formula fields: an X / Z list beside each field (X1 = 1500 · name), suggestions while typing, lower-case x/z and Arabic-Indic digits accepted, and a clear message for a bare "X".

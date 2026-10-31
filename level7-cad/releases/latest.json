@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.121",
- "notes": "رسم حي يتبع الماوس؛ بطاقة خطوة ✓ و‹؛ قائمة X/Z بجانب الحقول؛ قبول x وأرقام عربية",
+ "version": "0.9.122",
+ "notes": "الرسم الحي في كل الأدوات: الموازي والطول والنقاط والزوايا والقص",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "bc0b4917fd0d987d157df4366c20f3f368c2a2f54d9bc064e2e9ad325badbd48",
-   "size": 120682
+   "sha256": "4e532b104a99bb32130144a614452e653a2b247fea547f2e0991eef7d79e9b9e",
+   "size": 121200
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 7884
   },
   {
-   "path": "assets/l7design/assets/index-cFnv24zw.js",
-   "sha256": "5d08f21e5462f7ef9a8fdbc5bae737a0cd92637125022344e45625a034ef2341",
-   "size": 88126
+   "path": "assets/l7design/assets/index-DOPaLRqp.js",
+   "sha256": "73c0f3d499ccdabc5ac14a82d02ea20fb3f21dfa1b94bad0cab920dbbd16a740",
+   "size": 90982
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "795eca4aa09dc77b8b70492549e7fc3d6e03908603c6476bb803a4506fd43657",
+   "sha256": "1b9f6662e3ec6dc0353d83f890b01bfbedeed7217d2741a7df31331bb7bc7502",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "717ab7c6c1f76dd54af9d30c23ce5fdd85081ec0966fbee0c27d306406343a1b",
+   "sha256": "9dee4e1f429aabe56e5a91667fb40a62c4d1770414e0c1518ad76a567222af1d",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "3e2441490e852d276e81b04ac82e4ca524e2b9e07b28db3c35f43e8b6aed8183",
-   "size": 17994
+   "sha256": "1c05152d17ad5c691c80f2b5afcba4bda7aa7571f08624d09360bfcf01d8bb8c",
+   "size": 18970
   },
   {
    "path": "src/line-transform-ui.js",
