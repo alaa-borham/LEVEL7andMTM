@@ -97,3 +97,21 @@
 @media (max-height:820px){.ui-0113 .tool-section{padding:4px 8px}.ui-0113 .grafis-option-grid,.ui-0113 .grafis-category-grid{gap:3px!important}.ui-0113 .tool-guide{margin:4px 8px}}
 @media (max-height:740px){.ui-0113 .grafis-option-grid>.grafis-icon-option,.ui-0113 .grafis-category-grid>.grafis-icon-option{height:40px!important;min-height:40px}.ui-0113 .grafis-icon-option svg{width:21px;height:21px}.ui-0113 .grafis-icon-option[data-caption]::after{font-size:9px}.ui-0113 .grafis-points-menu-value input{height:22px}}
 @media (max-height:740px){.ui-0113 .tool-guide-sub{display:none}.ui-0113 .tool-guide{padding:3px 8px;margin:3px 8px}}
+
+/* 0.9.115: cards fill the free panel height (set by ui-guide-0113.js) and look
+   like real tactile tiles; closed pattern shapes are filled like fabric. */
+.ui-0113.l7-fit .grafis-option-grid>.grafis-icon-option,.ui-0113.l7-fit .grafis-category-grid>.grafis-icon-option{height:var(--l7-card-h,46px)!important;min-height:var(--l7-card-h,46px)}
+.ui-0113.l7-fit .grafis-icon-option svg{width:var(--l7-icon,24px);height:var(--l7-icon,24px)}
+.ui-0113.l7-fit .grafis-icon-option[data-caption]::after{font-size:var(--l7-cap,9.5px)}
+.ui-0113 .grafis-icon-option{background:linear-gradient(180deg,#ffffff 0%,#f4f7fa 60%,#e9eef3 100%);border-color:#cfd8e0;box-shadow:inset 0 1px 0 #fff,0 1px 0 #c3ced8,0 3px 6px rgba(11,35,56,.10)}
+.ui-0113 .grafis-icon-option:not(:disabled):active{transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(11,35,56,.18)}
+.ui-0113 .grafis-icon-option svg{filter:drop-shadow(0 1.2px 1px rgba(11,35,56,.28))}
+.ui-0113 .grafis-icon-option .l7-fill-fabric{fill:url(#l7-fabric)}
+.ui-0113 .grafis-icon-option .l7-fill-sky{fill:url(#l7-sky)}
+.ui-0113 .grafis-icon-option .folder{fill:#f6c453;stroke:#c48a12}
+.ui-0113 .grafis-icon-option[aria-pressed="true"],.ui-0113 .grafis-icon-option[aria-expanded="true"]{background:linear-gradient(180deg,#fff9e8,#f7e3a8)}
+.ui-0113.l7-big-cards .grafis-icon-option[data-caption]::after{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* The help card keeps one fixed size so hovering never changes the panel layout. */
+.ui-0113 .tool-guide{height:68px;min-height:68px;overflow:hidden;align-content:start}
+.ui-0113 .tool-guide>*{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-height:740px){.ui-0113 .tool-guide{height:46px;min-height:46px}}

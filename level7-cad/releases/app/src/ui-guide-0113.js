@@ -30,6 +30,36 @@ function describe(button) {
     : 'اضغط لاستخدام الأداة';
   return { title: ar || en || 'أداة', sub: ar && en ? en : '', state, available: !button.disabled && !pending };
 }
+// 0.9.115: tool cards grow to use the free height of the right panel (never
+// beyond it, so no scrollbar), and closed outline shapes get a fabric/sky fill
+// with a soft shadow so pieces read as real pattern parts.
+function decorate(root = document) {
+  for (const p of root.querySelectorAll('.grafis-icon-option svg :is(path,rect,circle):not([data-l7-fill])')) {
+    p.dataset.l7Fill = '';
+    const closed = p.tagName !== 'path' || /[Zz]\s*$/.test(p.getAttribute('d') || '');
+    if (!closed) continue;
+    if (p.classList.contains('ink')) p.classList.add('l7-fill-fabric');
+    else if (p.classList.contains('blue')) p.classList.add('l7-fill-sky');
+  }
+}
+function installDefs() {
+  if (document.querySelector('#l7-icon-defs')) return;
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  svg.id = 'l7-icon-defs'; svg.setAttribute('aria-hidden', 'true'); svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+  svg.innerHTML = '<defs><linearGradient id="l7-fabric" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#ead7a8"/></linearGradient><linearGradient id="l7-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef8ff"/><stop offset="1" stop-color="#b8def5"/></linearGradient></defs>';
+  document.body.prepend(svg);
+}
+function fitPanel() {
+  const panel = document.querySelector('aside.command-panel');
+  if (!panel || !panel.clientHeight) return;
+  const root = document.documentElement.style, set = h => { document.body.classList.toggle('l7-big-cards', h >= 70); root.setProperty('--l7-card-h', h + 'px'); root.setProperty('--l7-icon', Math.round(h * 0.56) + 'px'); root.setProperty('--l7-cap', Math.max(9, Math.min(12, h * 0.17)).toFixed(1) + 'px'); };
+  const fits = () => panel.scrollHeight <= panel.clientHeight + 1;
+  let lo = 40, hi = 104; set(hi); if (fits()) return;
+  while (hi - lo > 2) { const mid = Math.floor((lo + hi) / 2); set(mid); if (fits()) lo = mid; else hi = mid; }
+  set(lo);
+}
+let fitQueued = false;
+const queueFit = () => { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitPanel(); }); };
 export function installInterfaceGuide() {
   const panel = document.querySelector('.command-panel');
   if (!panel || document.querySelector('#tool-guide')) return;
@@ -46,8 +76,19 @@ export function installInterfaceGuide() {
   };
   document.addEventListener('pointerover', e => show(e.target), { passive: true });
   document.addEventListener('focusin', e => show(e.target));
-  label();
-  new MutationObserver(records => { if (records.some(r => r.type === 'childList' || r.attributeName === 'title')) label(); })
+  installDefs(); label(); decorate();
+  new MutationObserver(records => { if (records.some(r => r.type === 'childList' || r.attributeName === 'title')) { label(); decorate(); } })
     .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['title'] });
-  document.body.classList.add('ui-0113');
+  // Refit only when the tool panel itself changes shape: a group opens or closes,
+  // or tools are added. The help card and status texts never trigger a refit, so
+  // a card never moves under the pointer.
+  let lastShape = '';
+  const shape = () => [...panel.querySelectorAll('.grafis-icon-option, .grafis-points-menu-value, .tool-section')].filter(e => e.offsetParent).length + ':' + panel.clientHeight;
+  new MutationObserver(records => {
+    if (records.every(r => card.contains(r.target))) return;
+    const now = shape(); if (now !== lastShape) { lastShape = now; queueFit(); }
+  }).observe(panel, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+  window.addEventListener('resize', queueFit);
+  document.body.classList.add('ui-0113', 'l7-fit');
+  queueFit();
 }

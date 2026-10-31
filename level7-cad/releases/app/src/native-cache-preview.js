@@ -18,7 +18,10 @@ function verifiedSource(input){
     // serializeMdl authenticates the production document and returns retained
     // private bytes; mutable inspection doc.bytes cannot bypass validation.
     const bytes=serializeMdl(doc);source={bytes,blocks:doc.blocks,variant:doc.variant};
-    if(source.variant!=='VA')throw new Error('This evaluated-cache variant has not been verified for preview; VA only.');
+    // 0.9.115: VB files (newer GRAFIS saves) use the same evaluated-cache layout;
+    // verified read-only on the owner's "alaa new.mdl" (103 parts, 1490 objects, every
+    // table/pool boundary consistent). Native edits stay VA-only elsewhere.
+    if(source.variant!=='VA'&&source.variant!=='VB')throw new Error('This evaluated-cache variant has not been verified for preview; VA and VB only.');
     verifiedDocuments.set(doc,source);
   }
   return source;

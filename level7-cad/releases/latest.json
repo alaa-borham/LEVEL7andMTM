@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.114",
- "notes": "LEVEL7 and MTM 0.9.114: لوحة الأدوات تدخل في الشاشة بدون تمرير.",
+ "version": "0.9.115",
+ "notes": "LEVEL7 and MTM 0.9.115: فتح ملفات جرافس الأحدث (VB) للعرض، وأيقونات أكبر تملأ اللوحة.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "8bf21faa97b646627565a1bbc6b87b20d7a8848159ab5a6b35e244f5411b8059",
-   "size": 117044
+   "sha256": "c0805397b76b6da4ddb0af87260227ea53477d02176e32b26d97a50a86c03b26",
+   "size": 117385
   },
   {
    "path": "assets/icon.ico",
@@ -110,7 +110,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "55df69fc74b75f92450907524f701d3db7a27104408c40968c2a0d2fa8fc4190",
+   "sha256": "5d040d5ed54197733cf8a4e34bd66594ffa3dafcd2c2de2fdba0750b6174e8c1",
    "size": 301
   },
   {
@@ -450,8 +450,8 @@
   },
   {
    "path": "src/native-cache-preview.js",
-   "sha256": "888441e52815e4ca7e934c9e9057224d246064af75f12a5f4c18fd93dd3a7ce6",
-   "size": 7761
+   "sha256": "238307949bb4be55c83bb5a43691acc814dae5fffb1e451ae01991afef6aa3e6",
+   "size": 8039
   },
   {
    "path": "src/native-chamfer-template.mjs",
@@ -1475,13 +1475,13 @@
   },
   {
    "path": "src/ui-0113.css",
-   "sha256": "2a2b51ea1ea4f4242707f30f4bcc8293c8bd4313900351f556ef79e4129aa1e3",
-   "size": 9385
+   "sha256": "0c56a7a3ca5ac07749c617408353966674c52367c037e081b846c30971268e89",
+   "size": 11147
   },
   {
    "path": "src/ui-guide-0113.js",
-   "sha256": "2631ee7bebd589038b8e0a3e1b7b4d474dd8a5981e7d962fb0f78a6a9391f2f1",
-   "size": 3595
+   "sha256": "c61b4418565561bcb6fb5a0e4d2f397d60c146eeb5210eee9023e4c1986e1b3b",
+   "size": 6580
   },
   {
    "path": "src/unchanged-parameter-commit.mjs",

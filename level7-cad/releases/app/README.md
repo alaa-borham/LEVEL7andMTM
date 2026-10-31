@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.115
+
+Newer GRAFIS files (MDL variant VB) now open with their stored drawings for viewing (read-only; editing and saving stay VA-only). Tool cards grow to use the free height of the right panel without a scrollbar, with two-line captions on large cards, tactile tile styling and fabric-filled pattern pieces in the icons.
+
 LEVEL7 and MTM 0.9.114
 
 Compact tool panel: the right panel now fits the window without a scrollbar for every tool group (checked at 1280x720, 1366x768, 1440x900 and 1920x1080): four tool cards per row with one-line Arabic captions, tool cards in reading order, and smaller spacing on short screens. Delivered through the automatic update.
