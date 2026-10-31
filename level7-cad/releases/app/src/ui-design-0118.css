@@ -123,3 +123,17 @@ body.ui-dark .l7-design svg .folder{fill:rgba(245,184,61,.22);stroke:#f5b83d}bod
 .l7-design-close{border:1px solid #c3cdd4;border-radius:5px;background:transparent;color:#405868}
 body.ui-dark .l7-design-close{background:transparent;border-color:#323c48;color:#aab6c4}
 body.ui-dark .l7-design-close:hover{background:#4a2a2e;border-color:#e5484d;color:#fff}
+/* 0.9.121 step card: picture, explanation, ✓ confirm and ‹ back (as in GRAFIS 2020). */
+.l7-design-guide{width:232px;padding:8px 10px;gap:6px}
+.l7-design-guide .l7g-pic{display:flex;align-items:center;justify-content:center;height:86px;border-radius:5px;background:#e9eef2}
+.l7-design-guide .l7g-pic svg{width:76px;height:76px;fill:none;stroke:#3a4b5a;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.l7-design-guide footer{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.l7-design-guide footer button{width:38px;min-height:28px;height:28px;padding:0;border:0;background:transparent;font-size:20px;font-weight:700;line-height:1;cursor:pointer}
+.l7-design-guide .l7g-ok{color:#3c9a3f}.l7-design-guide .l7g-back{color:#d23b3b;font-size:24px}
+.l7-design-guide footer button:hover{background:rgba(0,0,0,.06);border-radius:5px}
+body.ui-dark .l7-design-guide .l7g-pic{background:#9a9a9a}
+body.ui-dark .l7-design-guide .l7g-pic svg{stroke:#111}
+body.ui-dark .l7-design-guide .l7g-pic svg .ink{stroke:#111}
+body.ui-dark .l7-design-guide .l7g-ok{color:#8fd14f}
+/* the step card sits low on the right so it never covers the engine's value box (top right) */
+.l7-design-guide{top:auto;bottom:44px;right:14px}

@@ -15,6 +15,7 @@
   --grid-major: #dde1e6;
   --piece: #2e7d32;
   --piece-fill: rgba(46, 125, 50, 0.07);
+  --live: #43a047;
   font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", Arial, sans-serif;
   font-size: 14px;
   color: var(--text);
@@ -534,3 +535,11 @@ body.dark input,body.dark select,body.dark #canvas{background:#10141a}
 body.dark .size-table th.customer{background:#3a2f17}
 /* 0.9.119: the program's command bar switches the pages (F5, Ctrl+X, F11, Ctrl+G, Pieces). */
 body.embedded .panel .tabs{display:none}
+
+/* live drawing preview */
+#canvas text.live-label { fill: var(--live); font-weight: 700; font-size: 13px; }
+body.dark { --live: #8fd14f; }
+
+/* X / Z picker beside formula fields */
+.tool-box .field:has(.ref-pick) { grid-template-columns: 110px 1fr auto; }
+.tool-box .ref-pick { width: 64px; padding: 3px 2px; font-size: 12px; }

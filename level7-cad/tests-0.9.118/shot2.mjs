@@ -1,0 +1,10 @@
+import path from'node:path';import fs from'node:fs/promises';import os from'node:os';import{_electron}from'file:///opt/node-tools/node_modules/playwright/index.mjs';
+const src='/home/user/work/dev';const env={...process.env,LOCALAPPDATA:await fs.mkdtemp(path.join(os.tmpdir(),'sh-'))};delete env.ELECTRON_RUN_AS_NODE;
+const app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();await page.waitForSelector('#tool-guide');
+await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setMinimumSize(800,600);w.setSize(1280,720);});await page.waitForTimeout(500);
+await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
+const f=page.frames().find(x=>x.url().includes('l7design'));await f.evaluate(()=>{window.level7.model.measurements.push({id:1,name:'طول الثوب',value:1500},{id:2,name:'',value:900});});
+await page.locator('[data-l7d-cat="الخطوط"]').click();await page.locator('[data-l7d-tool="lineAngle"]').click();await page.waitForTimeout(300);
+const cb=await page.frameLocator('#l7-design-frame').locator('#canvas').boundingBox();const x0=cb.x+cb.width*0.35,y0=cb.y+cb.height*0.7;
+await page.mouse.click(x0,y0);await page.mouse.move(x0+100,y0-60,{steps:5});await page.mouse.move(x0+200,y0-150,{steps:5});await page.waitForTimeout(300);
+await page.screenshot({path:'shot-0121-live.png'});await app.close();

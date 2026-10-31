@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.121
+
+LEVEL7 design mode, live drawing: "line by angle and length" follows the mouse from its start point with a dashed length circle and an angle/length label; angle step (free, 1, 5, 15, 45, 90°); typed values stay fixed; a click on the drawing or Enter confirms. "Line between two points" shows a rubber band with length and angle. Step card with picture, explanation, ✓ (confirm) and ‹ (back one step; removes a point the click created). Formula fields: an X / Z list beside each field (X1 = 1500 · name), suggestions while typing, lower-case x/z and Arabic-Indic digits accepted, and a clear message for a bare "X".
+
 LEVEL7 and MTM 0.9.120
 
 LEVEL7 design mode: tools live in a slim icon strip at the right edge; each icon (corner triangle) opens a flyout menu listing its tools by icon and name (points, lines, modify, curves, corners, pieces, measuring, export & save), and shows the last tool used. New corner tools: sharp corner (extend/trim both lines to their intersection), round corner (tangent arc of a given radius) and chamfer (straight cut at a given distance); all stay parametric and editable.

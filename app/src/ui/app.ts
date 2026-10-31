@@ -36,6 +36,9 @@ interface FormState {
   title: string;
   fields: Field[];
   onOk: (v: Record<string, string>) => void;
+  /** Live drawing: the line follows the mouse from `from`; angle and length fill in
+   * until typed by hand, and a click on the drawing confirms. */
+  live?: { from: Pt; follow?: (at: Pt) => void; submit?: () => void };
 }
 
 export class App {
@@ -219,7 +222,40 @@ export class App {
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
+    parts.push(this.liveSvg());
     this.svg.innerHTML = parts.join("");
+  }
+
+  /** Rubber-band preview of the line being drawn, with its length and angle. */
+  private liveSvg(): string {
+    let from: Pt | null = null, to: Pt | null = null, circle = false;
+    if (this.form?.live) {
+      const box = $("#tool-box");
+      const val = (k: string) => {
+        try {
+          return new Vars(withSize(this.model), undefined, this.res.z).eval((box.querySelector(`input[data-key="${k}"]`) as HTMLInputElement).value);
+        } catch {
+          return NaN;
+        }
+      };
+      const a = (val("angle") * Math.PI) / 180, L = val("length");
+      if (!Number.isFinite(a) || !(L > 0)) return "";
+      from = this.form.live.from;
+      to = [from[0] + L * Math.cos(a), from[1] + L * Math.sin(a)];
+      circle = true;
+    } else if (this.tool?.key === "line" && this.picks.length === 1 && this.picks[0].kind === "point" && !this.form) {
+      from = this.pointOf(this.picks[0].ref);
+      to = this.hover?.kind === "point" ? this.pointOf(this.hover.ref) : this.mouse;
+    }
+    if (!from || !to) return "";
+    const [x1, y1] = this.toScreen(from), [x2, y2] = this.toScreen(to);
+    const L = dist(from, to), deg = (Math.atan2(to[1] - from[1], to[0] - from[0]) * 180) / Math.PI;
+    const out = [`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--live)" stroke-width="2"/>`, `<circle cx="${x1}" cy="${y1}" r="3.5" fill="var(--live)"/>`];
+    if (circle) out.push(`<circle cx="${x1}" cy="${y1}" r="${Math.hypot(x2 - x1, y2 - y1).toFixed(1)}" fill="none" stroke="var(--muted)" stroke-dasharray="4 4"/>`);
+    const ux = (x2 - x1) / (Math.hypot(x2 - x1, y2 - y1) || 1), uy = (y2 - y1) / (Math.hypot(x2 - x1, y2 - y1) || 1);
+    out.push(`<path d="M${x2} ${y2} l${(-10 * ux + 5 * uy).toFixed(1)} ${(-10 * uy - 5 * ux).toFixed(1)} M${x2} ${y2} l${(-10 * ux - 5 * uy).toFixed(1)} ${(-10 * uy + 5 * ux).toFixed(1)}" stroke="var(--live)" stroke-width="2" fill="none"/>`);
+    out.push(`<text class="live-label" x="${x2 + 8}" y="${y2 - 8}" direction="ltr">\u2066${fmt(Math.round(deg * 10) / 10)}° · ${fmt(Math.round(L * 10) / 10)} mm\u2069</text>`);
+    return out.join("");
   }
 
   private highlighted(): Set<number> {
@@ -428,6 +464,7 @@ export class App {
     const id = newId(this.model, "point");
     this.model.steps.push({ op: "point", id, x: String(x), y: String(y) } as Step);
     this.changed();
+    this.autoPoint = id;
     return { kind: "point", ref: { obj: id }, at: [x, y] };
   }
 
@@ -476,7 +513,42 @@ export class App {
       this.commit({});
       return;
     }
-    this.openForm({ title: t.name, fields, onOk: (v) => this.commit(v) });
+    const p0 = this.picks[0];
+    const live = t.key === "lineAngle" && p0?.kind === "point" ? { from: this.pointOf(p0.ref) } : undefined;
+    this.openForm({ title: t.name, fields, onOk: (v) => this.commit(v), live });
+  }
+
+  /** Angle step for live drawing, in degrees (0 = free). */
+  angleStep = 1;
+  private autoPoint: number | null = null;
+
+  /** Embedded mode: the ✓ of the step card (Enter). */
+  confirmStep(): void {
+    if (this.form) ($("#tool-box").querySelector("[data-ok]") as HTMLButtonElement | null)?.click();
+    else if (this.collecting) this.finishPicks();
+  }
+
+  /** Embedded mode: the back arrow of the step card: undo the last pick of the tool. */
+  backStep(): void {
+    if (!this.tool) return;
+    if (this.form) this.closeForm();
+    else if (this.collecting && this.extra.length) this.extra.pop();
+    else if (this.collecting) this.collecting = false;
+    if (!this.collecting) {
+      const p = this.picks.pop();
+      // a point made by clicking empty space goes away with its pick
+      const last = this.model.steps[this.model.steps.length - 1];
+      if (p?.kind === "point" && last?.op === "point" && last.id === p.ref.obj && this.autoPoint === p.ref.obj) {
+        const prev = this.undoStack.pop();
+        if (prev) {
+          this.model = parseModel(prev);
+          this.changed();
+        }
+        this.autoPoint = null;
+      }
+    }
+    this.updatePrompt();
+    this.render();
   }
 
   private commit(values: Record<string, string>): void {
@@ -576,6 +648,66 @@ export class App {
       preview(inp);
       inp.addEventListener("input", () => preview(inp));
     });
+    // X / Z list next to every formula field: pick a measurement or variable instead of typing it.
+    const sized = withSize(this.model);
+    const refs: [string, string][] = [
+      ...sized.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
+      ...this.model.variables.map((v): [string, string] => {
+        const val = this.res.z.get(v.id);
+        return [`Z${v.id}`, `Z${v.id}${val !== undefined ? " = " + fmt(val) : ""}${v.name ? " · " + v.name : ""}`];
+      }),
+    ];
+    if (refs.length) {
+      const listId = "xz-refs";
+      box.insertAdjacentHTML("beforeend", `<datalist id="${listId}">${refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</datalist>`);
+      box.querySelectorAll<HTMLInputElement>("input.expr").forEach((inp) => {
+        inp.setAttribute("list", listId);
+        const pick = document.createElement("select");
+        pick.className = "ref-pick";
+        pick.title = "اختر قياس X أو متغير Z";
+        pick.setAttribute("aria-label", "قائمة X و Z");
+        pick.innerHTML = `<option value="">X / Z</option>` + refs.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+        pick.addEventListener("change", () => {
+          const ref = pick.value;
+          pick.value = "";
+          if (!ref) return;
+          const cur = inp.value.trim();
+          inp.value = !cur || /^[XxZz]?$|^[\d.\s\u0660-\u0669]*$/.test(cur) ? ref : /[-+*/(]$/.test(cur) ? cur + ref : cur + "+" + ref;
+          inp.dispatchEvent(new Event("input"));
+          inp.focus();
+        });
+        inp.after(pick);
+      });
+    }
+    if (f.live) {
+      const live = f.live;
+      const step = document.createElement("label");
+      step.className = "field";
+      step.innerHTML = `<span>خطوة الزاوية</span><select data-angle-step>${[0, 1, 5, 15, 45, 90]
+        .map((v) => `<option value="${v}"${v === this.angleStep ? " selected" : ""}>${v ? v + "°" : "حرة"}</option>`)
+        .join("")}</select>`;
+      box.querySelector(".hint")?.before(step);
+      (step.querySelector("select") as HTMLSelectElement).addEventListener("change", (e) => {
+        this.angleStep = Number((e.target as HTMLSelectElement).value);
+        live.follow?.(this.mouse);
+      });
+      const hint = box.querySelector(".hint") as HTMLElement;
+      hint.textContent = "حرّك الماوس: الخط يتبعه والقيم تتحدث. اكتب قيمة لتثبيتها، ثم انقر على الرسم أو Enter.";
+      const typed = new Set<string>();
+      const input = (k: string) => box.querySelector(`input[data-key="${k}"]`) as HTMLInputElement;
+      for (const k of ["angle", "length"]) input(k).addEventListener("input", () => typed.add(k));
+      live.follow = (at) => {
+        const dx = at[0] - live.from[0], dy = at[1] - live.from[1];
+        let ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+        if (this.angleStep > 0) ang = Math.round(ang / this.angleStep) * this.angleStep;
+        ang = Math.round(ang * 10) / 10;
+        if (ang <= -180) ang += 360;
+        const len = Math.round(Math.hypot(dx, dy) * 10) / 10;
+        if (!typed.has("angle")) (input("angle").value = String(ang)), preview(input("angle"));
+        if (!typed.has("length") && len > 0) (input("length").value = String(len)), preview(input("length"));
+        this.render();
+      };
+    }
     const ok = () => {
       const v: Record<string, string> = {};
       let bad = false;
@@ -592,6 +724,7 @@ export class App {
       cb(v);
     };
     box.querySelector("[data-ok]")?.addEventListener("click", ok);
+    if (f.live) f.live.submit = ok;
     box.querySelector("[data-cancel]")?.addEventListener("click", () => (this.tool ? this.restartTool() : this.closeForm()));
     box.onkeydown = (e) => {
       if (e.key === "Enter") {
@@ -628,6 +761,10 @@ export class App {
         return;
       }
       if (e.button !== 0) return;
+      if (this.form?.live?.submit) {
+        this.form.live.submit();
+        return;
+      }
       const kind = this.currentPickKind();
       if (!kind) return;
       const r = svg.getBoundingClientRect();
@@ -651,13 +788,17 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.form?.live?.follow) {
+        this.form.live.follow(this.mouse);
+        return;
+      }
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
       const kind = this.currentPickKind();
       const h = kind ? this.hit(kind, sx, sy) : null;
       if (JSON.stringify(h && { ...h, at: 0 }) !== JSON.stringify(this.hover && { ...this.hover, at: 0 })) {
         this.hover = h;
         this.render();
-      }
+      } else if (this.tool?.key === "line" && this.picks.length === 1) this.render(); // rubber band
     });
     svg.addEventListener(
       "wheel",

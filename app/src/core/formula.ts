@@ -8,9 +8,21 @@ export type Lookup = (kind: "X" | "Z", n: number) => number;
 
 const TOKEN = /\s*(CMDIF|[XZ]\d+|\d+(?:\.\d*)?|\.\d+|<=|>=|<>|[-+*/()[\]{}<>=])/y;
 
+/** Accept lower-case x/z/cmdif and Arabic-Indic digits as typed on an Arabic keyboard. */
+export function normalizeFormula(src: string): string {
+  return src
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066b\u060c]/g, ".")
+    .replace(/cmdif/gi, "CMDIF")
+    .replace(/[xz](?=\s*\d)/g, (c) => c.toUpperCase());
+}
+
 export function tokenize(src: string): string[] {
   const out: string[] = [];
-  const s = src.trim();
+  const s = normalizeFormula(src).trim();
+  const bare = s.match(/(?:^|[^A-Za-z])([XxZz])(?!\s*\d)/);
+  if (bare) throw new FormulaError(`اكتب رقم ${bare[1].toUpperCase() === "X" ? "القياس" : "المتغير"} بعد ${bare[1].toUpperCase()}، مثل ${bare[1].toUpperCase()}1`);
   TOKEN.lastIndex = 0;
   while (TOKEN.lastIndex < s.length) {
     const at = TOKEN.lastIndex;

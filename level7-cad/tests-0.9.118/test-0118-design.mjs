@@ -47,6 +47,32 @@ try{
  await (await tool(page,'line')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="line"]').getAttribute('aria-pressed')==='true');
  await page.mouse.click(cb.x+cb.width*0.3,cb.y+cb.height*0.7);await page.mouse.click(cb.x+cb.width*0.6,cb.y+cb.height*0.75);
  await f.waitForFunction(()=>window.level7.model.steps.map(s=>s.op).join()==='point,lineAngle,point,point,line');pass('line between two clicks in empty space');
+ // 0.9.121 live drawing: the angle line follows the mouse, a click on the drawing fixes it.
+ await (await tool(page,'lineAngle')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="lineAngle"]').getAttribute('aria-pressed')==='true');
+ const x0=cb.x+cb.width*0.5,y0=cb.y+cb.height*0.5;await page.mouse.click(x0,y0);await frame.locator('#tool-box [data-angle-step]').waitFor();
+ await frame.locator('#tool-box [data-angle-step]').selectOption('45');
+ await page.mouse.move(x0+60,y0-50,{steps:4});await page.mouse.move(x0+120,y0-110,{steps:4});
+ const live=await f.evaluate(()=>({a:document.querySelector('#tool-box input[data-key="angle"]').value,l:Number(document.querySelector('#tool-box input[data-key="length"]').value),label:document.querySelector('#canvas text.live-label')?.textContent}));
+ assert.equal(live.a,'45');assert(live.l>0&&/45° · /.test(live.label||''),JSON.stringify(live));
+ const n0=await f.evaluate(()=>window.level7.model.steps.length);await page.mouse.click(x0+120,y0-110);
+ await f.waitForFunction(n=>window.level7.model.steps.length===n+1,n0);const st=await f.evaluate(()=>window.level7.model.steps.at(-1));assert.equal(st.op,'lineAngle');assert.equal(st.angle,'45');
+ pass('angle line follows the mouse with a 45° step and a click fixes it ('+st.length+' mm)');
+ // step card: picture and back arrow
+ assert(await page.locator('.l7-design-guide:not([hidden]) .l7g-pic svg').count()===1);
+ const n1=await f.evaluate(()=>window.level7.model.steps.length);await page.mouse.click(x0-100,y0+60);await f.waitForFunction(()=>document.querySelector('#tool-box').hidden===false);
+ await page.locator('[data-l7d-step="back"]').click();await f.waitForFunction(n=>document.querySelector('#tool-box').hidden&&window.level7.model.steps.length===n,n1);
+ assert.equal(await page.locator('[data-l7d-tool="lineAngle"]').getAttribute('aria-pressed'),'true');
+ pass('step card shows a picture; ‹ goes back one step and removes the point the click made');
+ await page.keyboard.press('Escape');
+ // X list in the value box: X1 = 1500 is offered and lower-case / Arabic digits are read.
+ await f.evaluate(()=>{const m=window.level7.model;m.measurements.push({id:91,name:'طول',value:1500});});
+ await (await tool(page,'lineAngle')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="lineAngle"]').getAttribute('aria-pressed')==='true');await page.mouse.click(x0+40,y0+40);await frame.locator('#tool-box .ref-pick').first().waitFor();
+ const opts=await frame.locator('#tool-box .ref-pick').nth(1).locator('option').allTextContents();assert(opts.some(o=>o.startsWith('X91 = 1500')),opts.join('|'));
+ await frame.locator('#tool-box .ref-pick').nth(1).selectOption('X91');assert.equal(await frame.locator('#tool-box input[data-key="length"]').inputValue(),'X91');
+ await frame.locator('#tool-box input[data-key="length"]').fill('x91/٢');await frame.locator('#tool-box [data-ok]').click();
+ await f.waitForFunction(()=>window.level7.model.steps.at(-1).length==='x91/٢');const L=await f.evaluate(()=>{const s=window.level7.model.steps.at(-1);const o=window.level7.res.objects.get(s.id);return Math.hypot(o.pts[1][0]-o.pts[0][0],o.pts[1][1]-o.pts[0][1]);});
+ assert(Math.abs(L-750)<1e-6,String(L));pass('value box lists X (X91 = 1500); "x91/٢" is read as 750 mm');
+ await page.keyboard.press('Escape');
  // corner tools: round the corner between the angle line and the first line
  await (await tool(page,'cornerRound')).click();await page.waitForFunction(()=>document.querySelector('[data-l7d-cat="الزوايا"]').classList.contains('l7-active'));
  assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),0);assert.equal(await page.locator('[data-l7d-cat="الزوايا"] svg').getAttribute('data-tool-icon'),'circularCorner');pass('choosing a corner tool closes the menu and its strip icon shows that tool');

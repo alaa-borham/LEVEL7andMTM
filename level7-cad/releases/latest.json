@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.120",
- "notes": "قوائم أدوات منسدلة من شريط أيقونات؛ أدوات الزوايا: حادة ومستديرة وقطع",
+ "version": "0.9.121",
+ "notes": "رسم حي يتبع الماوس؛ بطاقة خطوة ✓ و‹؛ قائمة X/Z بجانب الحقول؛ قبول x وأرقام عربية",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "1f10b2f03e055d234331e111aa2d56a458561d57c4bae9952ae60785d5037b0a",
-   "size": 120036
+   "sha256": "bc0b4917fd0d987d157df4366c20f3f368c2a2f54d9bc064e2e9ad325badbd48",
+   "size": 120682
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-C4MKxRoa.js",
-   "sha256": "6acf2b0d3d8ff6800f586be084031490a37b0b1366a6540975cc3766002e8cc8",
-   "size": 82819
+   "path": "assets/l7design/assets/index-BHBiVpH9.css",
+   "sha256": "7940b3138add81183b7667dab1215a0fd11957a1eecb8e5de92093a292819842",
+   "size": 7884
   },
   {
-   "path": "assets/l7design/assets/index-CCsKS3pm.css",
-   "sha256": "d0289efc2732a835c5476108c8ba7b2a1df0eef218f043700a4399fe09e19ad8",
-   "size": 7639
+   "path": "assets/l7design/assets/index-cFnv24zw.js",
+   "sha256": "5d08f21e5462f7ef9a8fdbc5bae737a0cd92637125022344e45625a034ef2341",
+   "size": 88126
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "13c432254146d90d10af76c1b684051675dc3840ef5c15cd38d94ebdaade6a6d",
+   "sha256": "795eca4aa09dc77b8b70492549e7fc3d6e03908603c6476bb803a4506fd43657",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "f78f26e66904bf417f836295cee1ce8e26496329b5e172cbfa8a8c6cff3249ee",
+   "sha256": "717ab7c6c1f76dd54af9d30c23ce5fdd85081ec0966fbee0c27d306406343a1b",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "4de51f2c70439f2fc124b681c67c60a3edfba1c06965df25f5fa752bdeb4da85",
-   "size": 17067
+   "sha256": "3e2441490e852d276e81b04ac82e4ca524e2b9e07b28db3c35f43e8b6aed8183",
+   "size": 17994
   },
   {
    "path": "src/line-transform-ui.js",
@@ -1505,8 +1505,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "23abc43175e709f0ebc890faf5374a5d9bbfc5c1b1285928fc9d1d14680b5bbc",
-   "size": 12124
+   "sha256": "93e14158c053f5166d4d968dc2cb0617a49d3ee2b22f47a210c4e48b11bdc3bc",
+   "size": 13369
   },
   {
    "path": "src/ui-guide-0113.js",

@@ -23,8 +23,8 @@ const HINT = {
   pointOn: 'اختر خطاً قرب الطرف الذي تقاس منه المسافة.',
   intersect: 'اختر خطين أو منحنيين لإنشاء نقطة تقاطعهما.',
   pointMove: 'اختر نقطة ثم خطاً يحدد اتجاه النقل.',
-  line: 'اختر نقطتين أو انقر موضعين على اللوحة.',
-  lineAngle: 'اختر نقطة البداية ثم اكتب الزاوية والطول.',
+  line: 'انقر نقطة البداية ثم النهاية، أو موضعين فارغين؛ الخط يتبع الماوس بطوله وزاويته.',
+  lineAngle: 'انقر نقطة البداية (أو مكاناً فارغاً)، ثم حرّك الماوس: الخط يتبعه والزاوية والطول يظهران. انقر لتثبيته، أو اكتب القيمة في المربع.',
   parallel: 'اختر الخط ثم الجهة؛ اكتب المسافة بالمليمتر.',
   setLength: 'اختر الخط قرب الطرف الذي يتغير.',
   trim: 'اختر الخط المراد قصه أو تمديده ثم الحد.',
@@ -60,7 +60,7 @@ export function installDesignMode() {
   const host = document.createElement('section');
   host.id = 'l7-design'; host.className = 'l7-design'; host.hidden = true; host.dir = 'rtl';
   host.setAttribute('aria-label', 'تصميم LEVEL7');
-  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div><div class="l7-design-guide" aria-live="polite" hidden><b></b><span></span></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><button type="button" class="l7-design-close" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button><div class="l7-design-tools" role="toolbar" aria-orientation="vertical"></div></aside>';
+  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div><div class="l7-design-guide" aria-live="polite" hidden><b class="l7g-title"></b><div class="l7g-pic" aria-hidden="true"></div><span class="l7g-text"></span><footer><button type="button" class="l7g-ok" data-l7d-step="confirm" title="تأكيد الخطوة · Enter">✓</button><button type="button" class="l7g-back" data-l7d-step="back" title="رجوع خطوة">‹</button></footer></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><button type="button" class="l7-design-close" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button><div class="l7-design-tools" role="toolbar" aria-orientation="vertical"></div></aside>';
   workArea.append(host);
   const stage = host.querySelector('.l7-design-stage'), toolsBox = host.querySelector('.l7-design-tools');
   const guide = host.querySelector('.l7-design-guide');
@@ -157,8 +157,12 @@ export function installDesignMode() {
       if (h) { h.innerHTML = stripIcon(c); decorate(h); }
     }
     guide.hidden = !t;
-    guide.firstElementChild.textContent = t ? t.name : '';
-    guide.lastElementChild.textContent = t ? (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' Esc للإلغاء.' : '';
+    if (t && guide.dataset.tool !== t.key) {
+      guide.dataset.tool = t.key;
+      guide.querySelector('.l7g-title').textContent = t.name;
+      guide.querySelector('.l7g-pic').innerHTML = toolIcon(GLYPH[t.key] || 'point'); decorate(guide);
+      guide.querySelector('.l7g-text').textContent = (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' Esc للإلغاء.';
+    } else if (!t) delete guide.dataset.tool;
   };
   const openDesign = async () => {
     if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
@@ -191,7 +195,9 @@ export function installDesignMode() {
   });
   host.addEventListener('click', e => {
     const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');
-    if (e.target.closest('[data-l7d="close"]')) close();
+    const step = e.target.closest('[data-l7d-step]');
+    if (step) { send({ type: 'l7:action', action: step.dataset.l7dStep }); frame?.focus(); }
+    else if (e.target.closest('[data-l7d="close"]')) close();
     else if (cat) showCat(cat.dataset.l7dCat === openCat ? null : cat.dataset.l7dCat);
     else if (tool) { showCat(null); send(tool.dataset.l7dTool === active ? { type: 'l7:cancel' } : { type: 'l7:tool', key: tool.dataset.l7dTool }); frame?.focus(); }
     else if (cmd) { showCat(null); run(cmd.dataset.l7dCommand); }

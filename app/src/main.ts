@@ -38,6 +38,8 @@ if (embedded && window.parent !== window) {
   const click = (action: string) => (document.querySelector(`.actions [data-action="${action}"]`) as HTMLButtonElement | null)?.click();
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);
+    else if (action === "confirm") app.confirmStep();
+    else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);
     else if (/^tab-(steps|x|z|pieces|sizes)$/.test(action)) (document.querySelector(`.tabs [data-tab="${action.slice(4)}"]`) as HTMLButtonElement | null)?.click();
