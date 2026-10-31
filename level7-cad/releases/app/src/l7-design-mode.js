@@ -11,12 +11,18 @@ import { toolIcon } from './grouped-tool-palette.js';
 const GLYPH = {
   point: 'point', pointOn: 'pointFraction', intersect: 'pointCluster', pointMove: 'vector',
   line: 'line', lineAngle: 'angle', parallel: 'parallel', setLength: 'lengthTo', trim: 'cutEnd',
-  cornerSharp: 'انقر الخطين قرب الزاوية؛ النتيجة تظهر قبل النقرة الثانية.', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
-  mirrorCopy: 'انقر محور الانعكاس، ثم العناصر، ثم Enter.', mirrorMove: 'linkedReflection', curve: 'curve10', piece: 'seam',
+  cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
+  dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
+  mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
-  cornerSharp: 'انقر الخطين قرب الزاوية؛ يمتدان أو يُقصّان حتى يلتقيا.',
+  cornerSharp: 'انقر الخطين قرب الزاوية؛ النتيجة تظهر قبل النقرة الثانية، ويمتدان أو يُقصّان حتى يلتقيا.',
+  dimAligned: 'انقر نقطتين، ثم حرّك الماوس لوضع خط البعد وانقر. القيمة تتحدث مع الباترون.',
+  dimH: 'انقر نقطتين، ثم حرّك الماوس لأعلى أو أسفل لوضع البعد الأفقي وانقر.',
+  dimV: 'انقر نقطتين، ثم حرّك الماوس يميناً أو يساراً لوضع البعد الرأسي وانقر.',
+  dimLength: 'انقر الخط أو المنحنى، ثم حرّك الماوس لوضع بعد الطول وانقر.',
+  dimAngle: 'انقر نقطة على الضلع الأول، ثم رأس الزاوية، ثم نقطة على الضلع الثاني.',
   cornerRound: 'انقر الخطين قرب الزاوية (النتيجة تظهر قبل النقرة الثانية)، ثم حرّك الماوس: نصف القطر يتبعه. انقر لتثبيته أو اكتب القيمة.',
   cornerChamfer: 'انقر الخطين قرب الزاوية، ثم حرّك الماوس: مسافة القطع تتبعه. انقر لتثبيتها أو اكتب القيمة.',
   point: 'انقر على اللوحة لوضع نقطة، ثم عدّل س/ص في المربع.',
@@ -28,9 +34,9 @@ const HINT = {
   parallel: 'انقر الخط، ثم حرّك الماوس إلى الجهة المطلوبة: الخط الموازي يتبعه والمسافة تظهر. انقر لتثبيته أو اكتب المسافة.',
   setLength: 'انقر الخط قرب الطرف الذي يتغير، ثم حرّك الماوس: الخط يطول أو يقصر معه. انقر لتثبيته أو اكتب الطول.',
   trim: 'انقر الخط المراد قصه أو تمديده، ثم مرّر الماوس على الحد: النتيجة تظهر قبل النقر.',
-  mirrorCopy: 'اختر العناصر ثم محور الانعكاس.',
+  mirrorCopy: 'انقر محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين.',
   mirrorMove: 'اختر العناصر ثم محور الانعكاس.',
-  curve: 'اختر نقاط المنحنى بالترتيب ثم Enter.',
+  curve: 'انقر نقاط المنحنى بالترتيب (موجودة أو فارغة)، ثم Enter أو كليك يمين. بعدها اسحب الدائرة الحمراء عند كل طرف لضبط اتجاهه؛ دابل كليك عليها يعيده حراً.',
   piece: 'اختر حدود القطعة بالترتيب ثم Enter.',
   notch: 'اختر نقطة على حد القطعة.',
   measureDist: 'اختر نقطتين لقياس المسافة بينهما.',
@@ -145,6 +151,10 @@ export function installDesignMode() {
     }
   };
   document.addEventListener('pointerdown', e => { if (openCat !== null && !e.target.closest?.('.l7-cat')) showCat(null); }, true);
+  // right click anywhere else closes an open menu
+  document.addEventListener('contextmenu', e => {
+    if (openCat !== null && !e.target.closest?.('[data-l7d-cat]')) { e.preventDefault(); showCat(null); }
+  }, true);
   // right click on a group icon opens its menu to choose another tool
   toolsBox.addEventListener('contextmenu', e => {
     const cat = e.target.closest('[data-l7d-cat]');
@@ -198,6 +208,7 @@ export function installDesignMode() {
       for (const m of queue.splice(0)) frame.contentWindow.postMessage(m, '*');
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
+    else if (d.type === 'l7:context') showCat(null);
     else if (d.type === 'l7:panel') markTab(typeof d.tab === 'string' ? 'tab-' + d.tab : null);
     else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
   });

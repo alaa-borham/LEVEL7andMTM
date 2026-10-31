@@ -291,6 +291,58 @@ export const TOOLS: Tool[] = [
     addNotch: true,
   },
   {
+    key: "dimAligned",
+    name: "بُعد مائل (مسافة)",
+    group: "الأبعاد",
+    picks: [
+      { kind: "point", prompt: "انقر النقطة الأولى" },
+      { kind: "point", prompt: "انقر النقطة الثانية" },
+    ],
+    fields: () => [{ key: "offset", label: "إزاحة خط البعد", value: "10" }],
+    build: (c, v) => ({ op: "dim", kind: "aligned", a: point(c, 0).ref, b: point(c, 1).ref, offset: v.offset }),
+  },
+  {
+    key: "dimH",
+    name: "بُعد أفقي",
+    group: "الأبعاد",
+    picks: [
+      { kind: "point", prompt: "انقر النقطة الأولى" },
+      { kind: "point", prompt: "انقر النقطة الثانية" },
+    ],
+    fields: () => [{ key: "offset", label: "إزاحة خط البعد", value: "10" }],
+    build: (c, v) => ({ op: "dim", kind: "h", a: point(c, 0).ref, b: point(c, 1).ref, offset: v.offset }),
+  },
+  {
+    key: "dimV",
+    name: "بُعد رأسي",
+    group: "الأبعاد",
+    picks: [
+      { kind: "point", prompt: "انقر النقطة الأولى" },
+      { kind: "point", prompt: "انقر النقطة الثانية" },
+    ],
+    fields: () => [{ key: "offset", label: "إزاحة خط البعد", value: "10" }],
+    build: (c, v) => ({ op: "dim", kind: "v", a: point(c, 0).ref, b: point(c, 1).ref, offset: v.offset }),
+  },
+  {
+    key: "dimLength",
+    name: "بُعد طول خط أو منحنى",
+    group: "الأبعاد",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى" }],
+    fields: () => [{ key: "offset", label: "إزاحة خط البعد", value: "10" }],
+    build: (c, v) => ({ op: "dim", kind: "length", obj: line(c, 0).obj, offset: v.offset }),
+  },
+  {
+    key: "dimAngle",
+    name: "بُعد زاوية",
+    group: "الأبعاد",
+    picks: [
+      { kind: "point", prompt: "انقر نقطة على الضلع الأول" },
+      { kind: "point", prompt: "انقر رأس الزاوية" },
+      { kind: "point", prompt: "انقر نقطة على الضلع الثاني" },
+    ],
+    build: (c) => ({ op: "dim", kind: "angle", a: point(c, 0).ref, b: point(c, 1).ref, c: point(c, 2).ref, offset: "0" }),
+  },
+  {
     key: "measureDist",
     name: "قياس مسافة ← Z",
     group: "القياس من الرسم",
@@ -337,6 +389,8 @@ export function stepFields(s: Step): Field[] {
       ];
     case "pointMove":
       return [{ key: "dist", label: "المسافة", value: s.dist }];
+    case "dim":
+      return s.kind === "angle" ? [] : [{ key: "offset", label: "إزاحة خط البعد", value: s.offset }];
     case "pointOffset":
       return [
         { key: "dx", label: "إزاحة س", value: s.dx },

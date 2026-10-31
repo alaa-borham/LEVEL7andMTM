@@ -19,6 +19,12 @@ export function describe(s: Step, m: Model): string {
       return `نقطة ${n(s.id)} تقاطع ${n(s.a)} و ${n(s.b)}`;
     case "pointMove":
       return `نقطة ${n(s.id)} = ${pr(s.from)} منقولة ${e(s.dist)} باتجاه ${n(s.along)}`;
+    case "dim": {
+      const k = { aligned: "بُعد مائل", h: "بُعد أفقي", v: "بُعد رأسي", length: "بُعد طول", angle: "بُعد زاوية" }[s.kind];
+      if (s.kind === "length") return `${k} ${n(s.obj as number)}`;
+      if (s.kind === "angle") return `${k} ${pr(s.a as PointRef)} – ${pr(s.b as PointRef)} – ${pr(s.c as PointRef)}`;
+      return `${k} بين ${pr(s.a as PointRef)} و ${pr(s.b as PointRef)}`;
+    }
     case "pointOffset":
       return `نقطة ${n(s.id)} = ${pr(s.from)} + (${e(s.dx)} ، ${e(s.dy)})`;
     case "line":

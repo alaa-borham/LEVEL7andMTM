@@ -128,6 +128,8 @@ if (embedded && window.parent !== window) {
     e.stopImmediatePropagation();
     post({ type: "l7:shortcut", action });
   }, true);
+  // a right click in the drawing also closes an open tool menu of the program
+  window.addEventListener("contextmenu", () => post({ type: "l7:context" }));
   window.addEventListener("message", (e) => {
     if (e.source !== window.parent || typeof e.data?.type !== "string") return;
     const d = e.data as { type: string; key?: string; action?: string; text?: string; name?: string; grafis?: boolean };

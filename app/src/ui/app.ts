@@ -2,7 +2,7 @@ import { toGradedAama } from "../core/aama-graded";
 import { normalizeFormula } from "../core/formula";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
-import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, pointAlong, polyLen, type Pt } from "../core/geometry";
+import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
   createdIds,
   nearerEnd,
@@ -54,6 +54,8 @@ export class App {
   private cx = 0;
   private cy = 0;
   private scale = 1;
+  showNames = false;
+  private nameHover: number | null = null;
   showGrid = false;
 
   private tool: Tool | null = null;
@@ -214,21 +216,174 @@ export class App {
       const pts = o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ");
       const w = highlight.has(o.id) ? 2.5 : 1.4;
       parts.push(`<polyline points="${pts}" fill="none" stroke="${lineColor(o)}" stroke-width="${w}"/>`);
-      const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
-      parts.push(`<text x="${mid[0] + 4}" y="${mid[1] - 4}">${esc(o.name)}</text>`);
+      if (this.showNames) {
+        const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
+        parts.push(`<text x="${mid[0] + 4}" y="${mid[1] - 4}">${esc(o.name)}</text>`);
+      }
     }
     for (const o of this.res.objects.values()) {
       if (o.kind !== "point") continue;
       const [x, y] = this.toScreen(o.pts[0]);
       const c = highlight.has(o.id) ? "var(--select)" : "var(--point)";
-      parts.push(`<circle cx="${x}" cy="${y}" r="3.2" fill="${c}"/>`);
-      parts.push(`<text x="${x + 5}" y="${y - 5}">${esc(o.name)}</text>`);
+      parts.push(`<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`);
+      if (this.showNames) parts.push(`<text x="${x + 5}" y="${y - 5}">${esc(o.name)}</text>`);
     }
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
+    parts.push(this.dimsSvg());
     parts.push(this.liveSvg());
+    parts.push(this.curveHandlesSvg());
+    // no letters on the drawing: the name of the element under the pointer only
+    const under = this.nameHover;
+    if (under && !this.showNames) {
+      const o = this.res.objects.get(under);
+      if (o) {
+        const [x, y] = this.toScreen(o.kind === "point" ? o.pts[0] : o.pts[Math.floor(o.pts.length / 2)]);
+        parts.push(`<text class="name-tip" x="${x + 8}" y="${y - 8}">${esc(o.name)}</text>`);
+      }
+    }
     this.svg.innerHTML = parts.join("");
+  }
+
+  // ---- dimensions (annotation steps): drawn from the current geometry, always up to date
+  private dimSvg(s: Extract<Step, { op: "dim" }>, live = false): string {
+    let off = 0;
+    try {
+      off = new Vars(withSize(this.model), undefined, this.res.z).eval(s.offset || "0");
+    } catch {
+      return "";
+    }
+    const P = (r?: PointRef) => (r ? this.pointOf(r) : null);
+    const sc = (p: Pt) => this.toScreen(p);
+    const cls = live ? "dim live" : "dim";
+    const arrow = (tip: Pt, from: Pt) => {
+      const [x, y] = sc(tip), [fx, fy] = sc(from), L = Math.hypot(x - fx, y - fy) || 1, ux = (x - fx) / L, uy = (y - fy) / L;
+      return `M${x} ${y} l${(-9 * ux + 3.5 * uy).toFixed(1)} ${(-9 * uy - 3.5 * ux).toFixed(1)} M${x} ${y} l${(-9 * ux - 3.5 * uy).toFixed(1)} ${(-9 * uy + 3.5 * ux).toFixed(1)}`;
+    };
+    const text = (a: Pt, b: Pt, label: string) => {
+      const [x1, y1] = sc(a), [x2, y2] = sc(b);
+      let ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+      if (ang > 90) ang -= 180;
+      if (ang < -90) ang += 180;
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      return `<text class="dim-text" x="${mx}" y="${my - 5}" transform="rotate(${ang.toFixed(1)} ${mx} ${my})" text-anchor="middle" direction="ltr">\u2066${label}\u2069</text>`;
+    };
+    const line = (a: Pt, b: Pt, dashed = false) => `<line x1="${sc(a)[0]}" y1="${sc(a)[1]}" x2="${sc(b)[0]}" y2="${sc(b)[1]}"${dashed ? ' stroke-dasharray="4 3"' : ""}/>`;
+    const out: string[] = [];
+    const r1 = (v: number) => fmt(Math.round(v * 10) / 10);
+    if (s.kind === "aligned" || s.kind === "h" || s.kind === "v") {
+      const A = P(s.a), B = P(s.b);
+      if (!A || !B) return "";
+      let A2: Pt, B2: Pt, val: number;
+      if (s.kind === "h") (A2 = [A[0], A[1] + off]), (B2 = [B[0], A[1] + off]), (val = Math.abs(B[0] - A[0]));
+      else if (s.kind === "v") (A2 = [A[0] + off, A[1]]), (B2 = [A[0] + off, B[1]]), (val = Math.abs(B[1] - A[1]));
+      else {
+        const L = dist(A, B) || 1, nx = -(B[1] - A[1]) / L, ny = (B[0] - A[0]) / L;
+        A2 = [A[0] + nx * off, A[1] + ny * off];
+        B2 = [B[0] + nx * off, B[1] + ny * off];
+        val = L;
+      }
+      out.push(line(A, A2, true), line(B, B2, true), line(A2, B2), `<path d="${arrow(A2, B2)} ${arrow(B2, A2)}"/>`, text(A2, B2, r1(val)));
+    } else if (s.kind === "length" && s.obj !== undefined) {
+      const o = this.res.objects.get(s.obj);
+      if (!o) return "";
+      const pts = off ? offsetPolyline(o.pts, off) : o.pts, n = pts.length;
+      out.push(`<polyline points="${pts.map((p) => sc(p).join(",")).join(" ")}" fill="none"/>`, `<path d="${arrow(pts[0], pts[1])} ${arrow(pts[n - 1], pts[n - 2])}"/>`);
+      const m = Math.floor(n / 2);
+      out.push(text(pts[Math.max(0, m - 1)], pts[Math.min(n - 1, m + 1)], r1(polyLen(o.pts))));
+    } else if (s.kind === "angle") {
+      const A = P(s.a), V = P(s.b), C = P(s.c);
+      if (!A || !V || !C) return "";
+      const [vx, vy] = sc(V), [ax, ay] = sc(A), [cx, cy] = sc(C);
+      const a1 = Math.atan2(ay - vy, ax - vx), a2 = Math.atan2(cy - vy, cx - vx);
+      let sweep = a2 - a1;
+      while (sweep > Math.PI) sweep -= 2 * Math.PI;
+      while (sweep < -Math.PI) sweep += 2 * Math.PI;
+      const R = 32, p1 = [vx + R * Math.cos(a1), vy + R * Math.sin(a1)], p2 = [vx + R * Math.cos(a1 + sweep), vy + R * Math.sin(a1 + sweep)];
+      out.push(`<path d="M${p1[0]} ${p1[1]} A${R} ${R} 0 0 ${sweep > 0 ? 1 : 0} ${p2[0]} ${p2[1]}" fill="none"/>`);
+      const mid = a1 + sweep / 2;
+      out.push(`<text class="dim-text" x="${vx + (R + 14) * Math.cos(mid)}" y="${vy + (R + 14) * Math.sin(mid) + 4}" text-anchor="middle" direction="ltr">\u2066${r1((Math.abs(sweep) * 180) / Math.PI)}°\u2069</text>`);
+    }
+    return `<g class="${cls}">${out.join("")}</g>`;
+  }
+
+  private dimsSvg(): string {
+    const out: string[] = [];
+    this.model.steps.forEach((s, i) => {
+      if (s.op === "dim" && !this.res.stepErrors.has(i)) out.push(this.dimSvg(s));
+    });
+    // the dimension being placed
+    const t = this.tool;
+    if (t?.key.startsWith("dim") && t.build) {
+      let picks = this.picks;
+      let values: Record<string, string> | null = null;
+      if (this.form) {
+        values = {};
+        $("#tool-box").querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-key]").forEach((el) => ((values as Record<string, string>)[el.dataset.key as string] = el.value.trim()));
+      } else if (this.hover && picks.length === t.picks.length - 1 && t.picks[picks.length].kind === this.hover.kind) picks = [...picks, this.hover];
+      else return out.join("");
+      try {
+        const model = parseModel(JSON.stringify(this.model));
+        const ctx = { model, res: this.res, picks, extra: this.extra };
+        if (!values) values = Object.fromEntries((t.fields?.(ctx) ?? []).map((f) => [f.key, f.value]));
+        const st = t.build(ctx, values);
+        if (st.op === "dim") out.push(this.dimSvg(st, true));
+      } catch {
+        /* incomplete */
+      }
+    }
+    return out.join("");
+  }
+
+  // ---- curve end handles (as GRAFIS): drag the red circle to set the direction at that end
+  private dragHandle: { i: number; end: "start" | "end"; flip: boolean } | null = null;
+
+  private curveHandles(): { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean }[] {
+    const i = this.selectedStep, s = this.model.steps[i];
+    if (!s || s.op !== "curve" || this.form) return [];
+    const o = this.res.objects.get(s.id);
+    if (!o || o.pts.length < 2) return [];
+    const out: { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean }[] = [];
+    const W = this.svg.clientWidth, H = this.svg.clientHeight;
+    for (const end of ["start", "end"] as const) {
+      const n = o.pts.length, at = end === "start" ? o.pts[0] : o.pts[n - 1], nb = end === "start" ? o.pts[1] : o.pts[n - 2];
+      const es = this.toScreen(at), ns = this.toScreen(nb);
+      // direction of travel along the curve at that end, on screen
+      let dx = end === "start" ? ns[0] - es[0] : es[0] - ns[0], dy = end === "start" ? ns[1] - es[1] : es[1] - ns[1];
+      const L = Math.hypot(dx, dy) || 1;
+      dx /= L;
+      dy /= L;
+      let k = end === "start" ? -70 : 70; // start handle behind the curve, end handle ahead of it
+      // a handle that would fall outside the view goes to the other side of its end point
+      const inside = (x: number, y: number) => x > 8 && y > 8 && x < W - 8 && y < H - 8;
+      const flip = !inside(es[0] + dx * k, es[1] + dy * k) && inside(es[0] - dx * k, es[1] - dy * k);
+      if (flip) k = -k;
+      const given = (end === "start" ? s.startAngle : s.endAngle).trim();
+      const deg = given && Number.isFinite(Number(given)) ? Number(given) : Math.round((Math.atan2(-dy, dx) * 180) / Math.PI);
+      out.push({ i, end, at, es, hs: [es[0] + dx * k, es[1] + dy * k], set: !!given, deg, flip });
+    }
+    return out;
+  }
+
+  private handleAt(sx: number, sy: number) {
+    return this.curveHandles().find((h) => Math.hypot(h.hs[0] - sx, h.hs[1] - sy) <= 9) ?? null;
+  }
+
+  private curveHandlesSvg(): string {
+    const hs = this.curveHandles();
+    if (!hs.length) return "";
+    const out: string[] = [];
+    for (const h of hs) {
+      out.push(`<line x1="${h.es[0]}" y1="${h.es[1]}" x2="${h.hs[0]}" y2="${h.hs[1]}" stroke="var(--text)" stroke-dasharray="4 3" stroke-width="1.3"/>`);
+      out.push(`<circle class="curve-handle" cx="${h.hs[0]}" cy="${h.hs[1]}" r="6.5" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="2.2" fill="#e53935"/>`);
+      out.push(`<circle cx="${h.es[0]}" cy="${h.es[1]}" r="4" fill="var(--live)"/>`);
+      out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"}\u2069</text>`);
+    }
+    const s = this.model.steps[hs[0].i] as Extract<Step, { op: "curve" }>, o = this.res.objects.get(s.id) as GObj;
+    const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
+    out.push(`<text class="live-label" x="${mid[0] + 8}" y="${mid[1] + 18}" direction="ltr">\u2066${fmt(Math.round(polyLen(o.pts) * 10) / 10)} mm\u2069</text>`);
+    return out.join("");
   }
 
   /** Live preview: the result of the open tool in the live colour, plus for a line by
@@ -765,6 +920,25 @@ export class App {
           },
         };
       }
+      case "dimAligned":
+      case "dimH":
+      case "dimV": {
+        const A = ptOf(0), B = ptOf(1);
+        if (!A || !B) return undefined;
+        return {
+          values: (at) => {
+            if (t.key === "dimH") return { offset: r1(at[1] - A[1]) };
+            if (t.key === "dimV") return { offset: r1(at[0] - A[0]) };
+            const L = dist(A, B) || 1;
+            return { offset: r1((-(B[1] - A[1]) * (at[0] - A[0]) + (B[0] - A[0]) * (at[1] - A[1])) / L) };
+          },
+        };
+      }
+      case "dimLength": {
+        const o = lineObj(0);
+        if (!o) return undefined;
+        return { values: (at) => ({ offset: r1(closestOnPolyline(o.pts, at).d * sideOf(o, at)) }) };
+      }
       case "cornerRound":
       case "cornerChamfer": {
         const a = lineObj(0), b = lineObj(1);
@@ -842,7 +1016,7 @@ export class App {
   /** Right click: confirm the open value box (or finish a multi-pick); with nothing
    * pending it ends the tool, so the next operation can be chosen. */
   private rightConfirm(): void {
-    if (this.form || this.collecting) this.confirmStep();
+    if (this.form || (this.collecting && this.extra.length)) this.confirmStep();
     else if (this.tool && !this.picks.length) this.cancelTool();
   }
 
@@ -920,6 +1094,7 @@ export class App {
         return;
       }
       this.model.steps.push(step);
+      if (step.op === "curve") this.selectedStep = this.model.steps.length - 1; // its end handles show at once
       this.changed();
       const err = this.res.stepErrors.get(this.model.steps.length - 1);
       if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
@@ -1096,6 +1271,16 @@ export class App {
     // double-click a line, curve or point: open its step with its values (angle, length, X/Z ...)
     svg.addEventListener("dblclick", (e) => {
       const r = svg.getBoundingClientRect();
+      const hh = this.handleAt(e.clientX - r.left, e.clientY - r.top);
+      if (hh) {
+        const s = this.model.steps[hh.i] as Extract<Step, { op: "curve" }>;
+        this.snapshot();
+        if (hh.end === "start") s.startAngle = "";
+        else s.endAngle = "";
+        this.changed();
+        this.toast("اتجاه طرف المنحنى صار حراً");
+        return;
+      }
       if (this.tool && !this.form && this.picks.length) this.backStep(); // undo the first click's pick
       const h = this.hit("object", e.clientX - r.left, e.clientY - r.top);
       const id = h && pickedId(h);
@@ -1124,6 +1309,15 @@ export class App {
         return;
       }
       if (e.button !== 0 || e.detail >= 2) return; // the second click of a double-click edits (below)
+      {
+        const r0 = svg.getBoundingClientRect(), hh = this.handleAt(e.clientX - r0.left, e.clientY - r0.top);
+        if (hh) {
+          this.snapshot();
+          this.dragHandle = { i: hh.i, end: hh.end, flip: hh.flip };
+          e.preventDefault();
+          return;
+        }
+      }
       if (this.form?.live?.submit) {
         this.form.live.submit();
         return;
@@ -1143,6 +1337,10 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
+      if (this.dragHandle) {
+        this.dragHandle = null;
+        this.changed();
+      }
       const rd = this.rightDown;
       this.rightDown = null;
       if (e.button === 2 && rd && Math.hypot(e.clientX - rd.x, e.clientY - rd.y) < 5) this.rightConfirm();
@@ -1160,11 +1358,35 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.dragHandle) {
+        const s = this.model.steps[this.dragHandle.i] as Extract<Step, { op: "curve" }>, o = this.res.objects.get(s.id);
+        if (o) {
+          const at = this.dragHandle.end === "start" ? o.pts[0] : o.pts[o.pts.length - 1];
+          // the start handle sits behind the curve: the direction points from it to the end point
+          const behind = (this.dragHandle.end === "start") !== this.dragHandle.flip; // handle lies behind the travel direction
+          const v: Pt = behind ? [at[0] - this.mouse[0], at[1] - this.mouse[1]] : [this.mouse[0] - at[0], this.mouse[1] - at[1]];
+          let deg = (Math.atan2(v[1], v[0]) * 180) / Math.PI;
+          const q = this.angleStep > 0 ? this.angleStep : 1;
+          deg = Math.round(deg / q) * q;
+          if (this.dragHandle.end === "start") s.startAngle = String(deg);
+          else s.endAngle = String(deg);
+          this.evaluate();
+          this.render();
+        }
+        return;
+      }
       if (this.form?.live?.follow) {
         this.form.live.follow(this.mouse);
         return;
       }
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
+      if (!this.pan) {
+        const oh = this.hit("object", sx, sy), id = oh ? pickedId(oh) : null;
+        if (id !== this.nameHover) {
+          this.nameHover = id;
+          this.render();
+        }
+      }
       const kind0 = this.currentPickKind();
       const kind: PickKind | null = kind0 === "point" && this.ptMode !== "free" && this.ptMode !== "xy" ? "line" : kind0;
       const h = kind ? this.hit(kind, sx, sy) : null;
@@ -1406,7 +1628,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", pointOffset: "Point offset",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;

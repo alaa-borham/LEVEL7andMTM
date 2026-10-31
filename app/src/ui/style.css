@@ -662,3 +662,13 @@ body.embedded #tab-steps { padding: 0; }
 .pt-modes .pt-xy span { display: grid; grid-template-columns: 50px 34px; gap: 2px; }
 .pt-modes .pt-xy .pt-ref { align-self: center; }
 .table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+#canvas text.name-tip { fill: var(--text); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+
+/* 0.9.130 dimensions (as GRAFIS: mint lines, arrows, value along the line) */
+:root { --dim: #1f9d7a; }
+body.dark { --dim: #6fe0bd; }
+#canvas g.dim { stroke: var(--dim); stroke-width: 1.2; fill: none; }
+#canvas g.dim.live { stroke: var(--live); }
+#canvas g.dim text.dim-text { fill: var(--dim); stroke: none; font-size: 13px; font-weight: 600; paint-order: stroke; }
+#canvas g.dim.live text.dim-text { fill: var(--live); }

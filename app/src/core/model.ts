@@ -47,6 +47,9 @@ export type Step =
   | { op: "pointMove"; id: number; from: PointRef; along: number; dist: string }
   /** A point at a fixed offset (dx, dy) from another point; stays linked to it. */
   | { op: "pointOffset"; id: number; from: PointRef; dx: string; dy: string }
+  /** Dimension (annotation only, creates no geometry): aligned / horizontal / vertical
+   * distance between a and b, length of obj, or angle a-b-c; offset places the line. */
+  | { op: "dim"; kind: "aligned" | "h" | "v" | "length" | "angle"; a?: PointRef; b?: PointRef; c?: PointRef; obj?: number; offset: string }
   | { op: "line"; id: number; p1: PointRef; p2: PointRef }
   | { op: "lineAngle"; id: number; start: PointRef; angle: string; length: string }
   | { op: "parallel"; id: number; of: number; dist: string; side: 1 | -1 }
@@ -285,6 +288,12 @@ export function evaluateModel(model: Model): EvalResult {
           put(s.id, "point", [[p[0] + ux * d, p[1] + uy * d]], i);
           break;
         }
+        case "dim": {
+          for (const r of [s.a, s.b, s.c]) if (r) pointOf(r);
+          if (s.obj !== undefined) needLine(s.obj);
+          vars.eval(s.offset || "0");
+          break;
+        }
         case "pointOffset": {
           const p = pointOf(s.from);
           put(s.id, "point", [[p[0] + vars.eval(s.dx), p[1] + vars.eval(s.dy)]], i);
@@ -436,6 +445,7 @@ export function createdIds(s: Step): number[] {
   switch (s.op) {
     case "setLength":
     case "trim":
+    case "dim":
       return [];
     case "corner":
       return s.id === undefined ? [] : [s.id];
@@ -459,6 +469,8 @@ export function usedIds(s: Step): number[] {
       return [s.from.obj, s.along];
     case "pointOffset":
       return [s.from.obj];
+    case "dim":
+      return [s.a, s.b, s.c].filter((r): r is PointRef => !!r).map((r) => r.obj).concat(s.obj !== undefined ? [s.obj] : []);
     case "line":
       return [s.p1.obj, s.p2.obj];
     case "lineAngle":

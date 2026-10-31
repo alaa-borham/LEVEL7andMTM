@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.130
+
+LEVEL7 design mode: no letters (P, L, C) on the drawing; the name shows only under the pointer. A right click anywhere closes an open tool menu. Curves as in GRAFIS: after a curve is made (or selected), each end has a handle with a dashed direction line and a red circle; drag it to set the direction at that end (live), double-click it to free the direction; the curve length is shown. New Dimensions group (as GRAFIS): aligned distance, horizontal, vertical, line/curve length and angle, placed with the mouse, drawn with arrows and values, kept up to date when the pattern changes (listed in Record). Fix: the sharp-corner and mirror-copy icons (lost in 0.9.122) are back; a second right click ends the curve tool.
+
 LEVEL7 and MTM 0.9.129
 
 Z values rebuilt as in GRAFIS: a table Z | Formula | Text | Value with the formula first (a formula typed into the text field while the formula is 0 is moved to the formula); Enter saves and moves on; errors show in the value cell. Z value assistant, opened only on demand (ƒx on a row or "ƒx مساعد المعادلات" for the current row): formula or distinction of cases (IF / THEN / ELSE IF / ELSE, written as CMDIF), X and Z lists with names and values, logical and arithmetic operators. Point panel: an X / Z list beside the %, mm and x/y values (stays linked).
