@@ -54,6 +54,8 @@ export function describe(s: Step, m: Model): string {
       const axis = s.axisPts ? `${pr(s.axisPts[0])}–${pr(s.axisPts[1])}` : s.axisAt ? `${pr(s.axisAt)} بزاوية ${e((s.axisAngle ?? "90") + "°")}` : n(s.axis as number);
       return `انعكاس حول ${axis} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;
     }
+    case "inherit":
+      return `وراثة من البارت ${e(String(s.part).padStart(3, "0"))}: ${s.items.map((it) => n(it.dst)).join("، ")}`;
     case "scale": {
       const list = s.items.map((it) => (it.dst ? `${n(it.src)}←${n(it.dst)}` : n(it.src))).join("، ");
       return `تكبير ${e(s.factor + "%")} حول ${pr(s.center)}${s.angle ? ` باتجاه ${e(s.angle + "°")}` : ""} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;

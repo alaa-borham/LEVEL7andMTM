@@ -60,6 +60,8 @@ export type Step =
   /** Mirror about a line (axis), the line through two points (axisPts), or the line
    * through a point at an angle (axisAt + axisAngle). dst set = copy, else move. */
   | { op: "mirror"; axis?: number; axisPts?: [PointRef, PointRef]; axisAt?: PointRef; axisAngle?: string; items: { src: number; dst?: number }[] }
+  /** Objects inherited from an earlier part (linked: they follow the source part). */
+  | { op: "inherit"; part: number; items: { src: number; dst: number }[] }
   /** Scale about a centre by factor %; with angle: only along that direction (stretch). */
   | { op: "scale"; center: PointRef; factor: string; angle?: string; items: { src: number; dst?: number }[] }
   | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string }
@@ -82,9 +84,29 @@ export interface Model {
   nextId: number;
   names: Record<number, string>; // object display names (P1, L3, ...)
   unit?: "mm" | "in"; // how dimensions show their values (geometry is always mm)
+  /** Parts of the design (as GRAFIS). The active part's construction lives in steps /
+   * names / nextId / pieces; parts[activePart] holds it again whenever it is synced. */
+  parts?: Part[];
+  activePart?: number;
 }
 
 /** A size (or a customer for made-to-measure): values that replace the base measurements. */
+export interface Part {
+  no: number;
+  name: string;
+  steps: Step[];
+  names: Record<number, string>;
+  nextId: number;
+  pieces?: Piece[];
+  production?: boolean; // production part (cut) or draft part (construction only)
+  fabric?: string;
+  amount?: number; // pieces per garment, normal
+  mirrored?: number; // pieces per garment, mirrored
+  category?: string;
+  edited?: string; // last edit, ISO time
+  visible?: boolean; // shown faded behind the active part
+}
+
 export interface Size {
   name: string;
   kind?: "size" | "customer"; // customers (made to measure) are not graded
@@ -228,7 +250,15 @@ export class Vars {
 }
 
 // ------------------------------------------------------------------ evaluation
-export function evaluateModel(model: Model): EvalResult {
+/** Evaluate another part of the same design (for inheritance): same X / Z and sizes. */
+function evaluatePart(model: Model, partNo: number, depth: number): EvalResult | null {
+  const k = model.parts?.findIndex((p) => p.no === partNo) ?? -1;
+  const p = k >= 0 ? model.parts![k] : undefined;
+  if (!p || depth > 20) return null;
+  return evaluateModel({ ...model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }, depth + 1);
+}
+
+export function evaluateModel(model: Model, depth = 0): EvalResult {
   const objects = new Map<number, GObj>();
   const stepErrors = new Map<number, string>();
   const refPoint = (r: PointRef): Pt | null => {
@@ -320,6 +350,18 @@ export function evaluateModel(model: Model): EvalResult {
         case "parallel": {
           // side 1 = left of the direction start -> end, -1 = right
           put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
+          break;
+        }
+        case "inherit": {
+          const me = model.parts?.[model.activePart ?? 0]?.no ?? Infinity;
+          if (!(s.part < me)) throw new Error("الوراثة من بارت سابق فقط");
+          const src = evaluatePart(model, s.part, depth);
+          if (!src) throw new Error(`البارت ${s.part} غير موجود`);
+          for (const it of s.items) {
+            const o = src.objects.get(it.src);
+            if (!o) throw new Error(`العنصر ${it.src} غير موجود في البارت ${s.part}`);
+            put(it.dst, o.kind, o.pts.map((q) => [q[0], q[1]] as Pt), i);
+          }
           break;
         }
         case "scale": {
@@ -498,6 +540,8 @@ export function createdIds(s: Step): number[] {
       return s.id === undefined ? [] : [s.id];
     case "parallels":
       return s.ids;
+    case "inherit":
+      return s.items.map((it) => it.dst);
     case "mirror":
     case "scale":
       return s.items.filter((it) => it.dst !== undefined).map((it) => it.dst as number);
@@ -529,6 +573,8 @@ export function usedIds(s: Step): number[] {
       return [s.of];
     case "parallels":
       return s.of;
+    case "inherit":
+      return [];
     case "setLength":
       return [s.target];
     case "trim":

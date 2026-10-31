@@ -6,7 +6,7 @@ import { TOOLS } from "./ui/tools";
 function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && !e.shiftKey && !e.altKey) {
-    const map: Record<string, string> = { s: "save", n: "new", o: "open", e: "aama", g: "tab-sizes" };
+    const map: Record<string, string> = { s: "save", n: "new", o: "open", e: "aama", g: "tab-sizes", t: "tab-partlist" };
     if (map[k]) return map[k];
     if (!typing && ({ z: "undo", y: "redo", x: "tab-x" } as Record<string, string>)[k]) return ({ z: "undo", y: "redo", x: "tab-x" } as Record<string, string>)[k];
     return null;
@@ -50,25 +50,33 @@ const app = new App();
 if (embedded && window.parent !== window) {
   const post = (msg: Record<string, unknown>) => window.parent.postMessage(msg, "*");
   const select = app.selectTool.bind(app), cancel = app.cancelTool.bind(app);
-  app.selectTool = (t) => { select(t); post({ type: "l7:tool-state", tool: t.key }); };
+  const activeKey = () => (app as unknown as { tool: { key: string } | null }).tool?.key ?? null;
+  app.selectTool = (t) => { select(t); post({ type: "l7:tool-state", tool: activeKey() }); };
   app.cancelTool = () => { cancel(); post({ type: "l7:tool-state", tool: null }); };
   const click = (action: string) => (document.querySelector(`.actions [data-action="${action}"]`) as HTMLButtonElement | null)?.click();
   // The steps / X / Z / pieces / sizes page is a floating window: hidden until its
   // button is pressed, dragged by its title bar anywhere, resizable, remembered.
   // Exception: Z has a window of its own, so X and Z can be open at the same time.
-  const TITLES: Record<string, string> = { steps: "Record · سجل الإنشاء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج" };
+  const TITLES: Record<string, string> = { steps: "Record · سجل الإنشاء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج", partlist: "Parts · البارتات" };
   const DEFAULTS: Record<string, { width: string; height: string; left?: string; top?: string }> = {
     steps: { width: "780px", height: "430px" },
     z: { width: "560px", height: "56vh", left: "458px", top: "56px" }, // beside the X window
+    partlist: { width: "760px", height: "560px", left: "40px", top: "56px" },
   };
   const panel = document.querySelector(".panel") as HTMLElement;
   const zwin = document.createElement("aside");
   zwin.className = "panel zwin";
   zwin.append(document.querySelector("#tab-z") as HTMLElement);
   panel.after(zwin);
-  const open: Record<"main" | "z", string | null> = { main: null, z: null };
-  const report = () => post({ type: "l7:panel", tab: open.main, tabs: [open.main, open.z].filter(Boolean) });
-  const makeWindow = (win: HTMLElement, slot: "main" | "z") => {
+  // the parts window (as GRAFIS part organisation) also has a window of its own
+  const pwin = document.createElement("aside");
+  pwin.className = "panel pwin";
+  pwin.innerHTML = `<div class="tab-body" id="tab-partlist"></div>`;
+  zwin.after(pwin);
+  app.renderParts();
+  const open: Record<"main" | "z" | "parts", string | null> = { main: null, z: null, parts: null };
+  const report = () => post({ type: "l7:panel", tab: open.main, tabs: [open.main, open.z, open.parts].filter(Boolean) });
+  const makeWindow = (win: HTMLElement, slot: "main" | "z" | "parts") => {
     const head = document.createElement("div");
     head.className = "float-head";
     head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
@@ -125,8 +133,8 @@ if (embedded && window.parent !== window) {
     return toggle;
   };
   let zTop = 30;
-  const toggleMain = makeWindow(panel, "main"), toggleZ = makeWindow(zwin, "z");
-  const togglePanel = (tab: string | null) => (tab === "z" ? toggleZ(tab) : toggleMain(tab));
+  const toggleMain = makeWindow(panel, "main"), toggleZ = makeWindow(zwin, "z"), toggleParts = makeWindow(pwin, "parts");
+  const togglePanel = (tab: string | null) => (tab === "z" ? toggleZ(tab) : tab === "partlist" ? toggleParts(tab) : toggleMain(tab));
 
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);
@@ -134,7 +142,7 @@ if (embedded && window.parent !== window) {
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);
-    else if (/^tab-(steps|x|z|pieces|sizes)$/.test(action)) togglePanel(action.slice(4));
+    else if (/^tab-(steps|x|z|pieces|sizes|partlist)$/.test(action)) togglePanel(action.slice(4));
   };
   // Shortcuts of the program's command bar also work while the drawing has focus;
   // the host decides what each one does (new/open use its file dialogs).
@@ -154,7 +162,7 @@ if (embedded && window.parent !== window) {
     switch (d.type) {
       case "l7:tool": {
         const t = TOOLS.find((x) => x.key === d.key);
-        if (t) select(t), post({ type: "l7:tool-state", tool: t.key });
+        if (t) select(t), post({ type: "l7:tool-state", tool: activeKey() });
         break;
       }
       case "l7:theme": document.body.classList.toggle("dark", (d as { dark?: boolean }).dark === true); break;

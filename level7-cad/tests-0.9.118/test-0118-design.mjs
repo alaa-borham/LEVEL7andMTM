@@ -36,13 +36,13 @@ try{
  assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel')).display==='none'));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>document.querySelector('.panel').classList.contains('open'));
  await page.waitForFunction(()=>document.querySelector('[data-l7d-command="tab-steps"]').getAttribute('aria-pressed')==='true');
- const hb=await frame.locator('.panel:not(.zwin) .float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
- const hb2=await frame.locator('.panel:not(.zwin) .float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
+ const hb=await frame.locator('.panel:not(.zwin):not(.pwin) .float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
+ const hb2=await frame.locator('.panel:not(.zwin):not(.pwin) .float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  pass('steps / X / Z window: hidden until pressed, dragged anywhere, pressing again closes it');
  // 0.9.125 Record: table + preview of the pattern up to the selected step
  await page.locator('[data-l7d-command="tab-steps"]').click();await frame.locator('.record tbody tr').first().waitFor();
- assert.equal(await frame.locator('.panel:not(.zwin) .float-title').textContent(),'Record · سجل الإنشاء');
+ assert.equal(await frame.locator('.panel:not(.zwin):not(.pwin) .float-title').textContent(),'Record · سجل الإنشاء');
  await frame.locator('.record tbody tr').nth(1).click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='1'&&document.querySelectorAll('.rec-preview .rec-now').length>0);
  await frame.locator('[data-rec="next"]').click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='2');
  assert.equal(await frame.locator('.rec-at').textContent(),'3 / 3');

@@ -48,6 +48,7 @@ try{
  // 0.9.134: magnet — a line end clicked 14 px away from a point takes that point
  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
  await (async()=>{const b=page.locator('[data-l7d-tool="line"]');if(!await b.isVisible())await page.locator('[data-l7d-cat="الخطوط"]').click({button:"right"});await b.click();})();
+ await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="line"]').getAttribute('aria-pressed')==='true');
  const n0=await f.evaluate(()=>window.level7.model.steps.length);
  const [ax,ay]=await at(200,0);await page.mouse.click(ax+10,ay-10);const [bx,by]=await at(0,200);await page.mouse.move(bx+12,by+8,{steps:3});
  await f.waitForFunction(()=>window.level7.hover?.kind==='point');await page.mouse.click(bx+12,by+8);

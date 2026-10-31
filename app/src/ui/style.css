@@ -740,3 +740,37 @@ body:not(.dark) .xg-table td.xv input { color: #9a7400; }
 .xg-io [data-xa="export"] { color: #3ba55c; }
 /* a message never blocks the drawing under it */
 .toast { pointer-events: none; }
+
+/* 0.9.135 parts window (as GRAFIS part organisation) and inheritance */
+body.embedded .pwin #tab-partlist { display: block !important; flex: 1; overflow: hidden; padding: 0; }
+.pgrid { display: flex; flex-direction: column; height: 100%; }
+.pg-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.pg-main .xg-table { border-inline-end: 1px solid var(--border); }
+.pg-preview { width: 100%; height: 100%; background: #000; display: block; min-height: 160px; }
+.pg-preview .rec-old { fill: none; stroke: #2fa4dd; }
+.pg-preview circle.rec-old { fill: #2fa4dd; stroke: none; }
+.pg-preview .rec-now { fill: none; stroke: #9bd34f; }
+.pg-preview circle.rec-now { fill: #9bd34f; stroke: none; }
+.pgrid td.pno { width: 44px; text-align: center; font: 12px Consolas, monospace; color: var(--muted); }
+.pgrid td.peye { width: 34px; text-align: center; }
+.pgrid td.peye button { width: 28px; height: 22px; padding: 0; border: none; background: transparent; opacity: 0.3; }
+.pgrid td.peye button.on { opacity: 1; }
+.pgrid td.pn { width: 42px; text-align: center; font: 12px Consolas, monospace; color: #9bd34f; }
+.pgrid tr.sel td.pname input { color: #9bd34f; font-weight: 600; }
+.pg-props { flex: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 12.5px; }
+.pg-props label { display: flex; align-items: center; gap: 6px; }
+.pg-row { display: flex; align-items: center; gap: 6px; }
+.pg-row > span { width: 110px; color: var(--muted); }
+.pg-row input { width: 160px; height: 24px; }
+.pg-row input.num { width: 52px; text-align: center; }
+.pg-row small { color: var(--muted); }
+.pg-row b { margin-inline-start: 8px; font-weight: 600; font-size: 12px; }
+#canvas polyline.ghost { stroke: var(--muted); stroke-width: 1; opacity: 0.45; stroke-dasharray: 5 3; }
+.inherit-win { width: 560px; }
+.ih-main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 280px; margin-top: 6px; }
+.ih-list { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border); border-radius: 5px; }
+.ih-list ul { list-style: none; margin: 0; padding: 4px; overflow: auto; flex: 1; }
+.ih-list li label { display: flex; align-items: center; gap: 6px; padding: 2px 4px; font-size: 12.5px; }
+.ih-list li i { color: var(--muted); font-style: normal; font-size: 11px; }
+.ih-all { padding: 5px 8px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; align-items: center; }
+.pwin { display: none; }

@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.135
+
+LEVEL7 design mode: parts, as GRAFIS part organisation. A Parts window (button Parts, Ctrl+T): No | 👁 | name | RS | Obj | production, add / copy / delete a part, click a row to make it active, rename, draft or production part, fabric, amount normal / mirrored, category, last edit, and a preview. 👁 shows other parts faded behind the active one. Inheritance group: inherit chosen objects, or a whole part, from an earlier part; the copies stay linked to the source (they follow its changes and the X / Z values). Inheriting basic blocks from a library of other files is not available yet.
+
 LEVEL7 and MTM 0.9.134
 
 Dimensions: drag a dimension closer to / farther from what it measures; double-click it to add text and put the value on the other side of the line; new sum dimension (Σ) of several lines and curves; unit switch mm / inch for dimension values (angles stay in degrees). Magnet: points attract the pointer from 18 px, a left click takes that point. Parallels of several lines and curves at once at one distance (number or X/Z), each on the side it was clicked; the parallel of a curve is a curve. Transformations group: mirror about an axis from point to point or a point and a direction, scale about a point (%) and scale along a direction (stretch), each as a copy or a move, values as numbers or X/Z.

@@ -13,10 +13,12 @@ const GLYPH = {
   line: 'line', lineAngle: 'angle', parallel: 'parallel', parallelMany: 'offsetEnds', setLength: 'lengthTo', trim: 'cutEnd',
   cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
   dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
-  mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
+  inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
+  inheritObjects: 'يفتح نافذة: اختر بارتاً سابقاً ثم العناصر؛ تُنسخ إلى البارت النشط وتبقى مرتبطة بالأصل.',
+  inheritPart: 'يفتح نافذة: اختر بارتاً سابقاً فتُنسخ كل عناصره إلى البارت النشط مرتبطة بالأصل.',
   mirrorPts: 'انقر نقطتي محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين؛ اختر نسخة أو نقل.',
   mirrorDir: 'انقر نقطة على المحور، ثم العناصر، ثم Enter؛ اكتب اتجاه المحور (رقماً أو X/Z).',
   scalePts: 'انقر مركز التكبير، ثم العناصر، ثم Enter؛ اكتب النسبة % (100 = نفس الحجم) رقماً أو X/Z.',
@@ -52,7 +54,7 @@ const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'cs
 /** Same shortcuts as the program's toolbox (and the engine frame, which forwards them). */
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
-  if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
+  if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
   if (e.key === 'F6') return 'fit';
   if (e.key === 'F5') return 'tab-steps';
   if (e.key === 'F11') return 'tab-z';
@@ -82,7 +84,7 @@ export function installDesignMode() {
   const bar = [
     [['save', icon('save'), 'Save', 'حفظ التصميم · Ctrl+S']],
     [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
-    [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع']],
+    [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع'], ['tab-partlist', icon('parts'), 'Parts', 'البارتات (تنظيم البارتات) · Ctrl+T']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],
     [['new', icon('new'), 'New', 'تصميم جديد · Ctrl+N'], ['open', icon('open'), 'Open', 'فتح تصميم · Ctrl+O']],

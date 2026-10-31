@@ -50,6 +50,8 @@ export interface Tool {
   makeVar?: (c: Ctx, v: Record<string, string>) => Omit<Variable, "id">; // measurement tools
   makePiece?: (c: Ctx, v: Record<string, string>) => Omit<Piece, "id">;
   addNotch?: boolean; // notch tool: the picked point goes to the nearest piece
+  /** A tool that opens a window instead of picking on the drawing (inheritance). */
+  action?: boolean;
 }
 
 /** Object id of a multi-pick (a whole point or line). */
@@ -228,6 +230,20 @@ export const TOOLS: Tool[] = [
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
     multi: { kind: "object", prompt: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ", min: 1 },
     build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((p) => ({ src: pickedId(p) as number })) }),
+  },
+  {
+    key: "inheritObjects",
+    name: "وراثة عناصر من بارت سابق",
+    group: "الوراثة",
+    picks: [],
+    action: true,
+  },
+  {
+    key: "inheritPart",
+    name: "وراثة بارت كامل",
+    group: "الوراثة",
+    picks: [],
+    action: true,
   },
   {
     key: "mirrorPts",

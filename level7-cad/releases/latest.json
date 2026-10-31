@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.134",
- "notes": "تحكم في الأبعاد ونص وجمع وبوصة؛ مغناطيس النقاط؛ موازٍ لعدة خطوط؛ انعكاس وتكبير",
+ "version": "0.9.135",
+ "notes": "البارتات مثل GRAFIS؛ وراثة العناصر من بارت سابق مرتبطة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "bb48b8f95890ecea178125f1ab5c60277d881b4ad9a9c00fa70a0621be5a8982",
-   "size": 127830
+   "sha256": "914962723510a12ec5cf90ef6030b137827464a16804fe0928b33010f2f080a2",
+   "size": 128450
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BremXwdC.js",
-   "sha256": "6055eb970ff2274226e95eca7ed81b8f3cbaaaadfea99f67a8094892ed1a10f9",
-   "size": 158719
+   "path": "assets/l7design/assets/index-BVRt6lAq.js",
+   "sha256": "ccf6a55ed2d52a3c99eeea5586e6ecd61de955da6766867265aedb3149bc8e88",
+   "size": 170325
   },
   {
-   "path": "assets/l7design/assets/index-DCsN9aId.css",
-   "sha256": "8ca2f79d5d1aa9d260e3c3c307d59813ff9167e185507e77eccad6a8694e831a",
-   "size": 21387
+   "path": "assets/l7design/assets/index-Bj99gETT.css",
+   "sha256": "90fa7588cbe7099563ef370e8634329d928521a90771fdb66342c41e5a4984f2",
+   "size": 23461
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "29f8e739d38ada22b0b31ae126ba3f43563bbc23ac28df8cc77e0e553ebe985a",
+   "sha256": "ab15e8f98494b440c7af3b00da6e1491f974e865cc4734fd9a7a49e3f005d94e",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "87666b03b83001c9793d43b44473c1c3dac74c1ce2f5492febf9c9139ba3c62d",
+   "sha256": "f2c059594ae33707a5025b106d8d8a1780af301abeb5c7b60dc5c074dd3f0ff1",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "c862175bd6350a7f18fc1e92b1eac2b07a8a9d1e139d97352e3d9f02b6da97f4",
-   "size": 23177
+   "sha256": "3a99467dcca864d288f581368b6409462721a0cded0a5f4491e71221d50b309a",
+   "size": 23698
   },
   {
    "path": "src/line-transform-ui.js",

@@ -22,6 +22,7 @@ import {
   type Model,
   type PointRef,
   type Step,
+  type Part,
 } from "../core/model";
 import { thobeSample } from "../core/sample";
 import { describe, describeMeasure } from "./describe";
@@ -92,7 +93,11 @@ export class App {
   private evaluate(): void {
     const n = this.model.sizes?.length ?? 0;
     if ((this.model.activeSize ?? -1) >= n) this.model.activeSize = -1;
+    this.syncPart();
     this.res = evaluateModel(withSize(this.model));
+    // other parts shown faded behind the active one
+    const parts = this.model.parts ?? [];
+    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
     this.nest = this.showNest ? this.nestResults() : [];
   }
 
@@ -109,7 +114,217 @@ export class App {
   }
 
   /** Call before every change so it can be undone. */
+  // ------------------------------------------------------------ parts (as GRAFIS)
+  private ghosts: EvalResult[] = [];
+
+  /** The active part's construction is model.steps / names / nextId / pieces; keep the
+   * parts list pointing at it so other parts (inheritance, ghosts) see it current. */
+  private syncPart(): void {
+    const ps = this.model.parts, k = this.model.activePart ?? 0;
+    if (!ps?.[k]) return;
+    Object.assign(ps[k], { steps: this.model.steps, names: this.model.names, nextId: this.model.nextId, pieces: this.model.pieces ?? [] });
+  }
+
+  /** Turn a single-part design into one with a parts list (part 001). */
+  private ensureParts(): Part[] {
+    if (!this.model.parts?.length) {
+      this.model.parts = [{ no: 1, name: this.model.name || "Part 1", steps: this.model.steps, names: this.model.names, nextId: this.model.nextId, pieces: this.model.pieces ?? [], amount: 1 }];
+      this.model.activePart = 0;
+    }
+    return this.model.parts;
+  }
+
+  switchPart(k: number): void {
+    const ps = this.ensureParts();
+    if (!ps[k] || k === this.model.activePart) return;
+    this.syncPart();
+    this.cancelTool();
+    const p = ps[k];
+    Object.assign(this.model, { steps: p.steps, names: p.names, nextId: p.nextId, pieces: p.pieces ?? [], activePart: k });
+    this.selectedStep = -1;
+    this.changed();
+    this.fit();
+  }
+
+  private addPart(copyOf?: number): void {
+    const ps = this.ensureParts();
+    this.snapshot();
+    this.syncPart();
+    const no = ps.reduce((a, p) => Math.max(a, p.no), 0) + 1;
+    const src = copyOf !== undefined ? ps[copyOf] : undefined;
+    const part: Part = src ? (JSON.parse(JSON.stringify({ ...src, no, name: `${src.name} (2)`, visible: false })) as Part) : { no, name: "", steps: [], names: {}, nextId: 1, pieces: [], amount: 1 };
+    // a copy keeps inheriting from the same earlier parts
+    ps.push(part);
+    this.switchPart(ps.length - 1);
+  }
+
+  private deletePart(k: number): void {
+    const ps = this.ensureParts();
+    if (ps.length < 2) return this.toast("لا يمكن حذف البارت الوحيد");
+    const no = ps[k].no;
+    const users = ps.filter((p) => p.steps.some((s) => s.op === "inherit" && s.part === no)).map((p) => String(p.no).padStart(3, "0"));
+    if (users.length && !confirm(`البارتات ${users.join("، ")} ترث من هذا البارت وستظهر فيها أخطاء. حذف؟`)) return;
+    this.snapshot();
+    this.syncPart();
+    ps.splice(k, 1);
+    const next = Math.min(k, ps.length - 1), p = ps[next];
+    Object.assign(this.model, { steps: p.steps, names: p.names, nextId: p.nextId, pieces: p.pieces ?? [], activePart: next });
+    this.selectedStep = -1;
+    this.changed();
+  }
+
+  /** A small black preview of a part's construction (as GRAFIS). */
+  private partPreview(res: EvalResult, highlight = new Set<number>()): { box: string; svg: string } {
+    const all = [...res.objects.values()];
+    if (!all.length) return { box: "0 0 100 100", svg: "" };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const o of all) for (const [x, y] of o.pts) (x0 = Math.min(x0, x)), (y0 = Math.min(y0, y)), (x1 = Math.max(x1, x)), (y1 = Math.max(y1, y));
+    const pad = Math.max(x1 - x0, y1 - y0, 1) * 0.06, w = (Math.max(x1 - x0, y1 - y0, 1) / 260).toFixed(3);
+    const svg = all
+      .map((o) =>
+        o.kind === "point"
+          ? `<circle cx="${o.pts[0][0]}" cy="${-o.pts[0][1]}" r="${(Number(w) * 2.2).toFixed(3)}" class="${highlight.has(o.id) ? "rec-now" : "rec-old"}"/>`
+          : `<polyline points="${o.pts.map(([x, y]) => `${x},${-y}`).join(" ")}" class="${highlight.has(o.id) ? "rec-now" : "rec-old"}" stroke-width="${highlight.has(o.id) ? Number(w) * 2.2 : w}"/>`,
+      )
+      .join("");
+    return { box: `${x0 - pad} ${-(y1 + pad)} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`, svg };
+  }
+
+  private partResult(k: number): EvalResult {
+    if (k === (this.model.activePart ?? 0)) return this.res;
+    const p = (this.model.parts ?? [])[k];
+    return evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }));
+  }
+
+  /** Parts window: list (No, eye, name, RS, Obj, production), properties and a preview. */
+  renderParts(): void {
+    const box = document.querySelector("#tab-partlist") as HTMLElement | null;
+    if (!box) return;
+    const ps = this.ensureParts(), act = this.model.activePart ?? 0;
+    this.syncPart();
+    const rows = ps
+      .map((p, k) => {
+        const objs = p.steps.reduce((a, st) => a + createdIds(st).length, 0);
+        return `<tr data-part="${k}" class="${k === act ? "sel" : ""}"><td class="pno">${String(p.no).padStart(3, "0")}</td>
+          <td class="peye"><button data-peye="${k}" title="إظهار البارت باهتاً خلف البارت النشط" class="${p.visible || k === act ? "on" : ""}"${k === act ? " disabled" : ""}>👁</button></td>
+          <td class="pname"><input data-pname="${k}" value="${esc(p.name)}" placeholder="#"/></td><td class="pn">${p.steps.length}</td><td class="pn">${objs}</td><td class="pn">${p.production ? "✂" : ""}</td></tr>`;
+      })
+      .join("");
+    const p = ps[act];
+    const pv = this.partPreview(this.res);
+    const when = p.edited ? new Date(p.edited) : null;
+    box.innerHTML = `<div class="pgrid">
+      <div class="xg-bar"><button data-pa="add" class="xg-add" title="بارت جديد">⊕</button><button data-pa="copy" title="نسخ البارت النشط إلى بارت جديد">⧉</button><button data-pa="del" class="xg-del" title="حذف البارت النشط">✕</button>
+        <span class="xg-info">${ps.length} بارت · النشط ${String(p.no).padStart(3, "0")}</span></div>
+      <div class="pg-main"><div class="xg-table"><table><thead><tr><th>No</th><th>👁</th><th>Part name · الاسم</th><th>RS</th><th>Obj</th><th>✂</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <svg class="pg-preview" viewBox="${pv.box}">${pv.svg}</svg></div>
+      <div class="pg-props">
+        <label><input type="radio" name="pkind" value="draft" ${p.production ? "" : "checked"}/> بارت رسم (لا يُقص) · Draft part</label>
+        <label><input type="radio" name="pkind" value="prod" ${p.production ? "checked" : ""}/> بارت إنتاج (يُقص) · Production part</label>
+        <div class="pg-row"><span>القماش · Fabric</span><input data-pp="fabric" value="${esc(p.fabric ?? "")}" placeholder="(غير محدد)"/></div>
+        <div class="pg-row"><span>العدد · Amount</span><input data-pp="amount" class="num" dir="ltr" value="${p.amount ?? 1}"/><small>عادي</small><input data-pp="mirrored" class="num" dir="ltr" value="${p.mirrored ?? 0}"/><small>معكوس</small><b>${(p.amount ?? 1) + (p.mirrored ?? 0)} للموديل</b></div>
+        <div class="pg-row"><span>الفئة · Category</span><input data-pp="category" value="${esc(p.category ?? "")}"/></div>
+        <div class="pg-row"><span>آخر تعديل</span><output dir="ltr">${when ? when.toLocaleString("en-GB") : "—"}</output></div>
+      </div></div>`;
+    box.querySelectorAll<HTMLElement>("tr[data-part]").forEach((tr) => tr.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("input, button")) return;
+      this.switchPart(Number(tr.dataset.part));
+    }));
+    box.querySelectorAll<HTMLInputElement>("input[data-pname]").forEach((inp) => {
+      inp.addEventListener("focus", () => this.switchPart(Number(inp.dataset.pname)));
+      inp.addEventListener("change", () => {
+        this.snapshot();
+        ps[Number(inp.dataset.pname)].name = inp.value.trim();
+        this.changed();
+      });
+    });
+    box.querySelectorAll<HTMLButtonElement>("[data-peye]").forEach((b) => b.addEventListener("click", () => {
+      const q = ps[Number(b.dataset.peye)];
+      q.visible = !q.visible;
+      this.changed();
+    }));
+    box.querySelector('[data-pa="add"]')?.addEventListener("click", () => this.addPart());
+    box.querySelector('[data-pa="copy"]')?.addEventListener("click", () => this.addPart(act));
+    box.querySelector('[data-pa="del"]')?.addEventListener("click", () => this.deletePart(act));
+    box.querySelectorAll<HTMLInputElement>('input[name="pkind"]').forEach((r) => r.addEventListener("change", () => {
+      this.snapshot();
+      p.production = r.value === "prod";
+      this.changed();
+    }));
+    box.querySelectorAll<HTMLInputElement>("[data-pp]").forEach((inp) => inp.addEventListener("change", () => {
+      this.snapshot();
+      const k = inp.dataset.pp as "fabric" | "amount" | "mirrored" | "category";
+      if (k === "amount" || k === "mirrored") p[k] = Math.max(0, Math.round(Number(normalizeFormula(inp.value)) || 0));
+      else p[k] = inp.value.trim();
+      this.changed();
+    }));
+  }
+
+  /** Inherit objects (or a whole part) from an earlier part: linked copies (as GRAFIS). */
+  private openInherit(whole: boolean): void {
+    const ps = this.ensureParts(), act = this.model.activePart ?? 0, me = ps[act].no;
+    this.syncPart();
+    const earlier = ps.map((p, k) => ({ p, k })).filter(({ p }) => p.no < me);
+    if (!earlier.length) return this.toast("لا توجد بارتات سابقة للوراثة منها؛ أنشئ بارتاً من نافذة البارتات (Parts)");
+    document.querySelector(".inherit-win")?.remove();
+    const el = document.createElement("section");
+    el.className = "z-assistant inherit-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>${whole ? "Inherit part · وراثة بارت كامل" : "Inherit objects · وراثة عناصر"}</b><button type="button" data-ih="close">×</button></div>
+      <div class="za-body"><div class="za-row"><span>من البارت</span><select data-ih="part">${earlier.map(({ p, k }) => `<option value="${k}">${String(p.no).padStart(3, "0")} ${esc(p.name)}</option>`).join("")}</select></div>
+        <div class="ih-main"><div class="ih-list"><label class="ih-all"><input type="checkbox" data-ih="all" ${whole ? "checked disabled" : ""}/> الكل</label><ul></ul></div><svg class="pg-preview"></svg></div>
+        <p class="za-msg"></p><div class="za-foot"><button class="primary" data-ih="ok">✓ وراثة</button><button data-ih="close">إلغاء</button></div></div>`;
+    document.body.append(el);
+    const q = <T extends Element>(sel: string) => el.querySelector(sel) as T;
+    const fill = () => {
+      const k = Number(q<HTMLSelectElement>('[data-ih="part"]').value), res = this.partResult(k), p = ps[k];
+      const objs = [...res.objects.values()].filter((o) => !res.stepErrors.has(o.step));
+      q<HTMLUListElement>("ul").innerHTML = objs.map((o) => `<li><label><input type="checkbox" data-obj="${o.id}" ${whole ? "checked disabled" : ""}/> <b dir="ltr">${esc(p.names[o.id] ?? "#" + o.id)}</b> <i>${o.kind === "point" ? "نقطة" : (p.names[o.id] ?? "").startsWith("C") ? "منحنى" : "خط"}</i></label></li>`).join("") || `<li class="none">لا توجد عناصر</li>`;
+      draw();
+    };
+    const picked = () => new Set([...el.querySelectorAll<HTMLInputElement>("input[data-obj]:checked")].map((i) => Number(i.dataset.obj)));
+    const draw = () => {
+      const k = Number(q<HTMLSelectElement>('[data-ih="part"]').value), pv = this.partPreview(this.partResult(k), picked());
+      const svg = q<SVGSVGElement>("svg");
+      svg.setAttribute("viewBox", pv.box);
+      svg.innerHTML = pv.svg;
+    };
+    fill();
+    el.addEventListener("change", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.matches('[data-ih="part"]')) fill();
+      else if (t.matches('[data-ih="all"]')) el.querySelectorAll<HTMLInputElement>("input[data-obj]").forEach((i) => (i.checked = (t as HTMLInputElement).checked)), draw();
+      else draw();
+    });
+    el.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLElement>("[data-ih]")?.dataset.ih;
+      if (a === "close") el.remove();
+      if (a !== "ok") return;
+      const k = Number(q<HTMLSelectElement>('[data-ih="part"]').value), src = ps[k], ids = [...picked()];
+      if (!ids.length) return void (q<HTMLElement>(".za-msg").textContent = "اختر عنصراً واحداً على الأقل");
+      this.snapshot();
+      const res = this.partResult(k);
+      const taken = new Set(Object.values(this.model.names));
+      const items = ids.map((sid) => {
+        const o = res.objects.get(sid) as GObj, nm = src.names[sid];
+        let dst: number;
+        if (nm && !taken.has(nm)) {
+          dst = this.model.nextId++;
+          this.model.names[dst] = nm;
+          taken.add(nm);
+        } else dst = newId(this.model, o.kind === "point" ? "point" : nm?.startsWith("C") ? "curve" : "line");
+        return { src: sid, dst };
+      });
+      this.model.steps.push({ op: "inherit", part: src.no, items });
+      this.changed();
+      el.remove();
+      this.toast(`وُرثت ${items.length} عناصر من البارت ${String(src.no).padStart(3, "0")}`);
+    });
+  }
+
   private snapshot(): void {
+    const ap = this.model.parts?.[this.model.activePart ?? 0];
+    if (ap) ap.edited = new Date().toISOString();
     this.undoStack.push(JSON.stringify(this.model));
     if (this.undoStack.length > 200) this.undoStack.shift();
     this.redoStack = [];
@@ -215,6 +430,9 @@ export class App {
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
 
+    for (const g of this.ghosts)
+      for (const o of g.objects.values())
+        if (o.kind === "line") parts.push(`<polyline class="ghost" points="${o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
     if (this.showNest) parts.push(this.nestSvg());
     if (this.showPieces) parts.push(this.piecesSvg());
     for (const o of this.res.objects.values()) {
@@ -690,6 +908,11 @@ export class App {
   }
 
   selectTool(t: Tool): void {
+    if (t.action) {
+      this.cancelTool();
+      this.openInherit(t.key === "inheritPart");
+      return;
+    }
     this.cancelTool();
     this.tool = t;
     this.selectedStep = -1;
@@ -1845,6 +2068,7 @@ export class App {
     this.renderZ();
     this.renderPieces();
     this.renderSizes();
+    this.renderParts();
   }
 
   private renderSteps(): void {
@@ -1887,7 +2111,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", pointOffset: "Point offset", dim: "Dimension",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;

@@ -37,12 +37,12 @@ try{
  assert.match(await fr.locator('.z-assistant .za-msg').textContent(),/Z2 ليست قبل Z1/);await fr.locator('.z-assistant [data-za="close"]').first().click();
  pass('Excel formula: IF(AND(..); ROUND(X2/7;1); IF(..; MAX(..); 0)) = 68.6; a Z after the row is refused');
  // 0.9.131: X and Z windows open together; both buttons lit; each closes on its own
- await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.panel:not(.zwin)').classList.contains('open')&&document.querySelector('.zwin').classList.contains('open'));
+ await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.panel:not(.zwin):not(.pwin)').classList.contains('open')&&document.querySelector('.zwin').classList.contains('open'));
  await page.waitForFunction(()=>['tab-x','tab-z'].every(k=>document.querySelector(`[data-l7d-command="${k}"]`).getAttribute('aria-pressed')==='true'));
- const rx=await fr.locator('.panel:not(.zwin)').boundingBox(),rz=await fr.locator('.zwin').boundingBox();assert(rx.width>100&&rz.width>100);
+ const rx=await fr.locator('.panel:not(.zwin):not(.pwin)').boundingBox(),rz=await fr.locator('.zwin').boundingBox();assert(rx.width>100&&rz.width>100);
  await fr.locator('#tab-x input[data-f="value"]').first().waitFor();await fr.locator('.ztable').waitFor();
  await page.screenshot({path:'shot-0131-xz.png'});
- await page.locator('[data-l7d-command="tab-z"]').click();await f.waitForFunction(()=>!document.querySelector('.zwin').classList.contains('open')&&document.querySelector('.panel:not(.zwin)').classList.contains('open'));
+ await page.locator('[data-l7d-command="tab-z"]').click();await f.waitForFunction(()=>!document.querySelector('.zwin').classList.contains('open')&&document.querySelector('.panel:not(.zwin):not(.pwin)').classList.contains('open'));
  pass('X and Z windows are open at the same time (both buttons lit); Z closes on its own');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
