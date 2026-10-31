@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.150",
- "notes": "علامة الاقتراب مثل GRAFIS، ألوان الخطوط، صفحة المقاسات الجديدة",
+ "version": "0.9.151",
+ "notes": "سهم الماوس، علامة الاقتراب من 30 بكسل",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "8933999135bff0c98f41dd34d5d2fce4a6147ca853e42d8e5e3c9e0b21c4b3e0",
-   "size": 136978
+   "sha256": "1e16e0b8f64d765dca153e4544739b1d23dbb6f314d7c8955c99ab7ecce702dd",
+   "size": 137203
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-CAdXEBHv.js",
-   "sha256": "68846fd087f090bf8b27b51604dc685f7e51cea8f830b442ae5ab7ae563ac490",
-   "size": 252632
+   "path": "assets/l7design/assets/index-CKqPdbH7.js",
+   "sha256": "6bdf3a9da7ad53bcd98e60814abe8d10b6f0f215f173baa42a1dc9a7d840f1c6",
+   "size": 252878
   },
   {
-   "path": "assets/l7design/assets/index-R9lVB7Wq.css",
-   "sha256": "a5ea480f8b48ae822ae47957f345a106e6833f8ac644e86d53f23bcf765ab3f3",
-   "size": 37109
+   "path": "assets/l7design/assets/index-CZ-79KMq.css",
+   "sha256": "4f1898187a14f79935f53a2017ca3359e53c87d7381810d17befab7811a2d2a1",
+   "size": 37192
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "b86f0950247cccb9575ffc8db3c8434d6e21934d473071e7b4ba659367df7e53",
+   "sha256": "cc07e5c077f7839e357eb67199029c329c67496944fca2a889feba589445f504",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "5da51b159ad804738af7f9ea82b76560005ba1fb69055716a288e5b92026b886",
+   "sha256": "0d4dc5560950cb9f6ad713f3ca175f07dc4a651fadd071b76bb86a471e0f6496",
    "size": 301
   },
   {

@@ -949,7 +949,7 @@ th.sz-off { opacity: .45; text-decoration: line-through; }
 .xgrid .xg-table td.xv.sz, .xgrid .xg-table th.sz { min-width: 78px; }
 .z-assistant .za-head { cursor: move; user-select: none; }
 /* 0.9.150 near-pointer mark (as GRAFIS): the object under the pointer glows, a dot on its nearest point */
-:root { --near: #7ed321; }
+:root { --near: #f2e85c; }
 #canvas .near-glow { stroke: var(--near); stroke-width: 5; opacity: .28; pointer-events: none; }
 #canvas .near-dot { fill: var(--near); stroke: #0b0f14; stroke-width: 1; pointer-events: none; }
 .vis-colors { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
@@ -970,3 +970,6 @@ body.embedded #tab-sizes .size-table { flex: 1 1 auto; min-height: 140px; overfl
 .size-table thead th.id, .size-table thead th.mname, .size-table thead th.base, .size-table thead th.grade { z-index: 4; }
 .size-top { flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; } .size-top .field-inline { margin: 0; }
 .size-table table.grid { min-width: 0; } .size-table th.size-col { width: 112px; min-width: 112px; max-width: 112px; box-sizing: border-box; }
+/* 0.9.151: the normal mouse arrow on the drawing (as GRAFIS), not a cross */
+body.embedded #canvas { cursor: default; }
+body.embedded #canvas.panning { cursor: grabbing; }

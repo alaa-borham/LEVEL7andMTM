@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.151
+
+LEVEL7 design: the normal mouse arrow on the drawing (no cross); the near mark (pale yellow dot, as GRAFIS) shows from 30 px, on the nearest line / curve / point, and a click there picks that object.
+
 LEVEL7 and MTM 0.9.150
 
 LEVEL7 design: as GRAFIS, the line / curve / point near the pointer is marked (a glow and a dot on its nearest point), always, not only while a tool waits for a pick. View (Alt+O) has colours for straight lines, curves, points, the near mark and the drawing background, kept on this computer, with a reset. Size page as the user drew it: all buttons in one fixed row above the table (no explanation text), the header row and code / name / base / grading fixed while the sizes scroll, English digits in every field. Fix: a fast first keystroke in a new X row is no longer lost.

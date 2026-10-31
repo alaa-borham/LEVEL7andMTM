@@ -38,7 +38,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
 
-const PICK_PX = 10;
+const PICK_PX = 30; // 0.9.151: same distance as the near mark: where its dot shows, a click picks that line
 /** Points attract the pointer from farther away (magnet): a click then takes that point. */
 const SNAP_PX = 18;
 /** A one-line text area that grows with its text (descriptions). */
@@ -48,6 +48,8 @@ const grow = (t: HTMLElement): void => {
   if (t.scrollHeight) t.style.height = t.scrollHeight + 2 + "px";
 };
 /** Drawing colours the user can change (View → colours). */
+/** How far (screen pixels) from a line / curve / point its near mark appears (= PICK_PX). */
+const NEAR_PX = PICK_PX;
 const COLOR_KEYS: [string, string][] = [["--line", "الخطوط المستقيمة"], ["--curve", "المنحنيات"], ["--point", "النقاط"], ["--near", "علامة الاقتراب من خط"], ["--canvas", "خلفية الرسم"]];
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
@@ -1268,6 +1270,21 @@ export class App {
       const geo = this.res.pieces.get(piece.id);
       return geo ? [{ piece, geo }] : [];
     });
+  }
+
+  /** The object nearest to the pointer within NEAR_PX screen pixels and the closest point on it
+   * (points win when they are as close as a line, so line ends stay easy to reach). */
+  private nearest(sx: number, sy: number): { id: number; at: Pt } | null {
+    const lim = NEAR_PX / this.scale;
+    let best: { id: number; at: Pt; d: number } | null = null;
+    for (const o of this.res.objects.values()) {
+      if (o.kind === "point" && !this.vis.points) continue;
+      const c = o.kind === "point" ? { pt: o.pts[0], d: dist(o.pts[0], this.mouse) } : closestOnPolyline(o.pts, this.mouse);
+      const d = o.kind === "point" ? c.d - 4 / this.scale : c.d;
+      if (d <= lim && (!best || d < best.d)) best = { id: o.id, at: c.pt, d };
+    }
+    void sx, void sy;
+    return best && { id: best.id, at: best.at };
   }
 
   /** The near-pointer mark: the object glows, its nearest point gets a dot (as GRAFIS). */
@@ -2641,8 +2658,7 @@ export class App {
       if (!this.pan) {
         const oh = this.hit("object", sx, sy), id = oh ? pickedId(oh) : null;
         // the object near the pointer is marked (glow) with a dot on its nearest point
-        const o = id !== null && id !== undefined ? this.res.objects.get(id) : undefined;
-        const near = o ? { id: o.id, at: o.kind === "point" ? o.pts[0] : closestOnPolyline(o.pts, this.mouse).pt } : null;
+        const near = this.nearest(sx, sy);
         const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5));
         this.near = near;
         if (id !== this.nameHover || moved) {
@@ -3363,7 +3379,7 @@ export class App {
     const c = this.colors()[k];
     if (c) return c;
     const v = getComputedStyle(document.body).getPropertyValue(k === "--canvas" ? "--bg" : k).trim() || "#888888";
-    return /^#[0-9a-f]{6}$/i.test(v) ? v : k === "--near" ? "#7ed321" : k === "--curve" ? this.colorOf("--line") : "#888888";
+    return /^#[0-9a-f]{6}$/i.test(v) ? v : k === "--near" ? "#f2e85c" : k === "--curve" ? this.colorOf("--line") : "#888888";
   }
   private setColor(k: string, v: string): void {
     const c = this.colors();

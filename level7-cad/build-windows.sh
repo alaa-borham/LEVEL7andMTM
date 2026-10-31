@@ -1,10 +1,10 @@
 #!/bin/bash
 # Assembles the Windows build of LEVEL7 and MTM from level7-cad/source-<version>
 # with the stock Electron 44.9.0 runtime. Usage: build-windows.sh <version> <out-dir>
-# From 0.9.150 the exe carries the LEVEL7 icon (assets/icon.ico, set with resedit, pure
+# From 0.9.151 the exe carries the LEVEL7 icon (assets/icon.ico, set with resedit, pure
 # JavaScript); the window and taskbar use the same icon. Not signed.
 set -euo pipefail
-V=${1:-0.9.150}; OUT=${2:-dist}
+V=${1:-0.9.151}; OUT=${2:-dist}
 HERE=$(cd "$(dirname "$0")" && pwd)
 SRC="$HERE/source-$V"; [ -d "$SRC" ] || SRC="$HERE/releases/app"  # from 0.9.114 the latest tree is releases/app
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
