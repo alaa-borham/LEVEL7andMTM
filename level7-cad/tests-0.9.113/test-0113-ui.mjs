@@ -7,7 +7,7 @@ const qa=await fs.mkdtemp(path.join(os.tmpdir(),'l7-0113-')),env={...process.env
 let failed=0;const pass=t=>console.log('PASS '+t);
 const app=await _electron.launch({executablePath:exe,args,env,timeout:60000});
 try{const page=await app.firstWindow();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.setViewportSize({width:1440,height:900});
- {const v=await app.evaluate(({app})=>app.getVersion());assert.match(v,/^0\.9\.11[3-9]$/);pass('version '+v);}
+ {const v=await app.evaluate(({app})=>app.getVersion());assert.match(v,/^0\.9\.(11[3-9]|1[2-9]\d)$/);pass('version '+v);}
  await page.waitForSelector('body.ui-0113');await page.waitForSelector('#tool-guide');
  const caps=await page.locator('.grafis-category-grid .grafis-icon-option').evaluateAll(b=>b.map(x=>x.dataset.caption||''));
  assert(caps.length>=10&&caps.every(c=>/[؀-ۿ]/.test(c)),JSON.stringify(caps));pass(`all ${caps.length} tool groups show an Arabic caption`);

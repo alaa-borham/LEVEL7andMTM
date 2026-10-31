@@ -33,6 +33,11 @@ export function describe(s: Step, m: Model): string {
       const ends = [s.startAngle && `اتجاه البداية ${e(s.startAngle + "°")}`, s.endAngle && `اتجاه النهاية ${e(s.endAngle + "°")}`].filter(Boolean);
       return `منحنى ${n(s.id)} يمر بـ ${s.through.map(pr).join("، ")}${ends.length ? ` (${ends.join("، ")})` : ""}`;
     }
+    case "corner": {
+      const at = `${s.endA === "start" ? "بداية" : "نهاية"} ${n(s.a)} و${s.endB === "start" ? "بداية" : "نهاية"} ${n(s.b)}`;
+      if (s.kind === "sharp") return `زاوية حادة بين ${at}`;
+      return s.kind === "round" ? `زاوية مستديرة ${s.id !== undefined ? n(s.id) + " " : ""}بين ${at} بنصف قطر ${e(s.size)}` : `قطع زاوية ${s.id !== undefined ? n(s.id) + " " : ""}بين ${at} بمسافة ${e(s.size)}`;
+    }
     case "mirror": {
       const list = s.items.map((it) => (it.dst ? `${n(it.src)}←${n(it.dst)}` : n(it.src))).join("، ");
       return `انعكاس حول ${n(s.axis)} ${s.items.some((it) => it.dst) ? "(نسخة)" : "(نقل)"}: ${list}`;

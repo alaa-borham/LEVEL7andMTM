@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.119",
- "notes": "شريط أوامر بالاختصارات في تصميم LEVEL7؛ الرسم يعمل على صفحة فارغة؛ بدون مربعات الشبكة",
+ "version": "0.9.120",
+ "notes": "قوائم أدوات منسدلة من شريط أيقونات؛ أدوات الزوايا: حادة ومستديرة وقطع",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "a3ea1103e2bad80c9c4de54f22cb5883a53723236b5a6c94593120b9b5e85cd2",
-   "size": 119545
+   "sha256": "1f10b2f03e055d234331e111aa2d56a458561d57c4bae9952ae60785d5037b0a",
+   "size": 120036
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-C4MKxRoa.js",
+   "sha256": "6acf2b0d3d8ff6800f586be084031490a37b0b1366a6540975cc3766002e8cc8",
+   "size": 82819
+  },
+  {
    "path": "assets/l7design/assets/index-CCsKS3pm.css",
    "sha256": "d0289efc2732a835c5476108c8ba7b2a1df0eef218f043700a4399fe09e19ad8",
    "size": 7639
   },
   {
-   "path": "assets/l7design/assets/index-XYf31reT.js",
-   "sha256": "91037394c5cd79ee489a552207031b355b78aac7aa0af9c5ecace1e6623369dc",
-   "size": 78782
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "2407f86a02abe4c2884c696a97fa0f8113bf8ba20443aa1502cc31d45aacbccc",
+   "sha256": "13c432254146d90d10af76c1b684051675dc3840ef5c15cd38d94ebdaade6a6d",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "d2a78c39afad0cad0985c155a219cfa8fd1de51bd39c4e2e5ae0e55eb4289d84",
+   "sha256": "f78f26e66904bf417f836295cee1ce8e26496329b5e172cbfa8a8c6cff3249ee",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "cc3ea095beac607e44e0eb556c8da576f3aa56b0895a85df1de2b93fe35a89ed",
-   "size": 14205
+   "sha256": "4de51f2c70439f2fc124b681c67c60a3edfba1c06965df25f5fa752bdeb4da85",
+   "size": 17067
   },
   {
    "path": "src/line-transform-ui.js",
@@ -1505,8 +1505,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "7c39a5ce561d374820a9894f44b59790b7d72a6b2d9c4d8c93a7c248fd50d55e",
-   "size": 6359
+   "sha256": "23abc43175e709f0ebc890faf5374a5d9bbfc5c1b1285928fc9d1d14680b5bbc",
+   "size": 12124
   },
   {
    "path": "src/ui-guide-0113.js",

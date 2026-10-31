@@ -514,7 +514,15 @@ export class App {
       const v = this.res.z.get(id);
       this.toast(`أُضيف Z${id}${v !== undefined ? ` = ${fmt(v)}` : ""} ويمكن استخدامه في المعادلات`);
     } else if (t.build) {
-      const step: Step = t.build(ctx, values);
+      let step: Step;
+      try {
+        step = t.build(ctx, values);
+      } catch (e) {
+        this.undoStack.pop();
+        this.toast((e as Error).message);
+        this.restartTool();
+        return;
+      }
       this.model.steps.push(step);
       this.changed();
       const err = this.res.stepErrors.get(this.model.steps.length - 1);

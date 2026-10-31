@@ -228,6 +228,38 @@ export const TOOLS: Tool[] = [
     }),
   },
   {
+    key: "cornerSharp",
+    name: "زاوية حادة",
+    group: "الزوايا",
+    picks: [
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
+    ],
+    build: (c) => cornerStep(c, "sharp", "0"),
+  },
+  {
+    key: "cornerRound",
+    name: "زاوية مستديرة",
+    group: "الزوايا",
+    picks: [
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
+    ],
+    fields: () => [{ key: "size", label: "نصف القطر", value: "10" }],
+    build: (c, v) => cornerStep(c, "round", v.size),
+  },
+  {
+    key: "cornerChamfer",
+    name: "قطع الزاوية",
+    group: "الزوايا",
+    picks: [
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
+    ],
+    fields: () => [{ key: "size", label: "المسافة من الزاوية", value: "10" }],
+    build: (c, v) => cornerStep(c, "chamfer", v.size),
+  },
+  {
     key: "piece",
     name: "قطعة من الحدود",
     group: "القطع",
@@ -280,6 +312,16 @@ export const TOOLS: Tool[] = [
 ];
 
 /** Expression fields of an existing step, for editing it from the step list. */
+/** Corner step from two line picks; each line is cut at the end nearer its click. */
+function cornerStep(c: Ctx, kind: "sharp" | "round" | "chamfer", size: string): Step {
+  const a = line(c, 0), b = line(c, 1);
+  if (a.obj === b.obj) throw new Error("اختر خطين مختلفين");
+  return {
+    op: "corner", kind, a: a.obj, endA: nearerEnd(obj(c, a.obj), a.at), b: b.obj, endB: nearerEnd(obj(c, b.obj), b.at), size,
+    ...(kind === "sharp" ? {} : { id: newId(c.model, kind === "round" ? "curve" : "line") }),
+  };
+}
+
 export function stepFields(s: Step): Field[] {
   switch (s.op) {
     case "point":
@@ -309,6 +351,8 @@ export function stepFields(s: Step): Field[] {
       return [{ key: "length", label: "الطول الجديد", value: s.length }];
     case "trim":
       return [{ key: "end", label: "الطرف", value: s.end, options: [["start", "البداية"], ["end", "النهاية"]] }];
+    case "corner":
+      return s.kind === "sharp" ? [] : [{ key: "size", label: s.kind === "round" ? "نصف القطر" : "المسافة من الزاوية", value: s.size }];
     case "curve":
       return [
         { key: "startAngle", label: "اتجاه البداية °", value: s.startAngle, optional: true },

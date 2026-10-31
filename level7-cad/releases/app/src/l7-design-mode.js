@@ -11,10 +11,14 @@ import { toolIcon } from './grouped-tool-palette.js';
 const GLYPH = {
   point: 'point', pointOn: 'pointFraction', intersect: 'pointCluster', pointMove: 'vector',
   line: 'line', lineAngle: 'angle', parallel: 'parallel', setLength: 'lengthTo', trim: 'cutEnd',
+  cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
   mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
+  cornerSharp: 'انقر الخطين قرب الزاوية؛ يمتدان أو يُقصّان حتى يلتقيا.',
+  cornerRound: 'انقر الخطين قرب الزاوية ثم اكتب نصف القطر.',
+  cornerChamfer: 'انقر الخطين قرب الزاوية ثم اكتب مسافة القطع.',
   point: 'انقر على اللوحة لوضع نقطة، ثم عدّل س/ص في المربع.',
   pointOn: 'اختر خطاً قرب الطرف الذي تقاس منه المسافة.',
   intersect: 'اختر خطين أو منحنيين لإنشاء نقطة تقاطعهما.',
@@ -56,11 +60,10 @@ export function installDesignMode() {
   const host = document.createElement('section');
   host.id = 'l7-design'; host.className = 'l7-design'; host.hidden = true; host.dir = 'rtl';
   host.setAttribute('aria-label', 'تصميم LEVEL7');
-  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><header><strong>تصميم LEVEL7</strong><button type="button" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button></header><div class="l7-design-tools" role="toolbar"></div><div class="l7-design-guide" aria-live="polite"><b>اختر أداة</b><span>الأيقونات هنا تشغّل محرك LEVEL7. يُحفظ التصميم بصيغة ‎.level7.json.</span></div><output class="l7-design-status" aria-live="polite"></output></aside>';
+  host.innerHTML = '<div class="l7-design-stage"><div class="l7-design-bar toolbox-commands" role="toolbar" aria-label="أوامر تصميم LEVEL7"></div><div class="l7-design-guide" aria-live="polite" hidden><b></b><span></span></div></div><aside class="l7-design-palette" aria-label="أدوات تصميم LEVEL7"><button type="button" class="l7-design-close" data-l7d="close" title="إغلاق التصميم والعودة لملفات MDL">×</button><div class="l7-design-tools" role="toolbar" aria-orientation="vertical"></div></aside>';
   workArea.append(host);
   const stage = host.querySelector('.l7-design-stage'), toolsBox = host.querySelector('.l7-design-tools');
-  const guide = host.querySelector('.l7-design-guide'), statusOut = host.querySelector('.l7-design-status');
-  status = text => { statusOut.textContent = text; };
+  const guide = host.querySelector('.l7-design-guide');
 
   // Command bar in the style of the program's own toolbox, with the same shortcuts.
   const icon = id => `<svg aria-hidden="true"><use href="#icon-${id}"/></svg>`, letter = t => `<span class="palette-letter" aria-hidden="true">${t}</span>`;
@@ -84,6 +87,8 @@ export function installDesignMode() {
     barBox.append(g);
   }
   const cmdBox = barBox;
+  const statusOut = document.createElement('output'); statusOut.className = 'l7-design-status'; statusOut.setAttribute('aria-live', 'polite'); barBox.append(statusOut);
+  status = text => { statusOut.textContent = text; };
 
   const send = msg => { if (ready && frame?.contentWindow) frame.contentWindow.postMessage(msg, '*'); else queue.push(msg); };
   const dark = () => document.body.classList.contains('ui-dark');
@@ -95,39 +100,65 @@ export function installDesignMode() {
     stage.append(frame);
   };
   const open = () => {
-    ensureFrame(); host.hidden = false; document.body.classList.add('l7-design-on'); requestAnimationFrame(fit);
+    ensureFrame(); host.hidden = false; document.body.classList.add('l7-design-on');
     for (const d of document.querySelectorAll('.menubar details.menu')) d.open = false;
   };
   const close = () => { send({ type: 'l7:cancel' }); host.hidden = true; document.body.classList.remove('l7-design-on'); };
+  // 0.9.120: a slim strip of category icons at the right edge; each icon (small corner
+  // triangle) opens a flyout listing its tools by icon and name. The strip icon shows the
+  // last tool used in that category. Export is a category of its own.
+  let openCat = null, last = {}, cats = [];
+  try { last = JSON.parse(localStorage.getItem('level7.design.lastTools') || '{}') || {}; } catch {}
+  const categories = () => {
+    const list = [], byName = new Map();
+    for (const t of tools) { if (!byName.has(t.group)) { const c = { name: t.group, items: [] }; byName.set(t.group, c); list.push(c); } byName.get(t.group).items.push({ tool: t.key, name: t.name, glyph: GLYPH[t.key] || 'point' }); }
+    list.push({ name: 'التصدير والحفظ', items: [['save', 'حفظ التصميم · Ctrl+S', 'folder'], ['aama', 'تصدير AAMA للتعشيق · Ctrl+E', 'manufacturing'], ['dxf', 'تصدير DXF', 'line20'], ['plt', 'تصدير PLT للبلوتر', 'raster']].map(([command, name, glyph]) => ({ command, name, glyph })) });
+    return list;
+  };
+  const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return toolIcon(it.glyph) || toolIcon('point'); };
   const renderTools = () => {
     toolsBox.replaceChildren();
-    let group = '';
-    for (const t of tools) {
-      if (t.group !== group) { group = t.group; const h = document.createElement('h3'); h.textContent = group; toolsBox.append(h); }
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'l7-design-tool'; b.dataset.l7dTool = t.key;
-      b.title = t.name; b.setAttribute('aria-pressed', 'false');
-      b.innerHTML = (toolIcon(GLYPH[t.key] || 'point') || toolIcon('point')) + `<span>${t.name}</span>`;
-      toolsBox.append(b);
+    cats = categories();
+    for (const c of cats) {
+      const wrap = document.createElement('div'); wrap.className = 'l7-cat';
+      const head = document.createElement('button'); head.type = 'button'; head.className = 'l7-design-cat'; head.dataset.l7dCat = c.name;
+      head.setAttribute('aria-expanded', 'false'); head.setAttribute('aria-haspopup', 'menu'); head.title = c.name; head.setAttribute('aria-label', c.name);
+      head.innerHTML = stripIcon(c);
+      const panel = document.createElement('div'); panel.className = 'l7-design-flyout'; panel.hidden = true; panel.dataset.l7dCatPanel = c.name; panel.setAttribute('role', 'menu');
+      panel.innerHTML = `<header>${c.name}</header>`;
+      for (const it of c.items) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'l7-design-tool'; b.setAttribute('role', 'menuitem');
+        if (it.tool) { b.dataset.l7dTool = it.tool; b.setAttribute('aria-pressed', 'false'); } else b.dataset.l7dCommand = it.command;
+        b.innerHTML = (toolIcon(it.glyph) || toolIcon('point')) + `<span>${it.name}</span>`;
+        panel.append(b);
+      }
+      wrap.append(head, panel); toolsBox.append(wrap);
     }
-    decorate(toolsBox); decorate(cmdBox); markActive(); fit();
+    decorate(toolsBox); markActive();
   };
+  const showCat = name => {
+    openCat = name;
+    for (const h of toolsBox.querySelectorAll('[data-l7d-cat]')) h.setAttribute('aria-expanded', String(h.dataset.l7dCat === name));
+    for (const p of toolsBox.querySelectorAll('[data-l7d-cat-panel]')) {
+      p.hidden = p.dataset.l7dCatPanel !== name; p.style.top = '';
+      if (!p.hidden) { const over = p.getBoundingClientRect().bottom - host.getBoundingClientRect().bottom + 6; if (over > 0) p.style.top = -over + 'px'; }
+    }
+  };
+  document.addEventListener('pointerdown', e => { if (openCat !== null && !e.target.closest?.('.l7-cat')) showCat(null); }, true);
   // Closed outlines get the fabric/sky fill used by the host icons.
-  const decorate = root => { for (const p of root.querySelectorAll('svg :is(path,rect,circle)')) { if (p.tagName === 'path' && !/[Zz]\s*$/.test(p.getAttribute('d') || '')) continue; if (p.classList.contains('ink')) p.classList.add('l7-fill-fabric'); else if (p.classList.contains('blue')) p.classList.add('l7-fill-sky'); } };
-  // Cards take the free height of the palette, never more: no scrollbar.
-  const fit = () => {
-    if (host.hidden || !toolsBox.clientHeight) return;
-    const set = h => { host.classList.toggle('l7d-compact', h < 50); host.style.setProperty('--l7d-card', h + 'px'); host.style.setProperty('--l7d-icon', Math.round(h * 0.55) + 'px'); };
-    const fits = () => toolsBox.scrollHeight <= toolsBox.clientHeight + 1;
-    let lo = 32, hi = 92; set(hi); if (fits()) return;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; set(mid); if (fits()) lo = mid; else hi = mid; }
-    set(lo);
-  };
-  window.addEventListener('resize', () => requestAnimationFrame(fit));
+  const decorate = root => { for (const p of root.querySelectorAll('svg :is(path,rect,circle)')) { if (p.hasAttribute('stroke-dasharray')) continue; if (p.tagName === 'path' && !/[Zz]\s*$/.test(p.getAttribute('d') || '')) continue; if (p.classList.contains('ink')) p.classList.add('l7-fill-fabric'); else if (p.classList.contains('blue')) p.classList.add('l7-fill-sky'); } };
   const markActive = () => {
     for (const b of toolsBox.querySelectorAll('[data-l7d-tool]')) b.setAttribute('aria-pressed', String(b.dataset.l7dTool === active));
     const t = tools.find(x => x.key === active);
-    guide.firstElementChild.textContent = t ? t.name : 'اختر أداة';
-    guide.lastElementChild.textContent = t ? (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' Esc للإلغاء.' : 'الأيقونات هنا تشغّل محرك LEVEL7. يُحفظ التصميم بصيغة ‎.level7.json.';
+    for (const h of toolsBox.querySelectorAll('[data-l7d-cat]')) h.classList.toggle('l7-active', !!t && h.dataset.l7dCat === t.group);
+    if (t && last[t.group] !== t.key) {
+      last[t.group] = t.key; try { localStorage.setItem('level7.design.lastTools', JSON.stringify(last)); } catch {}
+      const c = cats.find(x => x.name === t.group), h = c && toolsBox.querySelector(`[data-l7d-cat="${CSS.escape(c.name)}"]`);
+      if (h) { h.innerHTML = stripIcon(c); decorate(h); }
+    }
+    guide.hidden = !t;
+    guide.firstElementChild.textContent = t ? t.name : '';
+    guide.lastElementChild.textContent = t ? (HINT[t.key] || 'اتبع التعليمات أسفل اللوحة.') + ' Esc للإلغاء.' : '';
   };
   const openDesign = async () => {
     if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
@@ -159,10 +190,11 @@ export function installDesignMode() {
     else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
   });
   host.addEventListener('click', e => {
-    const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]');
+    const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');
     if (e.target.closest('[data-l7d="close"]')) close();
-    else if (tool) { send(tool.dataset.l7dTool === active ? { type: 'l7:cancel' } : { type: 'l7:tool', key: tool.dataset.l7dTool }); frame?.focus(); }
-    else if (cmd) run(cmd.dataset.l7dCommand);
+    else if (cat) showCat(cat.dataset.l7dCat === openCat ? null : cat.dataset.l7dCat);
+    else if (tool) { showCat(null); send(tool.dataset.l7dTool === active ? { type: 'l7:cancel' } : { type: 'l7:tool', key: tool.dataset.l7dTool }); frame?.focus(); }
+    else if (cmd) { showCat(null); run(cmd.dataset.l7dCommand); }
   });
   const run = action => {
     if (action === 'open') void openDesign();
@@ -174,6 +206,7 @@ export function installDesignMode() {
   markTab('tab-steps');
   document.addEventListener('keydown', e => {
     if (host.hidden) return;
+    if (e.key === 'Escape' && openCat !== null) { showCat(null); e.preventDefault(); e.stopImmediatePropagation(); return; }
     if (e.key === 'Escape') { send({ type: 'l7:cancel' }); e.preventDefault(); e.stopImmediatePropagation(); return; }
     const action = shortcut(e, e.target.matches?.('input, select, textarea'));
     if (action) { run(action); e.preventDefault(); e.stopImmediatePropagation(); }

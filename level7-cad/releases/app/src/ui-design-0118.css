@@ -1,6 +1,6 @@
 /* 0.9.118 LEVEL7 design mode: engine frame + palette drawn with the host icons. */
 .work-area{position:relative}
-.l7-design{position:absolute;inset:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) 264px;direction:ltr;background:var(--l7-bg,#f3f5f7)}
+.l7-design{position:absolute;inset:0;z-index:30;display:grid;grid-template-columns:minmax(0,1fr) 50px;direction:ltr;background:var(--l7-bg,#f3f5f7)}
 .l7-design-palette{direction:rtl}
 body.l7-design-on #toolbox-dock{display:none}
 .l7-design[hidden]{display:none}
@@ -63,3 +63,63 @@ body.ui-dark .l7-design-bar .palette-command svg{color:#7cc4ef;stroke:#7cc4ef}
 body.ui-dark .l7-design-bar .palette-command small{color:#aab6c4}
 .l7-design-bar .palette-command[aria-pressed="true"]{background:#d7e9f4;box-shadow:inset 0 -2px #1b7fc0}
 body.ui-dark .l7-design-bar .palette-command[aria-pressed="true"]{background:#1f3d5c;box-shadow:inset 0 -2px #3d9bff}
+/* 0.9.120: categories ("options") that open their tools, one at a time. */
+.l7-design-tools{display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.l7-design-cat{display:flex;align-items:center;gap:9px;width:100%;height:40px;padding:3px 10px;border:1px solid #c3d0da;border-radius:8px;background:linear-gradient(#fbfcfd,#eaf0f4);color:#16486a;font-size:12.5px;font-weight:600;cursor:pointer;text-align:right}
+.l7-design-cat svg{width:28px;height:28px;flex:none}
+.l7-design-cat span{flex:1}
+.l7-design-cat small{min-width:20px;padding:0 6px;border-radius:9px;background:#dbe6ee;color:#3d5a6e;font:600 10px/18px Arial,sans-serif;text-align:center}
+.l7-design-cat::after{content:'';width:7px;height:7px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);margin-top:-4px;transition:transform .15s}
+.l7-design-cat[aria-expanded="true"]{border-color:#1b7fc0;background:linear-gradient(#e3f1fb,#cfe6f6)}
+.l7-design-cat[aria-expanded="true"]::after{transform:rotate(135deg);margin-top:4px}
+.l7-design-cat:hover{border-color:#3b8fc4}
+.l7-design-cat-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:4px 2px 8px}
+.l7-design-cat-tools[hidden]{display:none}
+.l7-design-cat-tools .l7-design-tool{height:auto;min-height:74px;padding:6px 3px}
+.l7-design-cat-tools .l7-design-tool svg{width:36px;height:36px}
+.l7-design-cat-tools .l7-design-tool span{white-space:normal;font-size:10.5px;line-height:1.25;max-height:2.6em}
+body.ui-dark .l7-design-cat{background:linear-gradient(#232b35,#1c232c);border-color:#323c48;color:#e4e9f0}
+body.ui-dark .l7-design-cat small{background:#2b3641;color:#aab6c4}
+body.ui-dark .l7-design-cat[aria-expanded="true"]{background:linear-gradient(#1f3d5c,#18324c);border-color:#3d9bff}
+body.ui-dark .l7-design-cat:hover{border-color:#3d9bff}
+
+/* 0.9.120: slim icon strip with flyout menus (each strip icon opens its tools by name). */
+.l7-design-palette{padding:4px 0;gap:0;overflow:visible;align-items:center;position:relative;z-index:35}
+.l7-design-close{width:34px;min-height:26px;height:26px;padding:0;margin-bottom:4px;font-size:17px;line-height:1}
+.l7-design-tools{overflow:visible;gap:2px;width:100%;align-items:center}
+.l7-cat{position:relative;width:100%;display:flex;justify-content:center}
+.l7-cat+.l7-cat{border-top:1px solid #d3dce3;padding-top:2px}
+.l7-design-cat{position:relative;width:42px;height:40px;padding:3px;border:1px solid transparent;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;color:#16486a}
+.l7-design-cat::after{content:'';position:absolute;left:3px;bottom:3px;border-style:solid;border-width:5px 5px 0 0;border-color:transparent;border-left:5px solid #7a8e9c;border-top:5px solid transparent;width:0;height:0;transform:none;margin:0}
+.l7-design-cat svg{width:30px;height:30px}
+.l7-design-cat:hover{border-color:#3b8fc4;background:#e6eff5}
+.l7-design-cat[aria-expanded="true"],.l7-design-cat.l7-active{border-color:#1b7fc0;background:#d7e9f4}
+.l7-design-cat.l7-active{box-shadow:inset -3px 0 #1b7fc0}
+.l7-design-flyout{position:absolute;top:0;right:calc(100% + 4px);min-width:236px;padding:4px;border:1px solid #9fb2c0;border-radius:4px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:1px;z-index:50;direction:rtl}
+.l7-design-flyout[hidden]{display:none}
+.l7-design-flyout header{padding:4px 8px 5px;font-size:11px;font-weight:600;color:#5b7488;border-bottom:1px solid #dde5eb;margin-bottom:2px}
+.l7-design-flyout .l7-design-tool{flex-direction:row;justify-content:flex-start;gap:10px;height:34px;min-height:0;padding:2px 8px;border:0;border-radius:3px;background:transparent;box-shadow:none}
+.l7-design-flyout .l7-design-tool svg{width:24px;height:24px;flex:none}
+.l7-design-flyout .l7-design-tool span{font-size:12.5px;white-space:nowrap;max-width:none;text-align:right}
+.l7-design-flyout .l7-design-tool:hover{background:#dfeef8;box-shadow:none}
+.l7-design-flyout .l7-design-tool[aria-pressed="true"]{background:#c7e2f4;box-shadow:inset -3px 0 #1b7fc0}
+.l7-design-guide{position:absolute;top:58px;right:12px;z-index:5;width:250px;height:auto;max-width:40%;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.l7-design-guide[hidden]{display:none}
+.l7-design-stage{position:relative}
+.l7-design-bar .l7-design-status{align-self:center;margin-left:auto;padding:0 10px;max-width:280px}
+body.ui-dark .l7-cat+.l7-cat{border-color:#2b333d}
+body.ui-dark .l7-design-cat{color:#d9e2ea}
+body.ui-dark .l7-design-cat::after{border-left-color:#8d98a7}
+body.ui-dark .l7-design-cat:hover{background:#232b35;border-color:#3d9bff}
+body.ui-dark .l7-design-cat[aria-expanded="true"],body.ui-dark .l7-design-cat.l7-active{background:#1f3d5c;border-color:#3d9bff}
+body.ui-dark .l7-design-cat.l7-active{box-shadow:inset -3px 0 #8fd14f}
+body.ui-dark .l7-design-flyout{background:#1b1f25;border-color:#3a434e;box-shadow:0 10px 28px rgba(0,0,0,.6)}
+body.ui-dark .l7-design-flyout header{color:#8d98a7;border-color:#2b333d}
+body.ui-dark .l7-design-flyout .l7-design-tool{color:#e4e9f0}
+body.ui-dark .l7-design-flyout .l7-design-tool:hover{background:#4a5563}
+body.ui-dark .l7-design-flyout .l7-design-tool[aria-pressed="true"]{background:#2b4a68;box-shadow:inset -3px 0 #8fd14f}
+.l7-design svg .folder{fill:#fbe7b5;stroke:#b07d16}.l7-design svg .green{stroke:#3c9a3f;fill:none}
+body.ui-dark .l7-design svg .folder{fill:rgba(245,184,61,.22);stroke:#f5b83d}body.ui-dark .l7-design svg .green{stroke:#8fd14f}
+.l7-design-close{border:1px solid #c3cdd4;border-radius:5px;background:transparent;color:#405868}
+body.ui-dark .l7-design-close{background:transparent;border-color:#323c48;color:#aab6c4}
+body.ui-dark .l7-design-close:hover{background:#4a2a2e;border-color:#e5484d;color:#fff}

@@ -51,7 +51,11 @@ export type Step =
   | { op: "setLength"; target: number; length: string }
   | { op: "trim"; target: number; end: "start" | "end"; to: number }
   | { op: "mirror"; axis: number; items: { src: number; dst?: number }[] }
-  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string };
+  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string }
+  /** Corner of two lines, each taken at the end nearer the corner: "sharp" extends or trims
+   * both to their intersection; "round" adds a tangent arc of radius `size`; "chamfer" cuts
+   * the corner with a straight line `size` from the intersection on each line. */
+  | { op: "corner"; kind: "sharp" | "round" | "chamfer"; id?: number; a: number; endA: "start" | "end"; b: number; endB: "start" | "end"; size: string };
 
 export interface Model {
   version: 1;
@@ -319,6 +323,63 @@ export function evaluateModel(model: Model): EvalResult {
           put(o.id, "line", pts, i);
           break;
         }
+        case "corner": {
+          if (s.a === s.b) throw new Error("الزاوية تحتاج خطين مختلفين");
+          const A = needLine(s.a), B = needLine(s.b);
+          const seg = (o: GObj, end: "start" | "end") => {
+            const n = o.pts.length;
+            const P = end === "end" ? o.pts[n - 1] : o.pts[0], Q = end === "end" ? o.pts[n - 2] : o.pts[1];
+            const L = Math.hypot(P[0] - Q[0], P[1] - Q[1]);
+            if (!(L > 1e-9)) throw new Error(`طرف ${o.name} قصير جداً`);
+            return { Q, d: [(P[0] - Q[0]) / L, (P[1] - Q[1]) / L] as Pt };
+          };
+          const sa = seg(A, s.endA), sb = seg(B, s.endB);
+          const den = sa.d[0] * sb.d[1] - sa.d[1] * sb.d[0];
+          if (Math.abs(den) < 1e-9) throw new Error("الخطان متوازيان، لا توجد زاوية");
+          const t = ((sb.Q[0] - sa.Q[0]) * sb.d[1] - (sb.Q[1] - sa.Q[1]) * sb.d[0]) / den;
+          const X: Pt = [sa.Q[0] + t * sa.d[0], sa.Q[1] + t * sa.d[1]];
+          const reach = (sg: typeof sa) => (X[0] - sg.Q[0]) * sg.d[0] + (X[1] - sg.Q[1]) * sg.d[1];
+          if (reach(sa) <= 1e-6 || reach(sb) <= 1e-6) throw new Error("الزاوية خلف بداية أحد الخطين؛ اختر الطرفين الأقرب للزاوية");
+          const setEnd = (o: GObj, end: "start" | "end", p: Pt) => {
+            const pts = o.pts.slice();
+            pts[end === "end" ? pts.length - 1 : 0] = p;
+            put(o.id, "line", pts, i);
+          };
+          const ua: Pt = [-sa.d[0], -sa.d[1]], ub: Pt = [-sb.d[0], -sb.d[1]]; // from the corner into each line
+          if (s.kind === "sharp") {
+            setEnd(A, s.endA, X);
+            setEnd(B, s.endB, X);
+            break;
+          }
+          const size = vars.eval(s.size);
+          if (!(size > 0)) throw new Error("المقدار يجب أن يكون أكبر من صفر");
+          const theta = Math.acos(Math.max(-1, Math.min(1, ua[0] * ub[0] + ua[1] * ub[1])));
+          if (theta > Math.PI - 1e-6) throw new Error("الخطان على استقامة واحدة");
+          const back = s.kind === "round" ? size / Math.tan(theta / 2) : size;
+          if (back >= reach(sa) || back >= reach(sb)) throw new Error(s.kind === "round" ? "نصف القطر أكبر من طول الخطين" : "مسافة القطع أكبر من طول الخطين");
+          const Ta: Pt = [X[0] + ua[0] * back, X[1] + ua[1] * back], Tb: Pt = [X[0] + ub[0] * back, X[1] + ub[1] * back];
+          setEnd(A, s.endA, Ta);
+          setEnd(B, s.endB, Tb);
+          if (s.id === undefined) throw new Error("خطوة زاوية بلا عنصر ناتج");
+          if (s.kind === "chamfer") {
+            put(s.id, "line", [Ta, Tb], i);
+          } else {
+            const bis: Pt = [ua[0] + ub[0], ua[1] + ub[1]], bl = Math.hypot(bis[0], bis[1]);
+            const h = size / Math.sin(theta / 2);
+            const C: Pt = [X[0] + (bis[0] / bl) * h, X[1] + (bis[1] / bl) * h];
+            const a0 = Math.atan2(Ta[1] - C[1], Ta[0] - C[0]);
+            let sweep = Math.atan2(Tb[1] - C[1], Tb[0] - C[0]) - a0;
+            while (sweep > Math.PI) sweep -= 2 * Math.PI;
+            while (sweep < -Math.PI) sweep += 2 * Math.PI;
+            const n = Math.max(6, Math.ceil(Math.abs(sweep) / (Math.PI / 36)));
+            const arc: Pt[] = [];
+            for (let k = 0; k <= n; k++) arc.push([C[0] + size * Math.cos(a0 + (sweep * k) / n), C[1] + size * Math.sin(a0 + (sweep * k) / n)]);
+            arc[0] = Ta;
+            arc[n] = Tb;
+            put(s.id, "line", arc, i);
+          }
+          break;
+        }
         case "mirror": {
           const ax = needLine(s.axis).pts;
           const origin = ax[0];
@@ -369,6 +430,8 @@ export function createdIds(s: Step): number[] {
     case "setLength":
     case "trim":
       return [];
+    case "corner":
+      return s.id === undefined ? [] : [s.id];
     case "mirror":
       return s.items.filter((it) => it.dst !== undefined).map((it) => it.dst as number);
     default:
@@ -401,6 +464,8 @@ export function usedIds(s: Step): number[] {
       return [s.axis, ...s.items.map((it) => it.src)];
     case "curve":
       return s.through.map((r) => r.obj);
+    case "corner":
+      return [s.a, s.b];
   }
 }
 

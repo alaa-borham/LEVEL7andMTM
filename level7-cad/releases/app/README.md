@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.120
+
+LEVEL7 design mode: tools live in a slim icon strip at the right edge; each icon (corner triangle) opens a flyout menu listing its tools by icon and name (points, lines, modify, curves, corners, pieces, measuring, export & save), and shows the last tool used. New corner tools: sharp corner (extend/trim both lines to their intersection), round corner (tangent arc of a given radius) and chamfer (straight cut at a given distance); all stay parametric and editable.
+
 LEVEL7 and MTM 0.9.119
 
 LEVEL7 design mode: a command bar in the style of the program's toolbox, docked above the drawing, with the same shortcuts (Save Ctrl+S, fit F6, steps F5, X Ctrl+X, Z F11, sizes Ctrl+G, pieces, zoom −/+, Undo Ctrl+Z, Redo Ctrl+Y, New Ctrl+N, Open Ctrl+O, AAMA Ctrl+E, DXF, PLT); shortcuts also work while the drawing has focus. The engine's own page tabs are hidden (the bar switches pages). Drawing tools work on a blank page: a click in empty space where a point is expected creates a free point there. No grid squares on the drawing.
