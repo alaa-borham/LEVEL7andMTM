@@ -35,7 +35,9 @@ export function importXTable(model: Model, rows: Cell[][]): XImport {
   const filled = rows.filter((r) => r.some((c) => String(c).trim() !== ""));
   if (!filled.length) throw new Error("الملف فارغ");
   const head = filled[0].map((c) => String(c).trim().toLowerCase());
-  const hasHeader = head.some((h) => /^(x|name|الاسم|القياس|mtm|code|standard|value|القيمة|الأساسي|رمز)/.test(h)) && !filled[0].some((c) => typeof c === "number");
+  // a header row has a column title (whole word: "X", "Name", "MTM", "Standard" ...); size titles may
+  // be numbers (52, 54 ...), a data row's X number ("X1") is not a title
+  const hasHeader = head.some((h) => /^(x|no\.?|#|name|mtm|code|standard|value|text)$/.test(h) || /^(الاسم|القياس|القيمة|الأساسي|رمز)/.test(h) || /^name\b/.test(h));
   const data = hasHeader ? filled.slice(1) : filled;
   const width = Math.max(...filled.map((r) => r.length));
   const colOf = (re: RegExp) => (hasHeader ? head.findIndex((h) => re.test(h)) : -1);

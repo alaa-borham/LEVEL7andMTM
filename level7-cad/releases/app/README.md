@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.149
+
+X table: X, name, MTM and the base size stay in place while the size columns scroll sideways (frozen like Excel); the header row stays on top. A library product takes its X values and sizes from Excel / CSV (same layout as the X table). Size names that are numbers (52, 54 ...) are read as size columns when importing X from Excel. Every small window (library, product, marker, ISO, product info ...) moves by its title bar.
+
 LEVEL7 and MTM 0.9.148
 
 The program opens straight into LEVEL7 design (the last design, kept by the autosave). The GRAFIS (MDL) commands are one "GRAFIS" button in the design command bar: open an MDL, new MDL, the X/Z example, the MDL workspace; × still shows the MDL workspace. Design files now have their own extension .level7 (older .level7.json files still open from the program); on Windows .level7 files are associated with the program for the current user, show its icon, and open in it on a double-click, also while it is already running. All exports are one "Export" button (AAMA / PLT of the current size or all sizes, AAMA with grade rules + RUL, DXF). The measurement library can be managed from the size page: new products, their measurements and sizes, editing library products in the library itself.

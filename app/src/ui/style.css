@@ -934,3 +934,17 @@ th.sz-off { opacity: .45; text-decoration: line-through; }
 .me-table td input.num { min-width: 64px; width: 70px; text-align: center; font-family: Consolas, monospace; }
 .me-table td.xid { color: var(--muted); font: 12px Consolas, monospace; }
 .size-export-note { color: var(--muted); font-size: 12.5px; }
+/* 0.9.149 X table: X, name, MTM and the base size stay in place while the sizes scroll sideways
+   (frozen like Excel); the header row stays on top while scrolling down. */
+.xgrid .xg-table table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; }
+.xgrid .xg-table th.xid, .xgrid .xg-table td.xid { position: sticky; right: 0; width: 44px; min-width: 44px; max-width: 44px; box-sizing: border-box; }
+.xgrid .xg-table th.xn, .xgrid .xg-table td.xn { position: sticky; right: 44px; width: 190px; min-width: 190px; max-width: 190px; box-sizing: border-box; }
+.xgrid .xg-table th.xc, .xgrid .xg-table td.xc { position: sticky; right: 234px; width: 70px; min-width: 70px; max-width: 70px; box-sizing: border-box; }
+.xgrid .xg-table th.xv:not(.sz), .xgrid .xg-table td.xv:not(.sz) { position: sticky; right: 304px; width: 80px; min-width: 80px; max-width: 80px; box-sizing: border-box; box-shadow: -4px 0 6px -2px rgba(0, 0, 0, 0.45); }
+.xgrid .xg-table td.xid, .xgrid .xg-table td.xn, .xgrid .xg-table td.xc, .xgrid .xg-table td.xv:not(.sz) { z-index: 2; background: var(--surface); }
+.xgrid .xg-table tbody tr:nth-child(even) td.xid, .xgrid .xg-table tbody tr:nth-child(even) td.xn, .xgrid .xg-table tbody tr:nth-child(even) td.xc, .xgrid .xg-table tbody tr:nth-child(even) td.xv:not(.sz) { background: color-mix(in srgb, var(--surface) 92%, var(--text) 8%); }
+.xgrid .xg-table tr.sel td.xid, .xgrid .xg-table tr.sel td.xn, .xgrid .xg-table tr.sel td.xc, .xgrid .xg-table tr.sel td.xv:not(.sz) { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.xgrid .xg-table thead th { position: sticky; top: 0; z-index: 3; background: var(--bg); }
+.xgrid .xg-table thead th.xid, .xgrid .xg-table thead th.xn, .xgrid .xg-table thead th.xc, .xgrid .xg-table thead th.xv:not(.sz) { z-index: 4; }
+.xgrid .xg-table td.xv.sz, .xgrid .xg-table th.sz { min-width: 78px; }
+.z-assistant .za-head { cursor: move; user-select: none; }

@@ -65,3 +65,16 @@ describe("Excel and CSV for X values", () => {
     expect(readCsv(writeCsv([["a,b", 1]]))).toEqual([["a,b", 1]]);
   });
 });
+
+import { importXTable as importX2 } from "./xtable";
+import { emptyModel as empty2 } from "./model";
+describe("X table with numeric size names", () => {
+  it("sizes named 52 / 54 are read as size columns", () => {
+    const m = empty2("t");
+    const r = importX2(m, [["X", "Name", "MTM", "Standard", 52, 54], ["X1", "length", "", 1500, 1450, 1520], ["X3", "collar", "", 400, "", 410]]);
+    expect(r.sizes).toEqual(["52", "54"]);
+    expect(m.sizes!.map((s) => s.name)).toEqual(["52", "54"]);
+    expect(m.sizes![1].values[3]).toBe(410);
+    expect(m.sizes![0].values[3]).toBeUndefined();
+  });
+});

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.148",
- "notes": "LEVEL7 افتراضي، ‎.level7 بدابل كليك، زر Export، إدارة مكتبة القياسات",
+ "version": "0.9.149",
+ "notes": "تجميد أعمدة X، إكسل لمنتجات المكتبة، نوافذ تتحرك",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "7208e9f7a97f769e59767c2f2737079aedca80f6d8fa26be508beb4ee032c1e6",
-   "size": 135926
+   "sha256": "b197cd97fa2329e1843e9cf21a3fc30f09395cec9b1ae32c549521bba99ee42b",
+   "size": 136376
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DIaJOj_f.css",
-   "sha256": "02017e46cbe7b774f6912d287dd1055bf9fd09b3e4a5d51921fbff1da82a4bea",
-   "size": 33444
+   "path": "assets/l7design/assets/index-ChQXXHn9.css",
+   "sha256": "be8d97dfd6052962c5c1d991967afa51dbaaa01de5f4e6ae05e48400070fbe7a",
+   "size": 35089
   },
   {
-   "path": "assets/l7design/assets/index-pvFiwmPm.js",
-   "sha256": "309b3d1c56510ca0798e1a2fe4c215701fb30cc1153425307dab4292794d6e2c",
-   "size": 248655
+   "path": "assets/l7design/assets/index-D_2ejTzf.js",
+   "sha256": "1203feff157b639bfc60ebabc0e0ce7d303e95c17a645218774d9aec3497705f",
+   "size": 250639
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "0904e6e01b3a1ceff8283ec09a39c754cd968eca353d103aa7b79e88038bff94",
+   "sha256": "2cde48f04742b1cee726954f5a4c065d222d5bab7a4add582822ca703d5e0ea9",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "36a9a3aa6a536b53f08edb69077c05192f8dd48e503e5209eb654031fb391eb9",
+   "sha256": "9908b70df1e1fbbdaf03e93a910e66d94b0adacab590e6ace87e7f098a6243a5",
    "size": 301
   },
   {

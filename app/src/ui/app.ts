@@ -110,6 +110,19 @@ export class App {
     this.model = restored ?? emptyModel();
     this.fromRestore = !!restored && this.unsaved;
     this.evaluate();
+    // every small window (library, product, marker, ISO, product info ...) moves by its title bar
+    document.addEventListener("pointerdown", (e) => {
+      const head = (e.target as HTMLElement).closest<HTMLElement>(".z-assistant .za-head");
+      if (!head || (e.target as HTMLElement).closest("button, input, select, textarea")) return;
+      const win = head.closest<HTMLElement>(".z-assistant")!;
+      const r = win.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      Object.assign(win.style, { left: r.left + "px", top: r.top + "px", right: "auto", bottom: "auto", transform: "none" });
+      head.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => Object.assign(win.style, { left: Math.min(Math.max(0, ev.clientX - dx), innerWidth - 80) + "px", top: Math.min(Math.max(0, ev.clientY - dy), innerHeight - 40) + "px" });
+      const up = () => (head.removeEventListener("pointermove", move), head.removeEventListener("pointerup", up));
+      head.addEventListener("pointermove", move);
+      head.addEventListener("pointerup", up);
+    });
     // size on / off ticks (X table and size page): one listener for both windows
     document.addEventListener("change", (e) => {
       const t = e.target as HTMLInputElement;
@@ -1554,7 +1567,7 @@ export class App {
                 .join("")}<td><button class="danger" data-me="delrow" data-r="${r}" title="حذف القياس">×</button></td></tr>`,
             )
             .join("")}</tbody></table></div>
-          <div class="table-actions"><button data-me="addrow">＋ قياس X</button><button data-me="addsize">＋ مقاس</button></div>
+          <div class="table-actions"><button data-me="addrow">＋ قياس X</button><button data-me="addsize">＋ مقاس</button><button data-me="xlsx" title="رفع قياسات X والمقاسات من ملف إكسل (.xlsx) أو CSV إلى هذا المنتج (نفس شكل جدول X: X | Name | MTM | الأساسي | المقاسات)">⤓ استيراد Excel</button></div>
           <p class="ml-note">الخانة الفارغة في عمود مقاس تأخذ قيمة المقاس الأساسي. الحفظ يغيّر المكتبة فقط؛ التصاميم التي نُسخ إليها هذا المنتج لا تتغير.</p>
           <div class="za-foot"><button class="primary" data-me="save">✓ حفظ في المكتبة</button><button data-me="close">إلغاء</button></div>
         </div>`;
@@ -1578,7 +1591,25 @@ export class App {
       const b = (ev.target as HTMLElement).closest<HTMLElement>("[data-me]");
       if (!b) return;
       const act = b.dataset.me;
+      if (act === "close" || act === "save") this.xImportTarget = null; // a cancelled file choice does not fill a closed editor later
       if (act === "close") return el.remove();
+      if (act === "xlsx") {
+        this.xImportTarget = { e, done: draw };
+        if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:open-table" }, "*");
+        else {
+          const inp = document.createElement("input");
+          inp.type = "file";
+          inp.accept = ".xlsx,.csv,.txt";
+          inp.onchange = async () => {
+            const file = inp.files?.[0];
+            if (!file) return;
+            if (/\.xlsx$/i.test(file.name)) await this.importXFile(file.name, { bytes: new Uint8Array(await file.arrayBuffer()) });
+            else await this.importXFile(file.name, { text: await file.text() });
+          };
+          inp.click();
+        }
+        return;
+      }
       if (act === "addrow") {
         const nid = e.measurements.reduce((a, m) => Math.max(a, m.id), 0) + 1;
         e.measurements.push({ id: nid, name: "", value: 0 });
@@ -3911,10 +3942,27 @@ export class App {
   }
 
   /** X values from an Excel (.xlsx) or CSV file: merged into the table (see importXTable). */
+  /** Set by the library product editor: the next Excel / CSV file fills that product. */
+  private xImportTarget: { e: MEntry; done: () => void } | null = null;
+
   async importXFile(name: string, data: { text?: string; bytes?: Uint8Array; base64?: string }): Promise<void> {
     try {
       const bytes = data.bytes ?? (data.base64 ? fromBase64(data.base64) : undefined);
       const rows = bytes ? await readXlsx(bytes) : readCsv(data.text ?? "");
+      // the library product editor asked for this file: the table goes into that product only
+      const target = this.xImportTarget;
+      this.xImportTarget = null;
+      if (target) {
+        const tmp = emptyModel();
+        tmp.measurements = target.e.measurements;
+        tmp.sizes = target.e.sizes ?? [];
+        tmp.size = target.e.size;
+        const r = importXTable(tmp, rows);
+        target.e.measurements = tmp.measurements;
+        target.e.sizes = tmp.sizes;
+        target.done();
+        return this.toast(`استُورد إلى منتج المكتبة: ${r.added} قياس جديد، ${r.updated} محدَّث${r.sizes.length ? `، المقاسات: ${r.sizes.join("، ")}` : ""} (احفظ في المكتبة)`);
+      }
       const r = importXTable(this.model, rows); // tables are not in the drawing history
       this.changed();
       this.toast(`استُورد من ${name}: ${r.added} قياس جديد، ${r.updated} محدَّث${r.sizes.length ? `، المقاسات: ${r.sizes.join("، ")}` : ""}`);
