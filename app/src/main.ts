@@ -186,6 +186,7 @@ if (embedded && window.parent !== window) {
       case "l7:marker": if (typeof d.text === "string") app.isoFromMarker(String(d.name ?? ""), d.text); break;
       case "l7:table": void app.importXFile(String(d.name ?? ""), { text: typeof d.text === "string" ? d.text : undefined, base64: (d as unknown as { base64?: unknown }).base64 as string | undefined }); break;
       case "l7:new": app.newDesign(); break;
+      case "l7:saved": app.markSaved(); break;
       case "l7:open": if (typeof d.text === "string") app.openText(d.text, d.name ?? "", d.grafis === true); break;
       case "l7:action": if (d.action) run(d.action); break;
     }

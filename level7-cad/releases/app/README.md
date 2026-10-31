@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.143
+
+LEVEL7 design safety: unsaved work survives a restart or crash (autosave + an "unsaved" mark) and "New" / "Open" offer it back or ask to save it before replacing it; a design counts as saved only when the program confirms the file was written; undo copies keep each background picture once (a 3 MB scan no longer multiplies by 200); autosave falls back to keeping the design without picture data when storage is full, and says so; deleting an X that formulas use asks first; saving always includes the current part. A fixed 0.9.143 design file is now part of the tests so later versions keep opening today's files.
+
 LEVEL7 and MTM 0.9.142
 
 The cutter-file window after nesting (command bar "ISO/PLT") also saves the nested marker as HPGL .plt: pen 1 the cut lines in the same order as the ISO file (cut-outs, notches, outline last), pen 2 sewing / grain / internal lines and a cross on each drill hole (optional), 40 units per mm, same origin as the ISO file.

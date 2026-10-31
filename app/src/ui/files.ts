@@ -5,12 +5,57 @@ import type { GObj, Measurement, Model, Variable } from "../core/model";
 
 const AUTOSAVE_KEY = "level7.cad.model";
 
-export function autosave(m: Model): void {
+const DIRTY_KEY = "level7.cad.unsaved";
+const BIG = 20000; // data URLs (pictures) longer than this are kept out of copies
+
+/** Autosave after every change. When the browser storage is full (large background pictures),
+ * the design is kept without the picture data. Returns what was kept. */
+export function autosave(m: Model): "ok" | "noimages" | "fail" {
   try {
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(m));
+    return "ok";
   } catch {
-    /* storage may be unavailable (private mode); the file save still works */
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(m, (_k, v) => (typeof v === "string" && v.length > BIG && v.startsWith("data:") ? "" : v)));
+      return "noimages";
+    } catch {
+      return "fail";
+    }
   }
+}
+
+/** Whether the autosaved design has changes that were not saved to a file (kept across restarts). */
+export function setUnsaved(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(DIRTY_KEY, "1");
+    else localStorage.removeItem(DIRTY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+export function hasUnsaved(): boolean {
+  try {
+    return localStorage.getItem(DIRTY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Undo copies without repeating picture data: each picture is stored once in `blobs`. */
+export function packModel(m: Model, blobs: Map<string, string>, keys: Map<string, string>): string {
+  return JSON.stringify(m, (_k, v) => {
+    if (typeof v !== "string" || v.length <= BIG || !v.startsWith("data:")) return v;
+    let key = keys.get(v);
+    if (!key) {
+      key = `\u0000blob:${blobs.size}`;
+      blobs.set(key, v);
+      keys.set(v, key);
+    }
+    return key;
+  });
+}
+export function unpackModel(raw: string, blobs: Map<string, string>): Model {
+  return checkModel(JSON.parse(raw, (_k, v) => (typeof v === "string" && v.startsWith("\u0000blob:") ? blobs.get(v) ?? "" : v)) as Model);
 }
 
 export function restore(): Model | null {
@@ -23,7 +68,9 @@ export function restore(): Model | null {
 }
 
 export function parseModel(raw: string): Model {
-  const m = JSON.parse(raw) as Model;
+  return checkModel(JSON.parse(raw) as Model);
+}
+function checkModel(m: Model): Model {
   if (m.version !== 1 || !Array.isArray(m.steps) || !Array.isArray(m.measurements)) {
     throw new Error("الملف ليس باترون LEVEL7");
   }

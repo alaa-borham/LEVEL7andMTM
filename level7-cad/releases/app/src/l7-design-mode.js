@@ -257,7 +257,7 @@ export function installDesignMode() {
     if (!desktop?.saveFile) { status('الحفظ متاح في نسخة سطح المكتب فقط.'); return; }
     try {
       const r = await desktop.saveFile({ text, filename: name, kind });
-      if (r?.saved) status('تم الحفظ: ' + r.name);
+      if (r?.saved) { status('تم الحفظ: ' + r.name); if (kind === 'design') send({ type: 'l7:saved', name: r.name }); }
     } catch (e) { status('تعذر الحفظ: ' + e.message); }
   };
 

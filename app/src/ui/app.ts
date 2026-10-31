@@ -28,7 +28,7 @@ import {
 import { thobeSample } from "../core/sample";
 import type { NotchType, Piece } from "../core/piece";
 import { describe, describeMeasure } from "./describe";
-import { autosave, download, downloadBytes, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
+import { autosave, download, downloadBytes, fromGrafis, hasUnsaved, packModel, parseModel, restore, safeFileName, setUnsaved, toDxf, unpackModel } from "./files";
 import { applyFields, pickedId, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -67,6 +67,13 @@ export class App {
   res!: EvalResult;
   private undoStack: string[] = [];
   private redoStack: string[] = [];
+  /** Picture data shared by all undo copies (stored once). */
+  private blobs = new Map<string, string>();
+  private blobKeys = new Map<string, string>();
+  private pack = () => packModel(this.model, this.blobs, this.blobKeys);
+  /** Changes not saved to a file; kept across restarts with the autosave. */
+  private unsaved = hasUnsaved();
+  private autosaveWarned = "";
 
   // view: world point at the canvas centre and pixels per mm
   private cx = 0;
@@ -89,7 +96,9 @@ export class App {
   private svg = $<SVGSVGElement & HTMLElement>("#canvas");
 
   constructor() {
-    this.model = restore() ?? emptyModel();
+    const restored = restore();
+    this.model = restored ?? emptyModel();
+    this.fromRestore = !!restored && this.unsaved;
     this.evaluate();
     this.buildTools();
     this.bindTopbar();
@@ -595,14 +604,20 @@ export class App {
   private snapshot(): void {
     const ap = this.model.parts?.[this.model.activePart ?? 0];
     if (ap) ap.edited = new Date().toISOString();
-    this.undoStack.push(JSON.stringify(this.model));
+    this.undoStack.push(this.pack());
     if (this.undoStack.length > 200) this.undoStack.shift();
     this.redoStack = [];
   }
 
   private changed(panels = true): void {
     this.evaluate();
-    autosave(this.model);
+    this.syncPart();
+    const kept = autosave(this.model);
+    if (kept !== "ok" && this.autosaveWarned !== kept) {
+      this.autosaveWarned = kept;
+      this.toast(kept === "noimages" ? "الحفظ التلقائي يعمل بدون الصور الخلفية (حجمها كبير): احفظ الملف Ctrl+S للاحتفاظ بها" : "تعذر الحفظ التلقائي: احفظ الملف Ctrl+S");
+    }
+    if (!this.unsaved) setUnsaved((this.unsaved = true));
     if (panels) this.renderPanels();
     else this.refreshValues();
     this.refreshForm?.();
@@ -612,10 +627,12 @@ export class App {
 
   /** Embedded mode: the host program hands over a file it opened. */
   openText(text: string, name: string, grafis = false): void {
+    if (!this.keepOrSave()) return;
     try {
       if (grafis) this.importGrafis(text);
       else {
         this.load(parseModel(text));
+        setUnsaved((this.unsaved = false));
         this.toast(`تم فتح ${name}`);
       }
     } catch (e) {
@@ -625,10 +642,30 @@ export class App {
 
   /** Embedded mode: start an empty design without asking. */
   newDesign(): void {
+    if (!this.keepOrSave()) return;
     this.load(emptyModel());
+    setUnsaved((this.unsaved = false));
   }
 
+  /** Before another design replaces this one: unsaved work (also from before a restart or a
+   * crash) is offered back, or saved to a file. False = keep the current design open. */
+  private keepOrSave(): boolean {
+    const ps = this.model.parts ?? [];
+    const empty = !this.model.steps.length && ps.every((p) => !p.steps.length) && !this.model.measurements.length;
+    if (!this.unsaved || empty) return true;
+    if (this.fromRestore) {
+      this.fromRestore = false;
+      // the first request after the program started: the design on screen is the one restored from the autosave
+      if (confirm(`التصميم «${this.model.name}» فيه تعديلات لم تُحفظ في ملف (من آخر مرة).\n\nموافق = استرجاعه ومتابعة العمل عليه\nإلغاء = خيارات أخرى`)) return false;
+    }
+    if (confirm(`حفظ التصميم «${this.model.name}» في ملف قبل استبداله؟\n\nموافق = حفظ ثم متابعة\nإلغاء = متابعة بدون حفظ (يمكن التراجع Ctrl+Z)`)) this.save();
+    return true;
+  }
+  /** The design on screen is the autosave restored at start, with unsaved changes. */
+  private fromRestore = false;
+
   private load(m: Model): void {
+    this.fromRestore = false;
     this.snapshot();
     this.model = m;
     this.cancelTool();
@@ -640,8 +677,8 @@ export class App {
   private undo(): void {
     const prev = this.undoStack.pop();
     if (!prev) return;
-    this.redoStack.push(JSON.stringify(this.model));
-    this.model = parseModel(prev);
+    this.redoStack.push(this.pack());
+    this.model = unpackModel(prev, this.blobs);
     this.cancelTool();
     this.changed();
   }
@@ -649,8 +686,8 @@ export class App {
   private redo(): void {
     const next = this.redoStack.pop();
     if (!next) return;
-    this.undoStack.push(JSON.stringify(this.model));
-    this.model = parseModel(next);
+    this.undoStack.push(this.pack());
+    this.model = unpackModel(next, this.blobs);
     this.cancelTool();
     this.changed();
   }
@@ -1841,7 +1878,7 @@ export class App {
       if (p?.kind === "point" && last?.op === "point" && last.id === p.ref.obj && this.autoPoint === p.ref.obj) {
         const prev = this.undoStack.pop();
         if (prev) {
-          this.model = parseModel(prev);
+          this.model = unpackModel(prev, this.blobs);
           this.changed();
         }
         this.autoPoint = null;
@@ -2436,7 +2473,15 @@ export class App {
     );
   }
 
+  /** The program confirmed that the design file was written (the save dialog was not cancelled). */
+  markSaved(): void {
+    setUnsaved((this.unsaved = false));
+  }
+
   private save(): void {
+    this.syncPart();
+    // inside LEVEL7 and MTM the file is written by the program, which confirms with l7:saved
+    if (!(document.body.classList.contains("embedded") && window.parent !== window)) this.markSaved();
     download(`${safeFileName(this.model.name)}.level7.json`, JSON.stringify(this.model, null, 1), "application/json");
   }
 
@@ -3429,6 +3474,11 @@ export class App {
       const a = (e.target as HTMLElement).closest<HTMLElement>("[data-xa]")?.dataset.xa;
       if (a === "del" && this.xSel >= 0 && this.model.measurements[this.xSel]) {
         const m = this.model.measurements[this.xSel];
+        // formulas that use this X (all parts, Z values) would show errors after the delete
+        const re = new RegExp(`\\bX0*${m.id}\\b`, "i");
+        this.syncPart();
+        const uses = [...(this.model.parts ?? [{ steps: this.model.steps }]).flatMap((p) => p.steps), ...this.model.variables].filter((o) => re.test(JSON.stringify(o))).length;
+        if (uses && !confirm(`X${m.id} «${m.name}» مستخدمة في ${uses} خطوة / معادلة وستظهر فيها أخطاء. حذف؟`)) return;
         this.snapshot();
         this.model.measurements.splice(this.xSel, 1);
         this.xSel = Math.min(this.xSel, this.model.measurements.length - 1);
@@ -3481,7 +3531,7 @@ export class App {
     try {
       const bytes = data.bytes ?? (data.base64 ? fromBase64(data.base64) : undefined);
       const rows = bytes ? await readXlsx(bytes) : readCsv(data.text ?? "");
-      const before = JSON.stringify(this.model);
+      const before = this.pack();
       const r = importXTable(this.model, rows);
       this.undoStack.push(before);
       this.redoStack = [];
