@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.119
+
+LEVEL7 design mode: a command bar in the style of the program's toolbox, docked above the drawing, with the same shortcuts (Save Ctrl+S, fit F6, steps F5, X Ctrl+X, Z F11, sizes Ctrl+G, pieces, zoom −/+, Undo Ctrl+Z, Redo Ctrl+Y, New Ctrl+N, Open Ctrl+O, AAMA Ctrl+E, DXF, PLT); shortcuts also work while the drawing has focus. The engine's own page tabs are hidden (the bar switches pages). Drawing tools work on a blank page: a click in empty space where a point is expected creates a free point there. No grid squares on the drawing.
+
 LEVEL7 and MTM 0.9.118
 
 LEVEL7 design mode: File > "تصميم LEVEL7 جديد" / "فتح تصميم LEVEL7…" opens the LEVEL7 parametric design engine (assets/l7design) over the work area. Its tools (points, lines, parallel, length, trim/extend, mirror, curves, pieces, notches, measuring) are driven by a palette drawn with the program's own icons; new designs are saved as LEVEL7 design files (.level7.json) and exported to DXF, DXF-AAMA (+RUL) and PLT through the program's save dialog. MDL files keep their existing path and are not converted.

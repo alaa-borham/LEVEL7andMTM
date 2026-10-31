@@ -21,13 +21,32 @@ try{
  await f.waitForFunction(()=>window.level7.model.steps.length===3);
  const steps=await f.evaluate(()=>window.level7.model.steps.map(s=>s.op));assert.deepEqual(steps,['point','point','line'],JSON.stringify(steps));pass('host line icon joins the two points');
  await page.locator('[data-l7d-tool="parallel"]').click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="parallel"]').getAttribute('aria-pressed')==='true');await page.keyboard.press('Escape');await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="parallel"]').getAttribute('aria-pressed')==='false');pass('tool state follows the engine; Esc cancels');
+ // Command bar with the toolbox shortcuts (0.9.119).
+ const tab=()=>f.evaluate(()=>document.querySelector('.tabs .active')?.dataset.tab);
+ assert(await page.locator('.l7-design-bar .palette-command').count()>=16);
+ await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='x');
+ await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('F11');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='z');
+ await page.keyboard.press('F5');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='steps');
+ const sc0=await f.evaluate(()=>window.level7.scale);await page.keyboard.press('+');await f.waitForFunction(s=>window.level7.scale>s,sc0);
+ await page.locator('[data-l7d-command="zoomOut"]').click();await f.waitForFunction(s=>Math.abs(window.level7.scale-s)<1e-9,sc0);
+ await page.keyboard.press('Control+z');await f.waitForFunction(()=>window.level7.model.steps.length===2);await page.keyboard.press('Control+y');await f.waitForFunction(()=>window.level7.model.steps.length===3);
+ pass('command bar and shortcuts (X, F11, F5, +/−, Ctrl+Z/Y) drive the engine, also with focus in the drawing');
  // Save through the host dialog.
  const file=path.join(tmp,'design.level7.json');await app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
- await page.locator('[data-l7d-command="save"]').click();await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
+ await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('Control+s');await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
  const saved=JSON.parse(await fs.readFile(file,'utf8'));assert.equal(saved.steps.length,3);pass('save writes a LEVEL7 design file, not MDL');
  await f.evaluate(()=>window.level7.newDesign());assert.equal(await f.evaluate(()=>window.level7.model.steps.length),0);
  await page.locator('[data-l7d-command="open"]').click();await page.waitForFunction(()=>/تم فتح/.test(document.querySelector('.l7-design-status').textContent));
  await f.waitForFunction(()=>window.level7.model.steps.length===3);pass('open reads the design back through the host dialog');
+ // 0.9.119: on a blank page a line tool starts from a click in empty space (a free point is created).
+ await page.locator('[data-l7d-command="new"]').click();await f.waitForFunction(()=>window.level7.model.steps.length===0);
+ await page.locator('[data-l7d-tool="lineAngle"]').click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="lineAngle"]').getAttribute('aria-pressed')==='true');
+ const cb=await frame.locator('#canvas').boundingBox();await page.mouse.click(cb.x+cb.width*0.4,cb.y+cb.height*0.4);await frame.locator('#tool-box [data-ok]').click();
+ await f.waitForFunction(()=>window.level7.model.steps.map(s=>s.op).join()==='point,lineAngle');pass('line by angle and length works on a blank page');
+ await page.locator('[data-l7d-tool="line"]').click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="line"]').getAttribute('aria-pressed')==='true');
+ await page.mouse.click(cb.x+cb.width*0.3,cb.y+cb.height*0.7);await page.mouse.click(cb.x+cb.width*0.6,cb.y+cb.height*0.75);
+ await f.waitForFunction(()=>window.level7.model.steps.map(s=>s.op).join()==='point,lineAngle,point,point,line');pass('line between two clicks in empty space');
+ assert.equal(await f.evaluate(()=>document.querySelectorAll('#canvas line[stroke^="var(--grid"]').length),0);assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel .tabs')).display==='none'));pass('no grid squares; page tabs only in the command bar');
  await page.locator('[data-l7d="close"]').click();assert(await page.locator('#l7-design').isHidden());await page.waitForSelector('#canvas-empty');pass('closing returns to the MDL workspace');
  assert.deepEqual(errors,[]);pass('no page errors');
 }catch(e){failed=1;console.error(e);}

@@ -532,3 +532,5 @@ body.dark{--bg:#14181e;--surface:#1c222b;--border:#2e3742;--text:#e4e9f0;--muted
 body.dark{color:var(--text)}
 body.dark input,body.dark select,body.dark #canvas{background:#10141a}
 body.dark .size-table th.customer{background:#3a2f17}
+/* 0.9.119: the program's command bar switches the pages (F5, Ctrl+X, F11, Ctrl+G, Pieces). */
+body.embedded .panel .tabs{display:none}

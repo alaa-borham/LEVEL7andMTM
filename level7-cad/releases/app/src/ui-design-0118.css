@@ -45,3 +45,21 @@ body.ui-dark .l7-design svg .l7-fill-fabric{fill:rgba(245,184,61,.16)}body.ui-da
 .n38-invalid{outline:2px solid #e5484d!important;outline-offset:-1px}
 .l7-design.l7d-compact .l7-design-tool span{display:none}
 @media (max-height:760px){.l7-design-palette{gap:6px;padding:6px}.l7-design-cmd{height:38px}.l7-design-cmd span{display:none}.l7-design-cmd svg{width:24px;height:24px}}
+/* 0.9.119: command bar with the program's toolbox look and shortcuts, docked above the drawing. */
+.l7-design-stage{flex-direction:column}
+.l7-design-bar{flex:none;direction:ltr;justify-content:flex-start;border-bottom:1px solid #c3cdd4;background:#eef2f5}
+.l7-design-bar .palette-command{width:auto;min-width:40px;padding:2px 5px}
+.l7-design-bar .palette-letter{font-size:17px;line-height:22px}
+.l7-design-bar [data-l7d-command="aama"] .palette-letter,.l7-design-bar [data-l7d-command="dxf"] .palette-letter,.l7-design-bar [data-l7d-command="plt"] .palette-letter{font-size:12px}
+.l7-design-bar [data-l7d-command="save"] svg{color:#3c854a;stroke:#3c854a}
+.l7-design-bar [data-l7d-command="tab-x"] .palette-letter,.l7-design-bar [data-l7d-command="tab-z"] .palette-letter{color:#3e7447}
+.l7-design-bar .redo-command svg{transform:scaleX(-1)}
+body.ui-dark .l7-design-bar{background:#161b22;border-color:#2b333d}
+body.ui-dark .l7-design-bar [data-l7d-command="save"] svg{stroke:#5ccf73;color:#5ccf73}
+body.ui-dark .l7-design-bar [data-l7d-command="tab-x"] .palette-letter,body.ui-dark .l7-design-bar [data-l7d-command="tab-z"] .palette-letter{color:#6fd39a}
+.l7-design-stage iframe{min-height:0}
+.l7-design-bar .palette-command svg{color:#176a91}
+body.ui-dark .l7-design-bar .palette-command svg{color:#7cc4ef;stroke:#7cc4ef}
+body.ui-dark .l7-design-bar .palette-command small{color:#aab6c4}
+.l7-design-bar .palette-command[aria-pressed="true"]{background:#d7e9f4;box-shadow:inset 0 -2px #1b7fc0}
+body.ui-dark .l7-design-bar .palette-command[aria-pressed="true"]{background:#1f3d5c;box-shadow:inset 0 -2px #3d9bff}

@@ -5,6 +5,7 @@ import { closestOnPolyline, dist, type Pt } from "../core/geometry";
 import {
   createdIds,
   emptyModel,
+  newId,
   fillGrading,
   sizeName,
   withSize,
@@ -47,6 +48,7 @@ export class App {
   private cx = 0;
   private cy = 0;
   private scale = 1;
+  showGrid = false;
 
   private tool: Tool | null = null;
   private picks: Pick[] = [];
@@ -185,6 +187,12 @@ export class App {
   }
 
   // ------------------------------------------------------------ rendering
+  /** Embedded mode: zoom about the centre of the drawing area (host +/- commands). */
+  zoomBy(f: number): void {
+    this.scale = Math.min(200, Math.max(0.02, this.scale * f));
+    this.render();
+  }
+
   render(): void {
     const r = this.svg.getBoundingClientRect();
     const parts: string[] = [this.gridSvg(r.width, r.height)];
@@ -281,6 +289,11 @@ export class App {
     const [x1, y0] = this.toWorld(w, h);
     const out: string[] = [];
     const major = step * 10;
+    // 0.9.119: no grid squares on the drawing (user request); only the origin cross.
+    if (!this.showGrid) {
+      const [ox, oy] = this.toScreen([0, 0]);
+      return `<line x1="${ox - 8}" y1="${oy}" x2="${ox + 8}" y2="${oy}" stroke="#9aa3ad"/><line x1="${ox}" y1="${oy - 8}" x2="${ox}" y2="${oy + 8}" stroke="#9aa3ad"/>`;
+    }
     for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
       const sx = this.toScreen([x, 0])[0].toFixed(1);
       const c = Math.abs(x % major) < 1e-9 ? "var(--grid-major)" : "var(--grid)";
@@ -405,6 +418,17 @@ export class App {
       text += " — Esc للإلغاء";
     }
     $("#prompt").textContent = text;
+  }
+
+  /** A click on empty space where a point is expected creates a free point there
+   * (as in GRAFIS), so lines can be drawn on a blank page. */
+  private freePointAt(at: Pt): Pick {
+    const x = Math.round(at[0] * 10) / 10, y = Math.round(at[1] * 10) / 10;
+    this.snapshot();
+    const id = newId(this.model, "point");
+    this.model.steps.push({ op: "point", id, x: String(x), y: String(y) } as Step);
+    this.changed();
+    return { kind: "point", ref: { obj: id }, at: [x, y] };
   }
 
   private onPick(p: Pick): void {
@@ -601,6 +625,7 @@ export class App {
       const r = svg.getBoundingClientRect();
       const h = this.hit(kind, e.clientX - r.left, e.clientY - r.top);
       if (h) this.onPick(h);
+      else if (kind === "point" && this.tool && !this.collecting) this.onPick(this.freePointAt(this.toWorld(e.clientX - r.left, e.clientY - r.top)));
       else if (kind !== "canvas") this.toast(kind === "line" ? "انقر على خط" : "انقر على نقطة أو طرف خط");
     });
     window.addEventListener("mouseup", () => {
