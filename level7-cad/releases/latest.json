@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.130",
- "notes": "مقابض الكيرف مثل GRAFIS؛ أبعاد القياس؛ بدون حروف P على الرسم؛ كليك يمين يغلق القائمة",
+ "version": "0.9.131",
+ "notes": "X وZ معاً؛ معادلات مثل إكسل؛ سهم رجوع وإعادة؛ مرونة الكيرف",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b3cb324e9b0c3ce79ea5581f91630ecf50ffebff2d92050b78b70ec28596d1af",
-   "size": 125310
+   "sha256": "d7f2a999d490822f7b2963a87a392920638d4bc3e9d0eb302df60ee1365b3a69",
+   "size": 126154
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DAQlhHT9.css",
-   "sha256": "67dc6106adfee0bd9a0b14e98123337ddbe26cc90440689a993e71b41da8eba8",
-   "size": 16828
+   "path": "assets/l7design/assets/index-D82yZYDU.js",
+   "sha256": "03a8e4ac425543cd5f4134a7c42a19817527b6de4e93acb52203574202687ff3",
+   "size": 133174
   },
   {
-   "path": "assets/l7design/assets/index-DxB435XA.js",
-   "sha256": "9ce4c8a0759f12317cc59af70d469c3eefb50312cf19955b8ff4f097fa6ddb1e",
-   "size": 123330
+   "path": "assets/l7design/assets/index-DEQScaYU.css",
+   "sha256": "20a9e2d8e9fdc8b1fb2aca980ed6611fd77dae3471d31a070defe0f6d4990c25",
+   "size": 18965
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "138e91789b1bb43ddee11f0515d4ad0df1287c06a4cda592c07b913796bdfe82",
+   "sha256": "1e3c4c3449a16c799c2ce5d718d5be9df169d55793f92a254aaa6f69f650c1f7",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "647002978ada7b537fce8b6fcd44f6b3bbf9a04b21bb9cc2bc64efbe1d3f68ad",
+   "sha256": "cfb184f2a2b3f2283f2c477838b52dcdeee3c949ad519d01244c1324c490de1a",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "742618fd70bb1d038eb3da8bae15bfcc98f0dd184c8a4e84b7c256cba7e0c363",
-   "size": 21153
+   "sha256": "67bfbc1059ad3d1da2bd358a74b09c003d7994c2ed239678d8db2f48e7075be5",
+   "size": 21250
   },
   {
    "path": "src/line-transform-ui.js",

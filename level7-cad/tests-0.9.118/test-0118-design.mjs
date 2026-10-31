@@ -12,7 +12,8 @@ try{
  await page.waitForSelector('#l7-design:not([hidden]) .l7-design-cat');
  const n=await page.locator('[data-l7d-tool] svg').count();assert(n>=19,'tools '+n);const cats=await page.locator('[data-l7d-cat]').evaluateAll(b=>b.map(x=>x.dataset.l7dCat));assert(cats.includes('الزوايا')&&cats.includes('التصدير والحفظ'),cats.join());assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),0);await page.locator('.l7-design-cat').first().click({button:'right'});assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),1);await page.locator('.l7-design-cat').nth(1).click({button:'right'});assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),1);await page.keyboard.press('Escape');assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),0);pass(n+' engine tools in '+(await page.locator('.l7-design-cat').count())+' strip icons; each opens one flyout menu');
  // 0.9.128: left click starts the group's last (or first) tool at once, no menu
- await page.locator('[data-l7d-cat="الخطوط"]').click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="line"]').getAttribute('aria-pressed')==='true');
+ const remembered=await page.evaluate(()=>{try{return JSON.parse(localStorage.getItem('level7.design.lastTools')||'{}')['الخطوط']||'line'}catch{return 'line'}});
+ await page.locator('[data-l7d-cat="الخطوط"]').click();await page.waitForFunction(k=>document.querySelector(`[data-l7d-tool="${k}"]`).getAttribute('aria-pressed')==='true',remembered);await page.keyboard.press('Escape');
  assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),0);
  await page.locator('[data-l7d-cat="الخطوط"]').click({button:'right'});await page.locator('[data-l7d-tool="parallel"]').click();await page.waitForFunction(()=>document.querySelector('[data-l7d-tool="parallel"]').getAttribute('aria-pressed')==='true');
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.querySelector('[data-l7d-tool][aria-pressed="true"]'));
@@ -35,13 +36,13 @@ try{
  assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel')).display==='none'));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>document.querySelector('.panel').classList.contains('open'));
  await page.waitForFunction(()=>document.querySelector('[data-l7d-command="tab-steps"]').getAttribute('aria-pressed')==='true');
- const hb=await frame.locator('.float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
- const hb2=await frame.locator('.float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
+ const hb=await frame.locator('.panel:not(.zwin) .float-head').boundingBox();await page.mouse.move(hb.x+60,hb.y+15);await page.mouse.down();await page.mouse.move(hb.x+260,hb.y+135,{steps:6});await page.mouse.up();
+ const hb2=await frame.locator('.panel:not(.zwin) .float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  pass('steps / X / Z window: hidden until pressed, dragged anywhere, pressing again closes it');
  // 0.9.125 Record: table + preview of the pattern up to the selected step
  await page.locator('[data-l7d-command="tab-steps"]').click();await frame.locator('.record tbody tr').first().waitFor();
- assert.equal(await frame.locator('.float-title').textContent(),'Record · سجل الإنشاء');
+ assert.equal(await frame.locator('.panel:not(.zwin) .float-title').textContent(),'Record · سجل الإنشاء');
  await frame.locator('.record tbody tr').nth(1).click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='1'&&document.querySelectorAll('.rec-preview .rec-now').length>0);
  await frame.locator('[data-rec="next"]').click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='2');
  assert.equal(await frame.locator('.rec-at').textContent(),'3 / 3');
@@ -49,7 +50,8 @@ try{
  pass('Record window: steps table (RS, Name), preview up to the selected step, ▶ next step');
  assert(await page.locator('.l7-design-bar .palette-command').count()>=16);
  await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='x');
- await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('F11');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='z');
+ await frame.locator('#canvas').click({position:{x:1000,y:620},button:'middle'});await page.keyboard.press('F11');await f.waitForFunction(()=>document.querySelector('.zwin').classList.contains('open'));
+ await page.keyboard.press('F11');await f.waitForFunction(()=>!document.querySelector('.zwin').classList.contains('open'));
  await page.keyboard.press('F5');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='steps');
  const sc0=await f.evaluate(()=>window.level7.scale);await page.keyboard.press('+');await f.waitForFunction(s=>window.level7.scale>s,sc0);
  await page.locator('[data-l7d-command="zoomOut"]').click();await f.waitForFunction(s=>Math.abs(window.level7.scale-s)<1e-9,sc0);
@@ -58,7 +60,7 @@ try{
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  // Save through the host dialog.
  const file=path.join(tmp,'design.level7.json');await app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
- await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('Control+s');await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
+ await frame.locator('#canvas').click({position:{x:1000,y:620},button:'middle'});await page.keyboard.press('Control+s');await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
  const saved=JSON.parse(await fs.readFile(file,'utf8'));assert.equal(saved.steps.length,3);pass('save writes a LEVEL7 design file, not MDL');
  await f.evaluate(()=>window.level7.newDesign());assert.equal(await f.evaluate(()=>window.level7.model.steps.length),0);
  await page.locator('[data-l7d-command="open"]').click();await page.waitForFunction(()=>/تم فتح/.test(document.querySelector('.l7-design-status').textContent));

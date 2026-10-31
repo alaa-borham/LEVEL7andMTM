@@ -34,6 +34,17 @@ try{
  await page.screenshot({path:'shot-0130.png'});
  pass('curve: two end handles; dragging the start handle sets the start direction (0°)');
  const hh2=await f.evaluate(()=>window.level7.curveHandles()[0].hs);await page.mouse.dblclick(box.x+hh2[0],box.y+hh2[1]);await f.waitForFunction(()=>window.level7.model.steps.at(-1).startAngle==='');pass('double-click on the handle frees the direction again');
+ // 0.9.131: handle distance sets the strength; the middle point of the curve can be dragged
+ {const h0=await f.evaluate(()=>window.level7.curveHandles()[1]);const [ex,ey]=h0.es;const ux=(h0.hs[0]-ex)/Math.hypot(h0.hs[0]-ex,h0.hs[1]-ey),uy=(h0.hs[1]-ey)/Math.hypot(h0.hs[0]-ex,h0.hs[1]-ey);
+  const len0=await f.evaluate(()=>{const s=window.level7.model.steps.at(-1);const o=window.level7.res.objects.get(s.id);let L=0;for(let i=1;i<o.pts.length;i++)L+=Math.hypot(o.pts[i][0]-o.pts[i-1][0],o.pts[i][1]-o.pts[i-1][1]);return L;});
+  await page.mouse.move(box.x+h0.hs[0],box.y+h0.hs[1]);await page.mouse.down();await page.mouse.move(box.x+ex+ux*140,box.y+ey+uy*140,{steps:6});await page.mouse.up();
+  await f.waitForFunction(()=>Number(window.level7.model.steps.at(-1).endTension)>=180);
+  pass('curve: pulling the end handle further makes the curve stronger at that end (tension '+await f.evaluate(()=>window.level7.model.steps.at(-1).endTension)+'%)');
+  const pts=await f.evaluate(()=>window.level7.curvePoints());assert(pts.length>=1);const mid=pts.find(p=>p.step===5)||pts[1]||pts[0];
+  const before=await f.evaluate(k=>({...window.level7.model.steps[k]}),mid.step);
+  await page.mouse.move(box.x+mid.s[0],box.y+mid.s[1]);await page.mouse.down();await page.mouse.move(box.x+mid.s[0]+40,box.y+mid.s[1]-30,{steps:5});await page.mouse.up();
+  const after=await f.evaluate(k=>({...window.level7.model.steps[k]}),mid.step);assert(after.x!==before.x&&after.y!==before.y,JSON.stringify([before,after]));
+  pass('curve: dragging a point the curve passes through reshapes it ('+before.x+','+before.y+' → '+after.x+','+after.y+')');}
  // dimensions
  await tool('dimH');await page.mouse.click(...await at(200,0));await page.mouse.click(...await at(0,200));await fr.locator('#tool-box [data-ok]').waitFor();
  await page.mouse.move(...await at(100,30),{steps:4});await f.waitForFunction(()=>document.querySelector('#canvas g.dim.live text')?.textContent.includes('200'));

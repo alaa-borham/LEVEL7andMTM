@@ -153,7 +153,9 @@ const unit = (v: Pt): Pt => {
  * startDir / endDir: optional unit directions at the ends; otherwise the end
  * tangent follows the neighbouring span. Returned as a dense polyline.
  */
-export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null, perSpan = 24): Pt[] {
+/** startScale / endScale: strength of the tangent at the first / last point (1 = normal),
+ * as the handle length in GRAFIS. */
+export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null, perSpan = 24, startScale = 1, endScale = 1): Pt[] {
   const n = pts.length;
   if (n < 2) return [...pts];
   const tan: Pt[] = pts.map((p, i) => {
@@ -177,8 +179,9 @@ export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null,
     const p0 = pts[i];
     const p1 = pts[i + 1];
     const m = dist(p0, p1);
-    const t0 = tan[i];
-    const t1 = tan[i + 1];
+    const s0 = i === 0 ? startScale : 1, s1 = i === n - 2 ? endScale : 1;
+    const t0: Pt = [tan[i][0] * s0, tan[i][1] * s0];
+    const t1: Pt = [tan[i + 1][0] * s1, tan[i + 1][1] * s1];
     for (let k = 1; k <= perSpan; k++) {
       const s = k / perSpan;
       const h00 = 2 * s ** 3 - 3 * s ** 2 + 1;

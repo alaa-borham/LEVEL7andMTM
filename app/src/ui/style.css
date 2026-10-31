@@ -672,3 +672,33 @@ body.dark { --dim: #6fe0bd; }
 #canvas g.dim.live { stroke: var(--live); }
 #canvas g.dim text.dim-text { fill: var(--dim); stroke: none; font-size: 13px; font-weight: 600; paint-order: stroke; }
 #canvas g.dim.live text.dim-text { fill: var(--live); }
+/* 0.9.131: Z has its own window (may be open together with X) */
+body.embedded .zwin #tab-z { display: block !important; flex: 1; overflow: auto; padding: 8px; }
+.zwin { display: none; }
+
+/* 0.9.131 assistant: unlimited conditions, Excel formula */
+.za-cond { border-inline-start: 2px solid var(--border); margin: 4px 0 6px 22px; padding-inline-start: 4px; }
+.za-cond .za-row { margin-inline-start: 0; grid-template-columns: 70px 1fr auto; }
+.za-cond .za-row:first-child { grid-template-columns: 70px 1fr; }
+.za-del { width: 26px; height: 24px; padding: 0; color: var(--danger); }
+.za-add { margin: 2px 22px 6px 0; font-size: 12px; }
+.z-assistant textarea { width: calc(100% - 22px); margin-inline-start: 22px; font: 13px Consolas, monospace; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 6px; resize: vertical; }
+.za-help { display: block; margin: 3px 22px 0 0; color: var(--muted); font-size: 11px; }
+.za-body h5 small { color: var(--muted); font-weight: normal; }
+
+/* 0.9.131 back / forward arrows on the drawing (as Excel) */
+.hist-bar { position: absolute; top: 10px; left: 12px; z-index: 6; display: flex; align-items: center; gap: 1px; direction: ltr;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+.hist-bar button { height: 30px; min-width: 30px; padding: 0 6px; border: none; background: transparent; color: var(--text); display: inline-flex; align-items: center; gap: 4px; }
+.hist-bar button[hidden] { display: none; }
+.hist-bar button:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.hist-bar button:disabled { opacity: 0.35; }
+.hist-bar svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hist-bar [data-h="redo"] svg { stroke: var(--live); }
+.hist-bar b { font: 600 11px Consolas, monospace; color: var(--muted); }
+.hist-bar .hist-more { min-width: 18px; padding: 0 3px; font-size: 11px; color: var(--muted); }
+.hist-menu { position: absolute; top: 38px; min-width: 190px; max-height: 320px; overflow: auto; padding: 4px; display: flex; flex-direction: column; gap: 1px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4); direction: rtl; }
+.hist-menu[hidden] { display: none; }
+.hist-menu button { justify-content: space-between; height: 28px; width: 100%; padding: 0 10px; font-size: 12.5px; }
+.hist-menu button i { font-style: normal; color: var(--muted); font-size: 11px; }

@@ -55,60 +55,78 @@ if (embedded && window.parent !== window) {
   const click = (action: string) => (document.querySelector(`.actions [data-action="${action}"]`) as HTMLButtonElement | null)?.click();
   // The steps / X / Z / pieces / sizes page is a floating window: hidden until its
   // button is pressed, dragged by its title bar anywhere, resizable, remembered.
-  const panel = document.querySelector(".panel") as HTMLElement;
+  // Exception: Z has a window of its own, so X and Z can be open at the same time.
   const TITLES: Record<string, string> = { steps: "Record · سجل الإنشاء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج" };
-  const head = document.createElement("div");
-  head.className = "float-head";
-  head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
-  panel.prepend(head);
-  let openTab: string | null = null;
-  // each page keeps its own place and size; the Record opens wide by default
-  const DEFAULTS: Record<string, { width: string; height: string }> = { steps: { width: "780px", height: "430px" } };
-  const restore = (tab: string) => {
-    let g: Record<string, string> | null = null;
-    try {
-      g = JSON.parse(localStorage.getItem("level7.panel.geometry." + tab) || "null");
-    } catch {}
-    const d = DEFAULTS[tab] ?? { width: "430px", height: "62vh" };
-    Object.assign(panel.style, { left: g?.left ?? panel.style.left, top: g?.top ?? panel.style.top, width: g?.width ?? d.width, height: g?.height ?? d.height });
+  const DEFAULTS: Record<string, { width: string; height: string; left?: string; top?: string }> = {
+    steps: { width: "780px", height: "430px" },
+    z: { width: "560px", height: "56vh", left: "458px", top: "56px" }, // beside the X window
   };
-  const keep = () => {
-    if (!openTab) return;
-    try {
-      localStorage.setItem("level7.panel.geometry." + openTab, JSON.stringify({ left: panel.style.left, top: panel.style.top, width: panel.style.width || panel.offsetWidth + "px", height: panel.style.height || panel.offsetHeight + "px" }));
-    } catch {}
-  };
-  const togglePanel = (tab: string | null) => {
-    if (tab && openTab === tab) tab = null;
-    openTab = tab;
-    panel.classList.toggle("open", !!tab);
-    if (tab) {
-      restore(tab);
-      (document.querySelector(`.tabs [data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();
-      (head.firstElementChild as HTMLElement).textContent = TITLES[tab] ?? "";
-      const r = panel.getBoundingClientRect();
-      if (r.right > innerWidth || r.bottom > innerHeight || r.left < 0 || r.top < 0) Object.assign(panel.style, { left: "16px", top: "56px" });
-    }
-    post({ type: "l7:panel", tab });
-  };
-  (head.lastElementChild as HTMLElement).addEventListener("click", () => togglePanel(null));
-  head.addEventListener("pointerdown", (e) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    const r = panel.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
-    head.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => {
-      const x = Math.min(Math.max(0, ev.clientX - dx), innerWidth - 80), y = Math.min(Math.max(0, ev.clientY - dy), innerHeight - 40);
-      Object.assign(panel.style, { left: x + "px", top: y + "px" });
+  const panel = document.querySelector(".panel") as HTMLElement;
+  const zwin = document.createElement("aside");
+  zwin.className = "panel zwin";
+  zwin.append(document.querySelector("#tab-z") as HTMLElement);
+  panel.after(zwin);
+  const open: Record<"main" | "z", string | null> = { main: null, z: null };
+  const report = () => post({ type: "l7:panel", tab: open.main, tabs: [open.main, open.z].filter(Boolean) });
+  const makeWindow = (win: HTMLElement, slot: "main" | "z") => {
+    const head = document.createElement("div");
+    head.className = "float-head";
+    head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
+    win.prepend(head);
+    const restore = (tab: string) => {
+      let g: Record<string, string> | null = null;
+      try {
+        g = JSON.parse(localStorage.getItem("level7.panel.geometry." + tab) || "null");
+      } catch {}
+      const d = DEFAULTS[tab] ?? { width: "430px", height: "62vh" };
+      // empty saved values (from older versions) count as missing
+      Object.assign(win.style, { left: g?.left || d.left || win.style.left, top: g?.top || d.top || win.style.top, width: g?.width || d.width, height: g?.height || d.height });
     };
-    const up = () => {
-      head.removeEventListener("pointermove", move);
-      head.removeEventListener("pointerup", up);
-      keep();
+    const keep = () => {
+      const tab = open[slot];
+      if (!tab) return;
+      try {
+        localStorage.setItem("level7.panel.geometry." + tab, JSON.stringify({ left: win.style.left, top: win.style.top, width: win.style.width || win.offsetWidth + "px", height: win.style.height || win.offsetHeight + "px" }));
+      } catch {}
     };
-    head.addEventListener("pointermove", move);
-    head.addEventListener("pointerup", up);
-  });
-  new ResizeObserver(() => panel.classList.contains("open") && keep()).observe(panel);
+    const toggle = (tab: string | null) => {
+      if (tab && open[slot] === tab) tab = null;
+      open[slot] = tab;
+      win.classList.toggle("open", !!tab);
+      if (tab) {
+        restore(tab);
+        if (slot === "main") (document.querySelector(`.tabs [data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();
+        (head.firstElementChild as HTMLElement).textContent = TITLES[tab] ?? "";
+        const r = win.getBoundingClientRect();
+        if (r.right > innerWidth || r.bottom > innerHeight || r.left < 0 || r.top < 0) Object.assign(win.style, { left: "16px", top: "56px" });
+        win.style.zIndex = String(++zTop);
+      }
+      report();
+    };
+    (head.lastElementChild as HTMLElement).addEventListener("click", () => toggle(null));
+    win.addEventListener("pointerdown", () => (win.style.zIndex = String(++zTop)));
+    head.addEventListener("pointerdown", (e) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      const r = win.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      head.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => {
+        const x = Math.min(Math.max(0, ev.clientX - dx), innerWidth - 80), y = Math.min(Math.max(0, ev.clientY - dy), innerHeight - 40);
+        Object.assign(win.style, { left: x + "px", top: y + "px" });
+      };
+      const up = () => {
+        head.removeEventListener("pointermove", move);
+        head.removeEventListener("pointerup", up);
+        keep();
+      };
+      head.addEventListener("pointermove", move);
+      head.addEventListener("pointerup", up);
+    });
+    new ResizeObserver(() => win.classList.contains("open") && keep()).observe(win);
+    return toggle;
+  };
+  let zTop = 30;
+  const toggleMain = makeWindow(panel, "main"), toggleZ = makeWindow(zwin, "z");
+  const togglePanel = (tab: string | null) => (tab === "z" ? toggleZ(tab) : toggleMain(tab));
 
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);

@@ -1,5 +1,5 @@
 import { toGradedAama } from "../core/aama-graded";
-import { normalizeFormula } from "../core/formula";
+import { FUNCTION_NAMES, normalizeFormula, references } from "../core/formula";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
@@ -78,6 +78,7 @@ export class App {
     this.bindTabs();
     this.bindCanvas();
     this.buildPointPanel();
+    this.buildHistoryBar();
     this.bindKeys();
     this.renderPanels();
     requestAnimationFrame(() => this.fit());
@@ -116,6 +117,7 @@ export class App {
     if (panels) this.renderPanels();
     else this.refreshValues();
     this.refreshForm?.();
+    this.updateHistoryBar();
     this.render();
   }
 
@@ -339,12 +341,12 @@ export class App {
   // ---- curve end handles (as GRAFIS): drag the red circle to set the direction at that end
   private dragHandle: { i: number; end: "start" | "end"; flip: boolean } | null = null;
 
-  private curveHandles(): { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean }[] {
+  private curveHandles(): { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean; pct: number }[] {
     const i = this.selectedStep, s = this.model.steps[i];
     if (!s || s.op !== "curve" || this.form) return [];
     const o = this.res.objects.get(s.id);
     if (!o || o.pts.length < 2) return [];
-    const out: { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean }[] = [];
+    const out: { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean; pct: number }[] = [];
     const W = this.svg.clientWidth, H = this.svg.clientHeight;
     for (const end of ["start", "end"] as const) {
       const n = o.pts.length, at = end === "start" ? o.pts[0] : o.pts[n - 1], nb = end === "start" ? o.pts[1] : o.pts[n - 2];
@@ -354,17 +356,37 @@ export class App {
       const L = Math.hypot(dx, dy) || 1;
       dx /= L;
       dy /= L;
-      let k = end === "start" ? -70 : 70; // start handle behind the curve, end handle ahead of it
+      const tens = (end === "start" ? s.startTension : s.endTension)?.trim();
+      const pct = tens && Number.isFinite(Number(tens)) ? Number(tens) : 100;
+      const len = Math.max(18, 70 * (pct / 100)); // handle length shows the strength of the curve at that end
+      let k = end === "start" ? -len : len; // start handle behind the curve, end handle ahead of it
       // a handle that would fall outside the view goes to the other side of its end point
       const inside = (x: number, y: number) => x > 8 && y > 8 && x < W - 8 && y < H - 8;
       const flip = !inside(es[0] + dx * k, es[1] + dy * k) && inside(es[0] - dx * k, es[1] - dy * k);
       if (flip) k = -k;
       const given = (end === "start" ? s.startAngle : s.endAngle).trim();
       const deg = given && Number.isFinite(Number(given)) ? Number(given) : Math.round((Math.atan2(-dy, dx) * 180) / Math.PI);
-      out.push({ i, end, at, es, hs: [es[0] + dx * k, es[1] + dy * k], set: !!given, deg, flip });
+      out.push({ i, end, at, es, hs: [es[0] + dx * k, es[1] + dy * k], set: !!given, deg, flip, pct });
     }
     return out;
   }
+
+  /** Through-points of the selected curve that are free points (plain numbers): draggable. */
+  private curvePoints(): { step: number; s: Pt }[] {
+    const s = this.model.steps[this.selectedStep];
+    if (!s || s.op !== "curve" || this.form) return [];
+    const out: { step: number; s: Pt }[] = [];
+    for (const r of s.through) {
+      if (r.end) continue;
+      const k = this.model.steps.findIndex((t) => t.op === "point" && t.id === r.obj);
+      const t = this.model.steps[k] as Extract<Step, { op: "point" }> | undefined;
+      if (!t || !/^-?\d+(\.\d+)?$/.test(t.x.trim()) || !/^-?\d+(\.\d+)?$/.test(t.y.trim())) continue;
+      out.push({ step: k, s: this.toScreen(this.pointOf(r)) });
+    }
+    return out;
+  }
+
+  private dragPoint: number | null = null;
 
   private handleAt(sx: number, sy: number) {
     return this.curveHandles().find((h) => Math.hypot(h.hs[0] - sx, h.hs[1] - sy) <= 9) ?? null;
@@ -378,8 +400,10 @@ export class App {
       out.push(`<line x1="${h.es[0]}" y1="${h.es[1]}" x2="${h.hs[0]}" y2="${h.hs[1]}" stroke="var(--text)" stroke-dasharray="4 3" stroke-width="1.3"/>`);
       out.push(`<circle class="curve-handle" cx="${h.hs[0]}" cy="${h.hs[1]}" r="6.5" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="2.2" fill="#e53935"/>`);
       out.push(`<circle cx="${h.es[0]}" cy="${h.es[1]}" r="4" fill="var(--live)"/>`);
-      out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"}\u2069</text>`);
+      out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"} · ${h.pct}%\u2069</text>`);
     }
+    // the points the curve passes through: drag them to reshape the curve
+    for (const p of this.curvePoints()) out.push(`<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`);
     const s = this.model.steps[hs[0].i] as Extract<Step, { op: "curve" }>, o = this.res.objects.get(s.id) as GObj;
     const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
     out.push(`<text class="live-label" x="${mid[0] + 8}" y="${mid[1] + 18}" direction="ltr">\u2066${fmt(Math.round(polyLen(o.pts) * 10) / 10)} mm\u2069</text>`);
@@ -781,6 +805,69 @@ export class App {
   }
 
   private pointPanel: HTMLElement | null = null;
+
+  // ---- back / forward arrows on the drawing (as Excel): ↶ with a list to go back several
+  // steps; ↷ appears once something was undone
+  private histBar: HTMLElement | null = null;
+
+  private buildHistoryBar(): void {
+    const wrap = document.querySelector(".canvas-wrap") as HTMLElement;
+    const bar = document.createElement("div");
+    bar.className = "hist-bar";
+    bar.innerHTML = `<button data-h="undo" title="رجوع خطوة (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg><b></b></button><button data-h="undo-list" class="hist-more" title="الرجوع عدة خطوات">▾</button>
+      <button data-h="redo" title="إعادة خطوة (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 000 11H13"/></svg><b></b></button><button data-h="redo-list" class="hist-more" title="الإعادة عدة خطوات">▾</button>
+      <div class="hist-menu" hidden></div>`;
+    wrap.append(bar);
+    const menu = bar.querySelector(".hist-menu") as HTMLElement;
+    const many = (dir: "undo" | "redo", k: number) => {
+      for (let n = 0; n < k; n++) dir === "undo" ? this.undo() : this.redo();
+      menu.hidden = true;
+    };
+    bar.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-h], [data-hk]");
+      if (!b) return;
+      if (b.dataset.hk) return many(b.dataset.hdir as "undo" | "redo", Number(b.dataset.hk));
+      const h = b.dataset.h;
+      if (h === "undo") this.undo();
+      else if (h === "redo") this.redo();
+      else {
+        const dir = h === "undo-list" ? "undo" : "redo";
+        const stack = dir === "undo" ? this.undoStack : this.redoStack;
+        if (!menu.hidden && menu.dataset.dir === dir) return void (menu.hidden = true);
+        const n = Math.min(stack.length, 20);
+        const items: string[] = [];
+        for (let k = 1; k <= n; k++) {
+          let steps = "";
+          try {
+            steps = String((JSON.parse(stack[stack.length - k]) as Model).steps.length);
+          } catch {}
+          items.push(`<button data-hk="${k}" data-hdir="${dir}">${dir === "undo" ? "رجوع" : "إعادة"} ${k} ${k === 1 ? "خطوة" : "خطوات"}<i>${steps ? `${steps} خطوة بناء` : ""}</i></button>`);
+        }
+        menu.innerHTML = items.join("");
+        menu.dataset.dir = dir;
+        menu.style.left = b.offsetLeft - 30 + "px";
+        menu.hidden = false;
+      }
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!menu.hidden && !(e.target as HTMLElement).closest(".hist-bar")) menu.hidden = true;
+    });
+    this.histBar = bar;
+    this.updateHistoryBar();
+  }
+
+  private updateHistoryBar(): void {
+    const bar = this.histBar;
+    if (!bar) return;
+    const u = this.undoStack.length, r = this.redoStack.length;
+    (bar.querySelector('[data-h="undo"]') as HTMLButtonElement).disabled = !u;
+    (bar.querySelector('[data-h="undo-list"]') as HTMLButtonElement).disabled = u < 2;
+    (bar.querySelector('[data-h="undo"] b') as HTMLElement).textContent = u ? String(u) : "";
+    // the forward arrow only appears after going back
+    for (const sel of ['[data-h="redo"]', '[data-h="redo-list"]']) (bar.querySelector(sel) as HTMLElement).hidden = !r;
+    (bar.querySelector('[data-h="redo"] b') as HTMLElement).textContent = r ? String(r) : "";
+    (bar.querySelector(".hist-menu") as HTMLElement).hidden = true;
+  }
 
   /** X and Z values with their current numbers and names, for pick lists. */
   private refOptions(): [string, string][] {
@@ -1275,8 +1362,8 @@ export class App {
       if (hh) {
         const s = this.model.steps[hh.i] as Extract<Step, { op: "curve" }>;
         this.snapshot();
-        if (hh.end === "start") s.startAngle = "";
-        else s.endAngle = "";
+        if (hh.end === "start") (s.startAngle = ""), (s.startTension = "");
+        else (s.endAngle = ""), (s.endTension = "");
         this.changed();
         this.toast("اتجاه طرف المنحنى صار حراً");
         return;
@@ -1317,6 +1404,14 @@ export class App {
           e.preventDefault();
           return;
         }
+        const sx = e.clientX - r0.left, sy = e.clientY - r0.top;
+        const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 7 && Math.abs(p.s[1] - sy) <= 7);
+        if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
+          this.snapshot();
+          this.dragPoint = cp.step;
+          e.preventDefault();
+          return;
+        }
       }
       if (this.form?.live?.submit) {
         this.form.live.submit();
@@ -1337,8 +1432,9 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
-      if (this.dragHandle) {
+      if (this.dragHandle || this.dragPoint !== null) {
         this.dragHandle = null;
+        this.dragPoint = null;
         this.changed();
       }
       const rd = this.rightDown;
@@ -1358,6 +1454,15 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.dragPoint !== null) {
+        const t = this.model.steps[this.dragPoint] as Extract<Step, { op: "point" }>;
+        const q = this.ptRaster > 0 ? this.ptRaster : 0.1;
+        t.x = String(Math.round(Math.round(this.mouse[0] / q) * q * 10) / 10);
+        t.y = String(Math.round(Math.round(this.mouse[1] / q) * q * 10) / 10);
+        this.evaluate();
+        this.render();
+        return;
+      }
       if (this.dragHandle) {
         const s = this.model.steps[this.dragHandle.i] as Extract<Step, { op: "curve" }>, o = this.res.objects.get(s.id);
         if (o) {
@@ -1368,8 +1473,11 @@ export class App {
           let deg = (Math.atan2(v[1], v[0]) * 180) / Math.PI;
           const q = this.angleStep > 0 ? this.angleStep : 1;
           deg = Math.round(deg / q) * q;
-          if (this.dragHandle.end === "start") s.startAngle = String(deg);
-          else s.endAngle = String(deg);
+          // the distance of the handle from the end sets the strength (70 px = 100 %)
+          const [ex, ey] = this.toScreen(at), [mx, my] = this.toScreen(this.mouse);
+          const pct = Math.min(400, Math.max(10, Math.round((Math.hypot(mx - ex, my - ey) / 70) * 100 / 5) * 5));
+          if (this.dragHandle.end === "start") (s.startAngle = String(deg)), (s.startTension = String(pct));
+          else (s.endAngle = String(deg)), (s.endTension = String(pct));
           this.evaluate();
           this.render();
         }
@@ -2078,70 +2186,79 @@ export class App {
 
   private zRow = -1;
 
-  /** Z value assistant (as GRAFIS): a formula, or a distinction of cases
-   * (IF / THEN / ELSE IF / ELSE, written as CMDIF), built from lists of X and Z values
-   * and logical operators. */
+  /** Z value assistant (as GRAFIS, plus Excel-style formulas): a formula, a distinction of
+   * cases with any number of IF / THEN rows (CMDIF), or an Excel formula (IF, IFS, AND, OR,
+   * MIN, MAX, ROUND …). Only X values and Z rows before this one may be used. */
   private openZAssistant(i: number): void {
     const v = this.model.variables[i];
     if (!v || v.measure) return;
     document.querySelector(".z-assistant")?.remove();
-    const m = /^\s*CMDIF\s*((?:\[[^\]]*\]\s*\{[^}]*\}\s*)+)(?:\{([^}]*)\})?\s*$/i.exec(v.expr);
-    const cases = m ? [...m[1].matchAll(/\[([^\]]*)\]\s*\{([^}]*)\}/g)].map((x) => [x[1].trim(), x[2].trim()]) : [];
+    const expr = v.expr.trim();
+    const m = /^\s*CMDIF\s*((?:\[[^\]]*\]\s*\{[^}]*\}\s*)+)(?:\{([^}]*)\})?\s*$/i.exec(expr);
+    const cases = m ? [...m[1].matchAll(/\[([^\]]*)\]\s*\{([^}]*)\}/g)].map((x) => [x[1].trim(), x[2].trim()]) : [["", ""]];
+    const excel = !m && /[A-Za-z_]{2,}\s*\(/.test(expr);
+    const mode = m ? "c" : excel ? "e" : "f";
+    const earlierZ = new Set(this.model.variables.slice(0, i).map((z) => z.id));
     const el = document.createElement("section");
     el.className = "z-assistant";
     el.dir = "rtl";
     el.innerHTML = `<div class="za-head"><b>Z value assistant · مساعد Z${v.id}</b><button type="button" data-za="close" title="إغلاق">×</button></div>
       <div class="za-body">
         <h5>Calculation instruction · طريقة الحساب</h5>
-        <label class="za-r"><input type="radio" name="za-kind" value="f" ${m ? "" : "checked"}/> Formula · معادلة</label>
-        <div class="za-row" data-k="f"><span dir="ltr">Z${v.id}=</span><input dir="ltr" lang="en" data-zf="formula" value="${m ? "" : esc(v.expr)}"/></div>
-        <label class="za-r"><input type="radio" name="za-kind" value="c" ${m ? "checked" : ""}/> Distinction of cases · حالات (IF)</label>
+        <label class="za-r"><input type="radio" name="za-kind" value="f" ${mode === "f" ? "checked" : ""}/> Formula · معادلة</label>
+        <div class="za-row" data-k="f"><span dir="ltr">Z${v.id}=</span><input dir="ltr" lang="en" data-zf="formula" value="${mode === "f" ? esc(expr) : ""}"/></div>
+        <label class="za-r"><input type="radio" name="za-kind" value="c" ${mode === "c" ? "checked" : ""}/> Distinction of cases · حالات (IF) — بلا حد</label>
         <div class="za-cases" data-k="c">
-          <div class="za-row"><span>IF …</span><input dir="ltr" lang="en" data-zf="if1" value="${esc(cases[0]?.[0] ?? "")}" placeholder="X1>100"/></div>
-          <div class="za-row"><span>THEN …</span><input dir="ltr" lang="en" data-zf="then1" value="${esc(cases[0]?.[1] ?? "")}"/></div>
-          <label class="za-r"><input type="checkbox" data-zf="elseif" ${cases[1] ? "checked" : ""}/> ELSE IF …</label>
-          <div class="za-row"><span>IF …</span><input dir="ltr" lang="en" data-zf="if2" value="${esc(cases[1]?.[0] ?? "")}"/></div>
-          <div class="za-row"><span>THEN …</span><input dir="ltr" lang="en" data-zf="then2" value="${esc(cases[1]?.[1] ?? "")}"/></div>
+          <div class="za-conds">${cases.map(([c, t], k) => this.zCaseRow(c, t, k)).join("")}</div>
+          <button type="button" class="za-add" data-za="add">+ إضافة شرط (ELSE IF)</button>
           <div class="za-row"><span>ELSE …</span><input dir="ltr" lang="en" data-zf="else" value="${esc(m?.[2]?.trim() ?? "")}"/></div>
         </div>
-        <h5>Formula element · عناصر المعادلة</h5>
+        <label class="za-r"><input type="radio" name="za-kind" value="e" ${mode === "e" ? "checked" : ""}/> Excel formula · معادلة مثل إكسل</label>
+        <div data-k="e"><textarea dir="ltr" lang="en" data-zf="excel" rows="3" placeholder="IF(X1>1000; Z1+10; IF(X1>500; 5; 0))">${mode === "e" ? esc(expr) : ""}</textarea>
+          <small class="za-help">مثل إكسل: IF(شرط; نعم; لا) متداخلة بلا حد، IFS(شرط; قيمة; شرط; قيمة …)، AND، OR، MIN، MAX، ROUND … الفاصل ; أو ,</small></div>
+        <h5>Formula element · عناصر المعادلة <small>(X وZ السابقة لهذا السطر فقط)</small></h5>
         <div class="za-els">
-          <div class="za-list"><select data-zf="cat"><option value="X">X value · قيم X</option><option value="Z">Z value · قيم Z</option></select><ul></ul></div>
-          <div class="za-ops"><span>Logical operator</span>${["=", "<", ">", "<>", "<=", ">="].map((o) => `<button type="button" data-op="${o}">${esc(o)}</button>`).join("")}<span>+ − × ÷</span>${["+", "-", "*", "/", "(", ")"].map((o) => `<button type="button" data-op="${o}">${o}</button>`).join("")}</div>
+          <div class="za-list"><select data-zf="cat"><option value="X">X value · قيم X</option><option value="Z">Z value · قيم Z السابقة</option><option value="F">Functions · دوال إكسل</option></select><ul></ul></div>
+          <div class="za-ops"><span>Logical operator</span>${["=", "<", ">", "<>", "<=", ">="].map((o) => `<button type="button" data-op="${o}">${esc(o)}</button>`).join("")}<span>+ − × ÷ ^</span>${["+", "-", "*", "/", "^", "(", ")", ";"].map((o) => `<button type="button" data-op="${o}">${o}</button>`).join("")}</div>
         </div>
         <p class="za-msg" role="status"></p>
         <div class="za-foot"><button type="button" class="primary" data-za="ok">✓ اعتماد</button><button type="button" data-za="close">إلغاء</button></div>
       </div>`;
     document.body.append(el);
     const q = <T extends Element>(sel: string) => el.querySelector(sel) as T;
-    let target: HTMLInputElement = q<HTMLInputElement>(m ? '[data-zf="if1"]' : '[data-zf="formula"]');
-    el.querySelectorAll<HTMLInputElement>("input[data-zf]:not([type=checkbox])").forEach((inp) => inp.addEventListener("focus", () => (target = inp)));
-    const insert = (t: string) => {
+    let target: HTMLInputElement | HTMLTextAreaElement = q(mode === "c" ? '[data-zc="if"]' : mode === "e" ? '[data-zf="excel"]' : '[data-zf="formula"]');
+    el.addEventListener("focusin", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.matches("input[type=text], input:not([type]), textarea")) target = t as HTMLInputElement;
+    });
+    const insert = (t: string, caretBack = 0) => {
       const a = target.selectionStart ?? target.value.length, b = target.selectionEnd ?? a;
       target.value = target.value.slice(0, a) + t + target.value.slice(b);
       target.focus();
-      target.setSelectionRange(a + t.length, a + t.length);
+      target.setSelectionRange(a + t.length - caretBack, a + t.length - caretBack);
     };
-    const kind = () => (q<HTMLInputElement>('input[name="za-kind"]:checked').value as "f" | "c");
+    const kind = () => q<HTMLInputElement>('input[name="za-kind"]:checked').value as "f" | "c" | "e";
     const sync = () => {
-      el.querySelector<HTMLElement>('[data-k="f"]')!.classList.toggle("off", kind() !== "f");
-      el.querySelector<HTMLElement>('[data-k="c"]')!.classList.toggle("off", kind() !== "c");
-      const two = q<HTMLInputElement>('[data-zf="elseif"]').checked;
-      q<HTMLInputElement>('[data-zf="if2"]').disabled = !two;
-      q<HTMLInputElement>('[data-zf="then2"]').disabled = !two;
+      for (const k of ["f", "c", "e"]) el.querySelector<HTMLElement>(`[data-k="${k}"]`)!.classList.toggle("off", kind() !== k);
     };
     el.addEventListener("change", sync);
     sync();
+    const FN_HELP: Record<string, string> = {
+      IF: "IF(شرط; إذا تحقق; إذا لم يتحقق)", IFS: "IFS(شرط; قيمة; شرط; قيمة …)", AND: "AND(شرط; شرط …)", OR: "OR(شرط; شرط …)", NOT: "NOT(شرط)",
+      MIN: "MIN(a; b …)", MAX: "MAX(a; b …)", ROUND: "ROUND(قيمة; خانات)", ROUNDUP: "ROUNDUP(قيمة; خانات)", ROUNDDOWN: "ROUNDDOWN(قيمة; خانات)",
+      ABS: "ABS(قيمة)", INT: "INT(قيمة)", SQRT: "SQRT(قيمة)", POWER: "POWER(أساس; أس)", MOD: "MOD(a; b)", SUM: "SUM(a; b …)", AVERAGE: "AVERAGE(a; b …)",
+      SIN: "SIN(زاوية°)", COS: "COS(زاوية°)", TAN: "TAN(زاوية°)", ASIN: "ASIN(قيمة) → °", ACOS: "ACOS(قيمة) → °", ATAN: "ATAN(قيمة) → °", PI: "PI()",
+    };
     const list = () => {
       const cat = q<HTMLSelectElement>('[data-zf="cat"]').value;
       const sized = withSize(this.model);
-      const items: [string, string, string][] =
-        cat === "X"
-          ? sized.measurements.map((x) => [`X${x.id}`, x.name, fmt(x.value)])
-          : this.model.variables.filter((z) => z.id !== v.id).map((z) => [`Z${z.id}`, z.name, this.res.z.has(z.id) ? fmt(this.res.z.get(z.id) as number) : ""]);
+      let items: [string, string, string][];
+      if (cat === "X") items = sized.measurements.map((x) => [`X${x.id}`, x.name, fmt(x.value)]);
+      else if (cat === "Z") items = this.model.variables.filter((z) => earlierZ.has(z.id)).map((z) => [`Z${z.id}`, z.name, this.res.z.has(z.id) ? fmt(this.res.z.get(z.id) as number) : ""]);
+      else items = FUNCTION_NAMES.map((n) => [`${n}()`, FN_HELP[n] ?? "", ""]);
       q<HTMLUListElement>("ul").innerHTML = items.length
-        ? items.map(([k, n, val]) => `<li data-ins="${k}"><b dir="ltr">${k}</b><span>${esc(n || "")}</span><i dir="ltr">${val}</i></li>`).join("")
-        : `<li class="none">لا توجد قيم</li>`;
+        ? items.map(([k, n, val]) => `<li data-ins="${k}"><b dir="ltr">${k}</b><span${cat === "F" ? ' dir="ltr"' : ""}>${esc(n || "")}</span><i dir="ltr">${val}</i></li>`).join("")
+        : `<li class="none">${cat === "Z" ? "لا توجد معادلات Z قبل هذا السطر" : "لا توجد قيم"}</li>`;
     };
     list();
     q<HTMLSelectElement>('[data-zf="cat"]').addEventListener("change", list);
@@ -2150,24 +2267,41 @@ export class App {
     });
     el.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
-      const ins = t.closest<HTMLElement>("[data-ins]"), op = t.closest<HTMLElement>("[data-op]"), za = t.closest<HTMLElement>("[data-za]");
-      if (ins) insert(ins.dataset.ins as string);
-      else if (op) insert(op.dataset.op as string);
-      else if (za?.dataset.za === "close") el.remove();
+      const ins = t.closest<HTMLElement>("[data-ins]"), op = t.closest<HTMLElement>("[data-op]"), za = t.closest<HTMLElement>("[data-za]"), del = t.closest<HTMLElement>("[data-zc-del]");
+      if (ins) {
+        const k = ins.dataset.ins as string;
+        if (k.endsWith("()")) insert(k, k === "PI()" ? 0 : 1);
+        else insert(k);
+      } else if (op) insert(op.dataset.op as string);
+      else if (del) {
+        if (el.querySelectorAll(".za-cond").length > 1) del.closest(".za-cond")?.remove();
+      } else if (za?.dataset.za === "add") {
+        const rows = q<HTMLElement>(".za-conds");
+        rows.insertAdjacentHTML("beforeend", this.zCaseRow("", "", rows.children.length));
+        (rows.lastElementChild?.querySelector('[data-zc="if"]') as HTMLInputElement)?.focus();
+      } else if (za?.dataset.za === "close") el.remove();
       else if (za?.dataset.za === "ok") {
-        const val = (k: string) => q<HTMLInputElement>(`[data-zf="${k}"]`).value.trim();
-        let expr = val("formula");
-        if (kind() === "c") {
-          if (!val("if1") || !val("then1") || !val("else")) return void (q<HTMLElement>(".za-msg").textContent = "أكمل IF و THEN و ELSE");
-          expr = `CMDIF[${val("if1")}]{${val("then1")}}` + (q<HTMLInputElement>('[data-zf="elseif"]').checked && val("if2") && val("then2") ? `[${val("if2")}]{${val("then2")}}` : "") + `{${val("else")}}`;
+        const msg = q<HTMLElement>(".za-msg");
+        let out: string;
+        if (kind() === "f") out = q<HTMLInputElement>('[data-zf="formula"]').value.trim();
+        else if (kind() === "e") out = q<HTMLTextAreaElement>('[data-zf="excel"]').value.trim().replace(/\s*\n\s*/g, " ");
+        else {
+          const rows = [...el.querySelectorAll(".za-cond")].map((r) => [(r.querySelector('[data-zc="if"]') as HTMLInputElement).value.trim(), (r.querySelector('[data-zc="then"]') as HTMLInputElement).value.trim()]);
+          const els = q<HTMLInputElement>('[data-zf="else"]').value.trim();
+          if (rows.some(([c, t]) => !c || !t) || !els) return void (msg.textContent = "أكمل كل IF و THEN و ELSE");
+          out = "CMDIF" + rows.map(([c, t]) => `[${c}]{${t}}`).join("") + `{${els}}`;
         }
+        if (!out) return void (msg.textContent = "اكتب المعادلة");
+        // only X values and the Z rows before this one
+        const later = references(out).filter((r) => r[0] === "Z" && !earlierZ.has(Number(r.slice(1))));
+        if (later.length) return void (msg.textContent = `${later.join("، ")} ليست قبل Z${v.id}؛ استخدم X أو Z السابقة فقط`);
         try {
-          new Vars(withSize(this.model), undefined, this.res.z).eval(expr.replace(new RegExp(`Z${v.id}(?!\\d)`, "g"), "0"));
+          new Vars(withSize(this.model), undefined, this.res.z).eval(out);
         } catch (err) {
-          if (!/غير موجود|Z\d+:/.test((err as Error).message)) return void (q<HTMLElement>(".za-msg").textContent = (err as Error).message);
+          return void (msg.textContent = (err as Error).message);
         }
         this.snapshot();
-        v.expr = expr;
+        v.expr = out;
         this.changed();
         el.remove();
         this.toast(`حُفظت Z${v.id}`);
@@ -2185,6 +2319,11 @@ export class App {
       head.addEventListener("pointerup", up);
     });
     target.focus();
+  }
+
+  private zCaseRow(cond: string, then: string, k: number): string {
+    return `<div class="za-cond"><div class="za-row"><span>${k ? "ELSE IF …" : "IF …"}</span><input dir="ltr" lang="en" data-zc="if" value="${esc(cond)}" placeholder="X1>1000"/></div>
+      <div class="za-row"><span>THEN …</span><input dir="ltr" lang="en" data-zc="then" value="${esc(then)}"/><button type="button" class="za-del" data-zc-del title="حذف الشرط">×</button></div></div>`;
   }
 
   private bindTable(box: HTMLElement, key: "measurements" | "variables"): void {

@@ -15,15 +15,34 @@ try{
  await fr.locator('.ztable').locator('xpath=..').locator('[data-add]').click();await page.keyboard.type('X1-Z1');await page.keyboard.press('Enter');
  await f.waitForFunction(()=>window.level7.res.z.get(2)===1260);pass('new Z: the cursor is in the formula; "X1-Z1" + Enter = 1260');
  await fr.locator('.ztable').locator('xpath=..').locator('[data-add]').click();await fr.locator('[data-zas="2"]').click();await fr.locator('.z-assistant').waitFor();
- await fr.locator('.z-assistant input[value="c"]').check();await fr.locator('.z-assistant [data-zf="if1"]').click();
+ await fr.locator('.z-assistant input[value="c"]').check();await fr.locator('.z-assistant [data-zc="if"]').first().click();
  await fr.locator('.z-assistant [data-ins="X1"]').click();await fr.locator('.z-assistant [data-op=">"]').click();await page.keyboard.type('1000');
- await fr.locator('.z-assistant [data-zf="then1"]').fill('Z1+10');await fr.locator('.z-assistant [data-zf="else"]').fill('0');
+ await fr.locator('.z-assistant [data-zc="then"]').first().fill('Z1+10');
+ // unlimited conditions: add a second one
+ await fr.locator('.z-assistant [data-za="add"]').click();await fr.locator('.z-assistant [data-zc="if"]').nth(1).fill('X1>500');await fr.locator('.z-assistant [data-zc="then"]').nth(1).fill('5');
+ await fr.locator('.z-assistant [data-zf="else"]').fill('0');
  await page.screenshot({path:'shot-0129-z.png'});
  await fr.locator('.z-assistant [data-za="ok"]').click();await f.waitForFunction(()=>window.level7.res.z.get(3)===250);
- assert.equal(await f.evaluate(()=>window.level7.model.variables[2].expr),'CMDIF[X1>1000]{Z1+10}{0}');
- pass('assistant: IF X1>1000 THEN Z1+10 ELSE 0 (built from the X list and the > operator) = 250');
+ assert.equal(await f.evaluate(()=>window.level7.model.variables[2].expr),'CMDIF[X1>1000]{Z1+10}[X1>500]{5}{0}');
+ pass('assistant: IF X1>1000 THEN Z1+10, ELSE IF X1>500 THEN 5 (added row), ELSE 0 = 250');
  await fr.locator('.ztable input[data-f="expr"][data-i="1"]').click();await fr.locator('[data-zas-bar]').click();
  await fr.locator('.z-assistant').waitFor();assert.equal(await fr.locator('.z-assistant [data-zf="formula"]').inputValue(),'X1-Z1');
  pass('Z window: one «ƒx» button opens the assistant for the current row (Z2) only when pressed');
+ // Excel formula with nested IF and functions; a later Z is refused
+ await fr.locator('.z-assistant [data-za="close"]').first().click();await fr.locator('[data-zas="0"]').click();await fr.locator('.z-assistant').waitFor();
+ const zl=await fr.locator('.z-assistant [data-zf="cat"]');await zl.selectOption('Z');assert.equal(await fr.locator('.z-assistant li.none').count(),1);
+ await fr.locator('.z-assistant input[value="e"]').check();await fr.locator('.z-assistant [data-zf="excel"]').fill('IF(AND(X1>1000; X2<500); ROUND(X2/7; 1); IF(X1>500; MAX(X2; 100); 0))');
+ await fr.locator('.z-assistant [data-za="ok"]').click();await f.waitForFunction(()=>window.level7.res.z.get(1)===68.6);
+ await fr.locator('[data-zas="0"]').click();await fr.locator('.z-assistant [data-zf="excel"]').fill('Z2+1');await fr.locator('.z-assistant [data-za="ok"]').click();
+ assert.match(await fr.locator('.z-assistant .za-msg').textContent(),/Z2 ليست قبل Z1/);await fr.locator('.z-assistant [data-za="close"]').first().click();
+ pass('Excel formula: IF(AND(..); ROUND(X2/7;1); IF(..; MAX(..); 0)) = 68.6; a Z after the row is refused');
+ // 0.9.131: X and Z windows open together; both buttons lit; each closes on its own
+ await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.panel:not(.zwin)').classList.contains('open')&&document.querySelector('.zwin').classList.contains('open'));
+ await page.waitForFunction(()=>['tab-x','tab-z'].every(k=>document.querySelector(`[data-l7d-command="${k}"]`).getAttribute('aria-pressed')==='true'));
+ const rx=await fr.locator('.panel:not(.zwin)').boundingBox(),rz=await fr.locator('.zwin').boundingBox();assert(rx.width>100&&rz.width>100);
+ await fr.locator('#tab-x input[data-f="value"]').first().waitFor();await fr.locator('.ztable').waitFor();
+ await page.screenshot({path:'shot-0131-xz.png'});
+ await page.locator('[data-l7d-command="tab-z"]').click();await f.waitForFunction(()=>!document.querySelector('.zwin').classList.contains('open')&&document.querySelector('.panel:not(.zwin)').classList.contains('open'));
+ pass('X and Z windows are open at the same time (both buttons lit); Z closes on its own');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

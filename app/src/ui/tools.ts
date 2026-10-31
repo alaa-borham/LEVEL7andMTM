@@ -416,6 +416,8 @@ export function stepFields(s: Step): Field[] {
       return [
         { key: "startAngle", label: "اتجاه البداية °", value: s.startAngle, optional: true },
         { key: "endAngle", label: "اتجاه النهاية °", value: s.endAngle, optional: true },
+        { key: "startTension", label: "شدة البداية %", value: s.startTension ?? "", optional: true },
+        { key: "endTension", label: "شدة النهاية %", value: s.endTension ?? "", optional: true },
       ];
     default:
       return [];

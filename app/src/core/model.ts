@@ -56,7 +56,7 @@ export type Step =
   | { op: "setLength"; target: number; length: string }
   | { op: "trim"; target: number; end: "start" | "end"; to: number }
   | { op: "mirror"; axis: number; items: { src: number; dst?: number }[] }
-  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string }
+  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string }
   /** Corner of two lines, each taken at the end nearer the corner: "sharp" extends or trims
    * both to their intersection; "round" adds a tangent arc of radius `size`; "chamfer" cuts
    * the corner with a straight line `size` from the intersection on each line. */
@@ -326,7 +326,13 @@ export function evaluateModel(model: Model): EvalResult {
             const r = (vars.eval(a) * Math.PI) / 180;
             return [Math.cos(r), Math.sin(r)];
           };
-          put(s.id, "line", smoothCurve(s.through.map(pointOf), dir(s.startAngle), dir(s.endAngle)), i);
+          const ten = (t?: string) => {
+            if (!t || !t.trim()) return 1;
+            const v = vars.eval(t) / 100;
+            if (!(v > 0 && v <= 10)) throw new Error("شدة طرف المنحنى بين 1% و 1000%");
+            return v;
+          };
+          put(s.id, "line", smoothCurve(s.through.map(pointOf), dir(s.startAngle), dir(s.endAngle), 24, ten(s.startTension), ten(s.endTension)), i);
           break;
         }
         case "trim": {

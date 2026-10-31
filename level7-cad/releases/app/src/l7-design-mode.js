@@ -209,7 +209,7 @@ export function installDesignMode() {
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
     else if (d.type === 'l7:context') showCat(null);
-    else if (d.type === 'l7:panel') markTab(typeof d.tab === 'string' ? 'tab-' + d.tab : null);
+    else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
     else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
   });
   host.addEventListener('click', e => {
@@ -232,7 +232,7 @@ export function installDesignMode() {
     else if (action === 'new') { send({ type: 'l7:new' }); status('تصميم جديد'); }
     else send({ type: 'l7:action', action });
   };
-  const markTab = action => { for (const b of barBox.querySelectorAll('[data-l7d-command^="tab-"]')) b.setAttribute('aria-pressed', String(b.dataset.l7dCommand === action)); };
+  const markTab = actions => { for (const b of barBox.querySelectorAll('[data-l7d-command^="tab-"]')) b.setAttribute('aria-pressed', String(actions.includes(b.dataset.l7dCommand))); };
 
   document.addEventListener('keydown', e => {
     if (host.hidden) return;
