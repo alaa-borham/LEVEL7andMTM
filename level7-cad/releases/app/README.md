@@ -1,3 +1,8 @@
+LEVEL7 and MTM 0.9.118
+
+LEVEL7 design mode: File > "تصميم LEVEL7 جديد" / "فتح تصميم LEVEL7…" opens the LEVEL7 parametric design engine (assets/l7design) over the work area. Its tools (points, lines, parallel, length, trim/extend, mirror, curves, pieces, notches, measuring) are driven by a palette drawn with the program's own icons; new designs are saved as LEVEL7 design files (.level7.json) and exported to DXF, DXF-AAMA (+RUL) and PLT through the program's save dialog. MDL files keep their existing path and are not converted.
+X values of the New-N38 template now accept up to ±10000 mm (was ±1000), so measurements such as 1500 mm appear in the Line 10 length source list. X values that exist but cannot be a length (zero, negative, above 10000 mm) are listed greyed out with the reason instead of being hidden.
+
 LEVEL7 and MTM 0.9.117
 
 Professional dark theme (default): dark panels, menus, command bar, dialogs and tables; tool icons are bright line glyphs on dark tiles (cyan, gold, mint, rose accents) with a cyan glow on hover and gold for the open group. View menu switches between dark and light; the choice is remembered on this computer.

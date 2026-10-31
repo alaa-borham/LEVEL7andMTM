@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.117",
- "notes": "LEVEL7 and MTM 0.9.117: واجهة داكنة احترافية وأيقونات أوضح. التبديل للفاتح من قائمة View.",
+ "version": "0.9.118",
+ "notes": "تصميم LEVEL7 داخل البرنامج بأيقوناته؛ قيم X حتى 10000 مم وتظهر في مصدر طول Line 10",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "0a28331dba1aa356fc4905500bb4ef47004458b62e36b3303359d5d85eef8522",
-   "size": 118142
+   "sha256": "26eeefa8365a5017fdc77f1c2a3c6eb41f777e80c4c7a9e4f8393991dcd0d025",
+   "size": 118981
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,24 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-CxlCasNH.css",
+   "sha256": "c525a36bfaf29c929e6de523d81a6f9149bbfbbf695e6d826bf597e145a83f32",
+   "size": 7599
+  },
+  {
+   "path": "assets/l7design/assets/index-FkqAkHqb.js",
+   "sha256": "3e83db424a3886c690aebfaa697eabc3fb68b59b45ffae29ed8b3ea07a1a9a0a",
+   "size": 77322
+  },
+  {
+   "path": "assets/l7design/index.html",
+   "sha256": "4208ba9080ec13f6d64a1f2300d1eb5e79cf3e0ad7e864fa8daf38e6560b93ab",
+   "size": 3317
+  },
+  {
    "path": "desktop/main.cjs",
-   "sha256": "c3395368ba2002a96c690f111b2804c184384e4f19078fb79adacd287cb29492",
-   "size": 22315
+   "sha256": "d09b8f0a1bcdd736831f378a2fb33ba96e745a56a0f36c3e8b413f2e4aa0389c",
+   "size": 23075
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -45,8 +60,8 @@
   },
   {
    "path": "desktop/preload.cjs",
-   "sha256": "1daa26d030e52f63e0ae448a25609957747b50717191834c6d680d020332b077",
-   "size": 2436
+   "sha256": "bd6784a48462fc7ed553340ff96e67520d5909a1a3a08600bb20dc5e1f5e3348",
+   "size": 2470
   },
   {
    "path": "desktop/remote-update.cjs",
@@ -105,12 +120,12 @@
   },
   {
    "path": "native.html",
-   "sha256": "3d7fd36138414dbbe02742073f1243d6710ff2f13bea835d94e2092c7f74fc37",
-   "size": 68662
+   "sha256": "41bbfad8e79ca991712b9c6943791ea2d2d1b8fa1e800373d539c6a6deace6c4",
+   "size": 68714
   },
   {
    "path": "package.json",
-   "sha256": "12daf2f371a76eb465b92a58d05dca56dd3c08eccd68dfdf7e52966b3252957a",
+   "sha256": "38b58a8476a32d41eb31c450200463fc0a37e12c29c59fbc002211c58a511609",
    "size": 301
   },
   {
@@ -285,8 +300,8 @@
   },
   {
    "path": "src/grouped-tool-palette.js",
-   "sha256": "600982a02b51bb5cc91e8da3f7dbded3e6a090c149d4012854558c4c8d8e1fa7",
-   "size": 54719
+   "sha256": "2a3842f711ce1c2193ee36f755dff3d06b66afabaec3c09fd1228ba05ed29f1e",
+   "size": 54635
   },
   {
    "path": "src/history-prefix-preview.js",
@@ -352,6 +367,11 @@
    "path": "src/io.js",
    "sha256": "65e8c3af3bafd424febca5d6a2c4d6822ed1099856a5719ae938374aee075d5e",
    "size": 28996
+  },
+  {
+   "path": "src/l7-design-mode.js",
+   "sha256": "7dc2fe903d998a74e06051a05ce6819397bc476b02abe0729b180fed1cb1158f",
+   "size": 11789
   },
   {
    "path": "src/line-transform-ui.js",
@@ -550,8 +570,8 @@
   },
   {
    "path": "src/native-line10-lengths.mjs",
-   "sha256": "01528beddd75ce6177fb0496ffa6eee3957ba83bb2e4a159cc0b6dedca54df37",
-   "size": 2588
+   "sha256": "ba97424ce6708275c28bf529b4e0b3d96269dbb024aed3301fd7092b4c5a5d55",
+   "size": 3320
   },
   {
    "path": "src/native-line10-template.mjs",
@@ -605,18 +625,18 @@
   },
   {
    "path": "src/native-n38-parametric-engine.js",
-   "sha256": "e6f790442aec80bbc68314ff7aa88a1e92f48f67984350876816747f38f9feed",
-   "size": 29103
+   "sha256": "6c6159a3ce9dcf833277e8259e52424a777d1c640cb929303bac027c3a5dc6a0",
+   "size": 28994
   },
   {
    "path": "src/native-n38-tables.js",
-   "sha256": "46fadaae2944749e47629daf09f74964d870412b351ff0dc7194b233d39e4640",
-   "size": 2023
+   "sha256": "741c57b4a493a82b644525605f3615fdb11eb71bfa572bc12b5f9077967a9cbb",
+   "size": 2001
   },
   {
    "path": "src/native-n38-ui.js",
-   "sha256": "33443025f5a375ac1ff810eaca9e3cff14bb38544685767f8132c90fea3a6632",
-   "size": 18314
+   "sha256": "b562cb9ac69718f6945e3e693cd09239b37c09acb278dddd7668d38f045feca2",
+   "size": 18238
   },
   {
    "path": "src/native-notch-conversion.mjs",
@@ -1120,8 +1140,8 @@
   },
   {
    "path": "src/original-line10-ui.js",
-   "sha256": "3df03ded1002ac01cd315395785bcc595888dc5cbefb6cf51e7e30d37176bb96",
-   "size": 27985
+   "sha256": "3721a69041d0f34910b93562631398d3d5ff44cc01b9f0c1a2f2a5cc2d98b5b3",
+   "size": 28270
   },
   {
    "path": "src/original-line20-create.mjs",
@@ -1470,8 +1490,8 @@
   },
   {
    "path": "src/ui-0113-start.js",
-   "sha256": "4e6ea32d584706b8c6ccd77519ac0958ac04b67a757f0dc4a4542aa970fb911f",
-   "size": 83
+   "sha256": "65a309e777ca68cbfa33c74e2b892736c08ef4222795abf20772ae6dc8168c9c",
+   "size": 159
   },
   {
    "path": "src/ui-0113.css",
@@ -1482,6 +1502,11 @@
    "path": "src/ui-dark-0117.css",
    "sha256": "a8a896e4efbc4801b8a23319a653e9b5f802dd82351eba01dac6c04584707072",
    "size": 11837
+  },
+  {
+   "path": "src/ui-design-0118.css",
+   "sha256": "7a8ff6a6afc2b04b4906f594d2ded9bf7bc6b998535e9c405763d8ebde6c36d1",
+   "size": 4745
   },
   {
    "path": "src/ui-guide-0113.js",

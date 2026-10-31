@@ -21,3 +21,10 @@ export function writeLine10LengthBinding(parameters,code){
  for(let at=0;at<p.length;){const n=v.getUint32(at,true)*8;need(n>=24&&at+n<=p.length,'Unknown Line10 parameter span');if(v.getInt16(at+4,true)===-12){const count=v.getUint32(at+20,true);need(count%8===0&&24+count<=n,'Unknown Line10 binding table');for(let i=at+24;i<at+24+count;i+=8)if(v.getUint32(i,true)===7){v.setUint32(i+4,code,true);found++;}}at+=n;}
  need(found===1,'Ambiguous Line10 length binding');return p;
 }
+/** 0.9.118: X values that exist but cannot be a length (zero, negative or above 10000 mm),
+ * so the length list can show them greyed out with the reason instead of hiding them. */
+export function line10UnusableX(doc,{partId,sizeKey}={}){
+ const table=readNativeXValues(doc,{partId}),sizeContext=standardSizeContext(doc),out=[],seen=new Set();
+ for(const r of resolveScalarXRows(table.localEntries,{sizeKey,sizeContext})){if(seen.has(r.name)||!/^X\d+$/.test(r.name))continue;seen.add(r.name);if(r.status==='resolved-stored-input'&&Number.isFinite(r.value)&&!(r.value>=.01&&r.value<=10000))out.push({name:r.name,value:r.value,reason:r.value<.01?'أدخل قيمة أكبر من صفر':'أكبر من 10000 مم'});}
+ return out;
+}

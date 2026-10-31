@@ -23,7 +23,9 @@ const FORMATS = Object.freeze({
   project: { name: 'LEVEL7 and MTM project', extensions: ['json'], suffix: '.json' },
   svg: { name: 'SVG pattern (millimetres)', extensions: ['svg'], suffix: '.svg' },
   dxf: { name: 'ASCII DXF pattern', extensions: ['dxf'], suffix: '.dxf' },
-  hpgl: { name: 'HPGL plotter drawing', extensions: ['plt', 'hpgl'], suffix: '.plt' }
+  hpgl: { name: 'HPGL plotter drawing', extensions: ['plt', 'hpgl'], suffix: '.plt' },
+  design: { name: 'LEVEL7 design', extensions: ['json'], suffix: '.level7.json' },
+  rul: { name: 'AAMA grade rules', extensions: ['rul'], suffix: '.rul' }
 });
 
 // Keep installed application data in the current user profile.
@@ -69,6 +71,10 @@ function lockSession(targetSession, exactFile = null) {
   targetSession.on('will-download', event => event.preventDefault());
 }
 
+function designFrameUrl(url) {
+  try { const u = new URL(url); return u.protocol === 'file:' && path.resolve(fileURLToPath(u)) === path.join(APP_ROOT, 'assets', 'l7design', 'index.html'); } catch { return false; }
+}
+
 function lockWindow(win, permittedUrl) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event, legacyUrl) => {
@@ -78,7 +84,8 @@ function lockWindow(win, permittedUrl) {
   win.webContents.on('will-attach-webview', event => event.preventDefault());
   win.webContents.on('will-frame-navigate', event => {
     // No child-frame navigation is required by the local drafting application.
-    if (!event.isMainFrame || event.url !== permittedUrl) event.preventDefault();
+    // 0.9.118: the embedded LEVEL7 design engine is the one permitted child frame.
+    if (event.isMainFrame ? event.url !== permittedUrl : !designFrameUrl(event.url)) event.preventDefault();
   });
 }
 
@@ -244,16 +251,17 @@ function registerIpc() {
   });
 
   registerOperation('pattern:open-file', async options => {
-    const measurements = options?.measurements === true;
+    const measurements = options?.measurements === true, design = options?.design === true;
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: measurements ? 'Import measurement table' : 'Open project or import geometry',
+      title: design ? 'Open LEVEL7 design' : measurements ? 'Import measurement table' : 'Open project or import geometry',
       properties: ['openFile'],
-      filters: measurements
+      filters: design ? [{ name: 'LEVEL7 design', extensions: ['json'] }] : measurements
         ? [{ name: 'Measurement tables', extensions: ['csv', 'mas'] }, { name: 'Supported files', extensions: ['json', 'dxf', 'csv', 'mas'] }]
         : [{ name: 'LEVEL7 and MTM and interchange', extensions: ['json', 'dxf', 'csv', 'mas'] }]
     });
     if (result.canceled || !result.filePaths[0]) return null;
     const selected = result.filePaths[0];
+    if (design && path.extname(selected).toLowerCase() !== '.json') throw new Error('افتح ملف تصميم LEVEL7 بامتداد ‎.json.');
     if (!['.json', '.dxf', '.csv', '.mas'].includes(path.extname(selected).toLowerCase())) throw new Error('Supported imports: JSON, DXF, CSV, and MAS.');
     return { text: await readBounded(selected), name: path.basename(selected) };
   });

@@ -523,3 +523,12 @@ input[type="number"] {
 .size-table th.customer {
   background: #fff7e6;
 }
+
+/* Embedded inside LEVEL7 and MTM: the host provides tools, files and commands. */
+body.embedded .tools,body.embedded .brand,body.embedded .actions{display:none}
+body.embedded .layout{grid-template-columns:1fr 340px}
+/* Dark theme matching the host's professional dark interface. */
+body.dark{--bg:#14181e;--surface:#1c222b;--border:#2e3742;--text:#e4e9f0;--muted:#8d98a7;--accent:#3d9bff;--accent-soft:#1d3550;--line:#e4e9f0;--point:#ff6b6b;--hover:#ffb340;--select:#3d9bff;--grid:#1f262f;--grid-major:#29323d;--piece:#5ccf73;--piece-fill:rgba(92,207,115,.10)}
+body.dark{color:var(--text)}
+body.dark input,body.dark select,body.dark #canvas{background:#10141a}
+body.dark .size-table th.customer{background:#3a2f17}

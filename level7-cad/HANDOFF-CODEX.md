@@ -194,3 +194,17 @@ Report: `level7-cad/REPORT-0.9.113.md`. Source: `level7-cad/source-0.9.113/`. Di
 
 1. All UI tests, plus `tests-0.9.113/test-0113-ui.mjs`, against `LEVEL7 and MTM.exe`.
 2. The packaged update test, with a local server (`tests-0.9.113/test-update-packaged.mjs`), on Windows.
+
+## 8. 0.9.118 (مُتحقق منه)
+- الملفات الجديدة:
+  - `src/l7-design-mode.js`
+  - `src/ui-design-0118.css`
+  - `assets/l7design/` (يُبنى بأمر `tools/build-design-engine.mjs`)
+- `desktop/main.cjs`:
+  - صيغتان جديدتان في `FORMATS`: `design` و`rul`.
+  - خيار `design:true` في `pattern:open-file`.
+  - `designFrameUrl` للسماح بإطار المحرك فقط.
+- `src/grouped-tool-palette.js`: إضافة `export toolIcon(name)`.
+- حد X في N38 أصبح ±10000. الملفات: `native-n38-ui.js` و`native-n38-tables.js` و`native-n38-parametric-engine.js`.
+- `native-line10-lengths.mjs`: الدالة `line10UnusableX` لعرض قيم X غير الصالحة رمادية مع السبب.
+- المطلوب على Windows: فتح «تصميم LEVEL7 جديد»، ورسم نقطتين وخط، ثم الحفظ وإعادة الفتح، ثم تصدير AAMA/PLT وفتحهما في برنامج التعشيق.

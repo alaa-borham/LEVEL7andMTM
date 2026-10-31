@@ -33,6 +33,11 @@ export function parseModel(raw: string): Model {
 }
 
 export function download(name: string, text: string, type: string): void {
+  // Inside LEVEL7 and MTM the host program saves through its own file dialog.
+  if (document.body.classList.contains("embedded") && window.parent !== window) {
+    window.parent.postMessage({ type: "l7:download", name, text, mime: type }, "*");
+    return;
+  }
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement("a");
   a.href = url;

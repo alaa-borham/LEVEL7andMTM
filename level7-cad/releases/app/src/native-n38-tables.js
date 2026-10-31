@@ -4,7 +4,7 @@ import{parseExperimentalExpression}from'./native-n38-expression.js';
 function ensure(v,m){if(!v)throw new Error(m);}const align8=n=>Math.ceil(n/8)*8;
 export function encodeExperimentalXEntries(entries){
   ensure(Array.isArray(entries)&&entries.length<=80,'Up to 80 sequential local default X values are accepted.');const outputs=[];
-  for(let n=0;n<entries.length;n++){const index=entries[n].index,value=entries[n].value;ensure(index===n+1,'X indices must be contiguous from 1 through 80.');ensure(typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=1000,'X value exceeds finite ±1000 experiment bounds.');const stored=Math.fround(value);ensure(Number.isFinite(stored),'X value is not finite float32.');const out=NativeBytes.alloc(24);out.writeUInt32LE(3,0);out.writeUInt16LE(index,4);out.fill(0x20,6,14);out.writeFloatLE(stored,16);outputs.push(out);}
+  for(let n=0;n<entries.length;n++){const index=entries[n].index,value=entries[n].value;ensure(index===n+1,'X indices must be contiguous from 1 through 80.');ensure(typeof value==='number'&&Number.isFinite(value)&&Math.abs(value)<=10000,'X value exceeds finite ±10000 bounds.');const stored=Math.fround(value);ensure(Number.isFinite(stored),'X value is not finite float32.');const out=NativeBytes.alloc(24);out.writeUInt32LE(3,0);out.writeUInt16LE(index,4);out.fill(0x20,6,14);out.writeFloatLE(stored,16);outputs.push(out);}
   return NativeBytes.concat(outputs);
 }
 export function encodeExperimentalZEntries(entries){

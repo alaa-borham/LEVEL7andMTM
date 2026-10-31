@@ -107,6 +107,24 @@ export class App {
     this.render();
   }
 
+  /** Embedded mode: the host program hands over a file it opened. */
+  openText(text: string, name: string, grafis = false): void {
+    try {
+      if (grafis) this.importGrafis(text);
+      else {
+        this.load(parseModel(text));
+        this.toast(`تم فتح ${name}`);
+      }
+    } catch (e) {
+      this.toast(`تعذر قراءة الملف: ${(e as Error).message}`);
+    }
+  }
+
+  /** Embedded mode: start an empty design without asking. */
+  newDesign(): void {
+    this.load(emptyModel());
+  }
+
   private load(m: Model): void {
     this.snapshot();
     this.model = m;

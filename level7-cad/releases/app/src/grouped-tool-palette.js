@@ -110,6 +110,8 @@ Object.assign(glyphs,{
  arrow:arrow,text:'<text x="6" y="37" fill="#666" stroke="none" font-size="24">ABC</text>',seam:`${part}<path class="blue" stroke-dasharray="3 3" d="M15 25V48H31V30"/>`,mirror:`${part}<path class="blue" stroke-dasharray="3 3" d="M41 7V54M44 10H53V52H44"/>`
 });
 function optionGlyph(glyph,attrs){const point=attrs['data-original-point'];if(point==='line')return'linkedLine';if(point==='chain')return'linkedChain';const shape=attrs['data-original-shape-create'];if(shape)return shape;const length=attrs['data-original-length'];if(length)return{to:'lengthTo',by:'lengthBy',edit:'lengthEdit'}[length];const cut=attrs['data-original-cut'];if(cut)return{1:'cutEnd',2:'cutStart',split:'splitLine'}[cut];if(attrs['data-original-parallel']==='ends')return'offsetEnds';if(attrs['data-original-point-edit'])return'pointEdit';if(attrs['data-original-grain-edit'])return'grainEdit';return glyph;}
+/** 0.9.118: the design engine palette reuses these drawings. */
+export function toolIcon(name){return Object.hasOwn(glyphs,name)?icon(name):'';}
 function icon(name){if(!Object.hasOwn(glyphs,name))throw Error('Missing tool icon: '+name);return `<svg viewBox="0 0 60 60" data-tool-icon="${name}" data-icon-revision="73" aria-hidden="true" focusable="false">${glyphs[name]}</svg>`;}
 const groups=[
  ['organisation','Part organisation','تنظيم البارتات','organisation'],['library','Call basic blocks','مكتبة القوالب','library'],['insert','Insert','إدراج','insert'],['assistant','Part assistant','مساعد البارت','assistant'],
