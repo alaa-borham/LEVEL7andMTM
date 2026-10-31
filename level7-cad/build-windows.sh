@@ -4,7 +4,7 @@
 # The exe keeps Electron's file icon (changing it needs rcedit on Windows); the
 # window and taskbar use assets/icon.ico. Not signed.
 set -euo pipefail
-V=${1:-0.9.125}; OUT=${2:-dist}
+V=${1:-0.9.126}; OUT=${2:-dist}
 HERE=$(cd "$(dirname "$0")" && pwd)
 SRC="$HERE/source-$V"; [ -d "$SRC" ] || SRC="$HERE/releases/app"  # from 0.9.114 the latest tree is releases/app
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)

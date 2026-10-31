@@ -19,6 +19,23 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   return null;
 }
 
+/** Numbers always in English digits: every field is marked English (number fields
+ * otherwise follow the page language and show Arabic-Indic digits), and Arabic-Indic
+ * digits typed from the keyboard are turned into 0-9 at once. */
+function englishDigits(): void {
+  const mark = (root: ParentNode) => root.querySelectorAll?.("input, select, textarea").forEach((el) => el.setAttribute("lang", "en"));
+  mark(document);
+  new MutationObserver((recs) => recs.forEach((r) => r.addedNodes.forEach((n) => n instanceof Element && (n.matches("input, select, textarea") ? n.setAttribute("lang", "en") : mark(n))))).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("input", (e) => {
+    const el = e.target as EventTarget;
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) || el.type === "number" || !/[\u0660-\u0669\u06f0-\u06f9]/.test(el.value)) return;
+    const at = el.selectionStart;
+    el.value = el.value.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660)).replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+    if (at !== null) el.setSelectionRange(at, at);
+  }, true);
+}
+englishDigits();
+
 const embedded = new URLSearchParams(location.search).get("embedded") === "1";
 if (embedded) document.body.classList.add("embedded");
 if (new URLSearchParams(location.search).get("theme") === "dark") document.body.classList.add("dark");

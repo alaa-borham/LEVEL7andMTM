@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.125",
- "notes": "نافذة Record مثل GRAFIS: جدول الخطوات ومعاينة حتى الخطوة المختارة",
+ "version": "0.9.126",
+ "notes": "الأرقام دائماً إنجليزية",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "55e0b1fffbff7627598d779f1e205d592b5a0038a41b2309c16892d680387ba0",
-   "size": 122621
+   "sha256": "78d4cad01cc0eff18d0d64fa1352ae346b4d0f688b605cf9348c13e05f1a248c",
+   "size": 122899
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 11822
   },
   {
-   "path": "assets/l7design/assets/index-v_4HiQCN.js",
-   "sha256": "23bc224c64a2f01c15d4318c664fbd33283ad263a8b79abf01d468ec296d2140",
-   "size": 98244
+   "path": "assets/l7design/assets/index-pXsPw-fQ.js",
+   "sha256": "a07ea08a5dabffd36683090193537a6c5ac811f6557018391a45d6667ff8f78a",
+   "size": 99018
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "de06f90768fecf5e2389dbdbb0033c43f2685955f6e96755c5fb26bb2a0d2a04",
+   "sha256": "885bb59cdda2cbb9ed568b56650fbacf757fff54846910d401c9ff3c1d148707",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "01da6231c08b5593aa4fc3ca1fa95ce05f7ab9153ac3f778ca66894f05527ae6",
+   "sha256": "27c5000c271e3cdbc538d1974353b7fd66eb0aaf639dfa6047ea3fc4fcef46a1",
    "size": 301
   },
   {
@@ -1490,8 +1490,8 @@
   },
   {
    "path": "src/ui-0113-start.js",
-   "sha256": "65a309e777ca68cbfa33c74e2b892736c08ef4222795abf20772ae6dc8168c9c",
-   "size": 159
+   "sha256": "153a09fa7ba303e81066760422816e2d2261895b1afb747a708ba3f08b0f9427",
+   "size": 1106
   },
   {
    "path": "src/ui-0113.css",

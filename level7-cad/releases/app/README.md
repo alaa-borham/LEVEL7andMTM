@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.126
+
+Numbers always in English digits: every field in the program and in the LEVEL7 design engine is marked English, so values show as 480, not ٤٨٠, even with an Arabic Windows language; Arabic-Indic digits typed from the keyboard become 0-9 immediately.
+
 LEVEL7 and MTM 0.9.125
 
 LEVEL7 design mode: the construction steps window is now "Record" (button Record · F5), opened only on demand, laid out like GRAFIS's list of interactive constructions: a table (RS, Name, details), a black preview of the pattern as it stood after the selected step with that step highlighted, and a bar with first / previous / ▶ next / last, edit and delete; arrow keys move through the steps, double-click a row to edit it. It opens wide by default; every window keeps its own place and size.
