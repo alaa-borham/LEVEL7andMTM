@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.116",
- "notes": "LEVEL7 and MTM 0.9.116: البرنامج أسرع بكثير في فتح الملفات والتنقل بين البارتات.",
+ "version": "0.9.117",
+ "notes": "LEVEL7 and MTM 0.9.117: واجهة داكنة احترافية وأيقونات أوضح. التبديل للفاتح من قائمة View.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "cf6a09e5c1575495d2a405dbf284e80b1c40628ad82f673f8074cf53bf7c8101",
-   "size": 117807
+   "sha256": "0a28331dba1aa356fc4905500bb4ef47004458b62e36b3303359d5d85eef8522",
+   "size": 118142
   },
   {
    "path": "assets/icon.ico",
@@ -105,12 +105,12 @@
   },
   {
    "path": "native.html",
-   "sha256": "8252463cb6f12c2ea6847a2d52bced8891e4ec1f40dfcc9a9a106047a3cfcc94",
-   "size": 68607
+   "sha256": "3d7fd36138414dbbe02742073f1243d6710ff2f13bea835d94e2092c7f74fc37",
+   "size": 68662
   },
   {
    "path": "package.json",
-   "sha256": "93b778411c7f287b1f00fb599affa4543ad78c952403f9175273343264028b9b",
+   "sha256": "12daf2f371a76eb465b92a58d05dca56dd3c08eccd68dfdf7e52966b3252957a",
    "size": 301
   },
   {
@@ -1479,9 +1479,14 @@
    "size": 11147
   },
   {
+   "path": "src/ui-dark-0117.css",
+   "sha256": "a8a896e4efbc4801b8a23319a653e9b5f802dd82351eba01dac6c04584707072",
+   "size": 11837
+  },
+  {
    "path": "src/ui-guide-0113.js",
-   "sha256": "c61b4418565561bcb6fb5a0e4d2f397d60c146eeb5210eee9023e4c1986e1b3b",
-   "size": 6580
+   "sha256": "4900905c83e53e30585c44a5dec489c50da46327d358be07f8c7ed196776f725",
+   "size": 7638
   },
   {
    "path": "src/unchanged-parameter-commit.mjs",

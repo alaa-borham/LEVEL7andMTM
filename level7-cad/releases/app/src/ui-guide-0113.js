@@ -60,6 +60,21 @@ function fitPanel() {
 }
 let fitQueued = false;
 const queueFit = () => { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitPanel(); }); };
+// 0.9.117: professional dark theme by default; View menu switches dark/light and
+// the choice is remembered on this computer.
+function installTheme() {
+  let dark = true; try { dark = localStorage.getItem('level7.theme') !== 'light'; } catch {}
+  const apply = () => { document.body.classList.toggle('ui-dark', dark); if (button) button.textContent = dark ? 'الوضع الفاتح · Light theme' : 'الوضع الداكن · Dark theme'; };
+  const menu = [...document.querySelectorAll('.menubar details.menu')].find(d => d.querySelector('summary')?.textContent.trim() === 'View');
+  let button = null;
+  if (menu) {
+    const popup = menu.querySelector('.menu-popup');
+    button = document.createElement('button'); button.type = 'button'; button.id = 'menu-theme-toggle';
+    button.addEventListener('click', () => { dark = !dark; try { localStorage.setItem('level7.theme', dark ? 'dark' : 'light'); } catch {} apply(); menu.open = false; });
+    popup?.prepend(document.createElement('hr')); popup?.prepend(button);
+  }
+  apply();
+}
 export function installInterfaceGuide() {
   const panel = document.querySelector('.command-panel');
   if (!panel || document.querySelector('#tool-guide')) return;
@@ -76,7 +91,7 @@ export function installInterfaceGuide() {
   };
   document.addEventListener('pointerover', e => show(e.target), { passive: true });
   document.addEventListener('focusin', e => show(e.target));
-  installDefs(); label(); decorate();
+  installTheme(); installDefs(); label(); decorate();
   new MutationObserver(records => { if (records.some(r => r.type === 'childList' || r.attributeName === 'title')) { label(); decorate(); } })
     .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['title'] });
   // Refit only when the tool panel itself changes shape: a group opens or closes,

@@ -1,0 +1,134 @@
+/* LEVEL7 and MTM 0.9.117 professional dark theme (presentation only).
+   Applied when <body> has .ui-dark (default; View menu can switch to light).
+   Palette: base #12171d, panel #19212a, raised #222c37, line #2f3b48,
+   text #dbe3ea, muted #8d9cab, cyan #38bdf8, gold #f5b83d, mint #34d399, rose #fb7185. */
+.ui-dark{--d-base:#12171d;--d-panel:#19212a;--d-raised:#222c37;--d-raised-2:#2a3542;--d-line:#2f3b48;--d-text:#dbe3ea;--d-muted:#8d9cab;--d-cyan:#38bdf8;--d-gold:#f5b83d;--d-mint:#34d399;--d-rose:#fb7185;color-scheme:dark}
+.ui-dark,.ui-dark body,body.ui-dark{background:var(--d-base);color:var(--d-text)}
+.ui-dark .native-shell,.ui-dark .work-area{background:var(--d-base);color:var(--d-text)}
+
+/* Title, menu, command bar */
+.ui-dark .app-topbar{background:#0d1217;border-bottom:1px solid var(--d-line)}
+.ui-dark .menubar,.ui-dark .commandbar{background:var(--d-panel);border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .menu summary{color:var(--d-text)}
+.ui-dark .menu summary:hover,.ui-dark .menu[open] summary{background:var(--d-raised-2);color:#fff}
+.ui-dark .menu-popup{background:var(--d-raised);border-color:var(--d-line);box-shadow:0 14px 34px rgba(0,0,0,.55)}
+.ui-dark .menu-popup button{color:var(--d-text);background:transparent}
+.ui-dark .menu-popup button:not(:disabled):hover{background:#2f4153}
+.ui-dark .menu-popup button:disabled{color:#5d6b79}
+.ui-dark .menu-popup kbd{color:var(--d-muted);background:transparent;border-color:var(--d-line)}
+.ui-dark .menu-popup hr{border-color:var(--d-line)}
+.ui-dark .cad-toolbox{background:var(--d-raised);border-color:var(--d-line);box-shadow:0 12px 30px rgba(0,0,0,.55)}
+.ui-dark .toolbox-titlebar{background:var(--d-panel);color:var(--d-muted);border-color:var(--d-line)}
+.ui-dark .toolbox-placement-toggle{background:transparent;color:var(--d-muted);border-color:var(--d-line)}
+.ui-dark .palette-command{background:transparent;color:var(--d-text);border-color:transparent}
+.ui-dark .palette-command svg{stroke:var(--d-text)}
+.ui-dark .palette-command:not(:disabled):hover{background:#2f4153;box-shadow:inset 0 0 0 1px #3f6a8a}
+.ui-dark .palette-command:disabled{color:#56636f}
+.ui-dark .palette-command:disabled svg{stroke:#56636f}
+.ui-dark .palette-letter{color:var(--d-cyan)}
+
+/* Side panels */
+.ui-dark .parts-panel,.ui-dark .command-panel,.ui-dark aside.command-panel{background:var(--d-panel);border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .tool-section{border-color:var(--d-line)}
+.ui-dark .section-heading h2{color:#e8eef3}
+.ui-dark .section-hint,.ui-dark .count-badge,.ui-dark .record-counter{color:var(--d-muted);background:var(--d-raised);border-color:var(--d-line)}
+.ui-dark .parts-search,.ui-dark .parts-search input{background:var(--d-raised);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark .part-item{background:var(--d-raised);border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .part-item:hover{border-color:#3f6a8a}
+.ui-dark .part-item.selected,.ui-dark .part-item[aria-current="true"],.ui-dark .part-item[aria-selected="true"]{border-color:var(--d-gold);box-shadow:0 0 0 1px var(--d-gold)}
+.ui-dark .part-visibility{background:var(--d-raised-2);border-color:var(--d-line);color:var(--d-muted)}
+.ui-dark .part-visibility[aria-pressed="true"]{color:var(--d-cyan);background:#16303f}
+.ui-dark .parts-visibility-bar [aria-pressed="true"]{background:#16303f;border-color:#2b6f93;color:var(--d-cyan)}
+.ui-dark .part-properties-section,.ui-dark .parts-properties-command{background:var(--d-panel);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark #selection-info,.ui-dark .selection-panel{color:var(--d-muted)}
+
+/* Generic controls */
+.ui-dark button{color:var(--d-text)}
+.ui-dark .construction-tool,.ui-dark .full-command,.ui-dark .command-footer button,.ui-dark .parts-visibility-bar button,.ui-dark .parts-panel button{background:var(--d-raised);border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .construction-tool svg,.ui-dark .full-command svg,.ui-dark .command-footer svg,.ui-dark .parts-panel svg{stroke:var(--d-text)}
+.ui-dark .construction-tool:not(:disabled):hover,.ui-dark .full-command:not(:disabled):hover{background:#2f4153;box-shadow:inset 0 0 0 1px #3f6a8a}
+.ui-dark .construction-tool:disabled,.ui-dark .full-command:disabled{color:#56636f;background:#1d252f}
+.ui-dark .construction-tool:disabled svg{stroke:#56636f}
+.ui-dark .construction-tool[aria-pressed="true"]{background:var(--d-cyan);color:#06222f;box-shadow:none}
+.ui-dark .construction-tool[aria-pressed="true"] svg{stroke:#06222f}
+.ui-dark input,.ui-dark select,.ui-dark textarea{background:#0f141a;color:var(--d-text);border-color:var(--d-line)}
+.ui-dark input:focus,.ui-dark select:focus,.ui-dark textarea:focus{border-color:var(--d-cyan);outline:none;box-shadow:0 0 0 2px rgba(56,189,248,.25)}
+.ui-dark label{color:var(--d-text)}
+
+/* Canvas area and notices */
+.ui-dark .drawing-panel,.ui-dark .canvas-frame{background:#0a0d11}
+.ui-dark .drawing-header,.ui-dark .cache-preview-caption{background:var(--d-panel);color:var(--d-muted);border-color:var(--d-line)}
+.ui-dark .native-notice{background:#2a2414;color:#f3d38b;border-color:#5a4718}
+.ui-dark .statusbar{background:#0d1217;color:var(--d-muted);border-top:1px solid var(--d-line)}
+
+/* Dialogs and tables */
+.ui-dark .native-dialog{background:var(--d-panel);color:var(--d-text);border-color:var(--d-line);box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.ui-dark .dialog-caption{background:var(--d-raised);color:#fff;border-color:var(--d-line)}
+.ui-dark .dialog-body,.ui-dark .dialog-actions{background:var(--d-panel);border-color:var(--d-line)}
+.ui-dark .dialog-note,.ui-dark .dialog-intro{color:var(--d-muted)}
+.ui-dark .dialog-actions button,.ui-dark .native-dialog button{background:var(--d-raised);border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .native-dialog button:not(:disabled):hover{background:#2f4153}
+.ui-dark .table-scroll{background:var(--d-panel);border-color:var(--d-line)}
+.ui-dark .native-table th{background:var(--d-raised);color:#e8eef3;border-color:var(--d-line)}
+.ui-dark .native-table td{border-color:var(--d-line);color:var(--d-text)}
+.ui-dark .native-table tr:nth-child(even) td{background:#1c242e}
+.ui-dark .native-table tr:hover td{background:#243241}
+.ui-dark .field-error,.ui-dark .error{color:var(--d-rose)}
+.ui-dark .docked-tool-settings,.ui-dark .curve-construction-palette,.ui-dark .dimension-inspection-palette,.ui-dark .direct-path-editor,.ui-dark .z-inspector-selection,.ui-dark .unavailable-properties{background:var(--d-raised);color:var(--d-text);border-color:var(--d-line)}
+
+/* Tool cards: dark tiles, crisp bright glyphs */
+.ui-dark .grafis-icon-option{background:linear-gradient(180deg,#26313d 0%,#1f2833 100%);border:1px solid var(--d-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 6px rgba(0,0,0,.35)}
+.ui-dark .grafis-icon-option svg{filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
+.ui-dark .grafis-icon-option[data-caption]::after{color:#c6d1db}
+.ui-dark .grafis-icon-option:not(:disabled):hover{border-color:var(--d-cyan);box-shadow:0 0 0 1px rgba(56,189,248,.35),0 6px 18px rgba(56,189,248,.18);transform:translateY(-2px)}
+.ui-dark .grafis-icon-option[aria-pressed="true"],.ui-dark .grafis-icon-option[aria-expanded="true"]{background:linear-gradient(180deg,#3a3016,#2b2512);border-color:var(--d-gold);box-shadow:0 0 0 1px rgba(245,184,61,.45)}
+.ui-dark .grafis-icon-option:disabled{background:#1a2129;opacity:.45;filter:grayscale(.7)}
+.ui-dark .grafis-icon-option[data-tool-pending]::before{background:#4a3a10;color:#f5d27a}
+.ui-dark .grafis-icon-option .ink{stroke:#d9e2ea}
+.ui-dark .grafis-icon-option .blue{stroke:var(--d-cyan)}
+.ui-dark .grafis-icon-option .green{stroke:var(--d-mint);fill:var(--d-mint)}
+.ui-dark .grafis-icon-option .red{stroke:var(--d-rose)}
+.ui-dark .grafis-icon-option .gold{stroke:var(--d-gold)}
+.ui-dark .grafis-icon-option .dot{fill:#f1f5f9;stroke:#f1f5f9}
+.ui-dark .grafis-icon-option .folder{fill:#c98b16;stroke:#f5b83d}
+.ui-dark .grafis-icon-option .l7-fill-fabric{fill:rgba(245,184,61,.16)}
+.ui-dark .grafis-icon-option .l7-fill-sky{fill:rgba(56,189,248,.16)}
+.ui-dark .grafis-icon-option text{fill:#d9e2ea!important}
+.ui-dark .grafis-category-header{background:var(--d-raised);color:#fff;border:1px solid var(--d-line)}
+.ui-dark .grafis-category-header button{background:var(--d-raised-2)}
+.ui-dark .grafis-points-menu-value span{color:var(--d-muted)}
+
+/* Help card */
+.ui-dark .tool-guide{background:linear-gradient(135deg,#1d2a36,#17212b);border-color:#2b4a62;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.ui-dark .tool-guide-title{color:#fff}
+.ui-dark .tool-guide-sub{color:var(--d-muted)}
+.ui-dark .tool-guide-state{color:var(--d-cyan)}
+.ui-dark .tool-guide[data-available="false"]{background:linear-gradient(135deg,#2a2414,#201b10);border-color:#5a4718}
+.ui-dark .tool-guide[data-available="false"] .tool-guide-state{color:var(--d-gold)}
+
+/* Scrollbars in dark */
+.ui-dark ::-webkit-scrollbar{width:10px;height:10px}
+.ui-dark ::-webkit-scrollbar-track{background:var(--d-panel)}
+.ui-dark ::-webkit-scrollbar-thumb{background:#33414f;border-radius:6px}
+.ui-dark .part-label,.ui-dark .part-item *{color:var(--d-text)}
+.ui-dark .part-item .part-number,.ui-dark .part-item small{color:var(--d-muted)}
+.ui-dark .parts-panel p,.ui-dark .parts-panel small,.ui-dark .parts-panel .hint{color:var(--d-muted)}
+
+/* Dialog interiors that set light backgrounds of their own */
+.ui-dark :is(#case-preview,#file-info-content,#formula-elements-list,#formula-logical-list,#linked-point-position,#original-line10-editor,#parameter-pending-banner,#point-construction-palette,#x-current-index,#x-interpolation-panel,#xz-error,#xz-transfer-result,.x-scope-toolbar,#x-values-dialog .x-scope-toolbar,#x-values-dialog .x-grouped-scroll,.part-manager-preview>pre,.part-production-panel,.xz-header,.xz-measured,.xz-scope,.toolbox-dock.is-docked,.x-size-panel select){background:var(--d-raised);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark :is(#formula-elements-list button,#formula-logical-list button,.native-table td button,.xz-table-editor button){background:var(--d-raised-2);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark :is(#x-values-body .x-value-entry td,.part-manager-table tbody tr:nth-child(odd) td,.part-manager-table tbody tr:nth-child(even) td,.native-table tr.is-future td,.recorded-dimensions-dialog [data-dimension-status="unsupported"] td){background:var(--d-panel);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark :is(#x-values-body .x-value-entry.x-selected td,.part-manager-table .native-table tr.selected td){background:#16303f;color:#fff}
+.ui-dark #x-values-body td,.ui-dark #x-values-body th{color:var(--d-text);border-color:var(--d-line)}
+.ui-dark #x-values-body tr:not(.x-value-entry) td,.ui-dark #x-values-body tr:not(.x-value-entry) th{background:var(--d-raised);color:#fff}
+.ui-dark :is(#x-values-body input,#x-values-body .x-selected input,.xz-parameters input,.formula-case-branch input,.formula-case-fallback input,.formula-entry textarea,.point-position-row input){background:#0f141a;color:var(--d-text);border-color:var(--d-line)}
+.ui-dark .xz-formulas-scroll th{background:var(--d-raised);color:#fff}
+.ui-dark .native-dialog :is(h1,h2,h3,legend,strong){color:#eef3f7}
+.ui-dark .native-dialog :is(p,small,span,label,fieldset,div){border-color:var(--d-line)}
+.ui-dark .native-dialog :is(label,legend,fieldset) {color:var(--d-text)}
+.ui-dark .native-dialog :disabled,.ui-dark .native-dialog [aria-disabled="true"]{color:#5d6b79}
+.ui-dark .native-dialog fieldset{background:transparent}
+.ui-dark .dialog-caption h1{color:#fff}
+.ui-dark .native-dialog a{color:var(--d-cyan)}
+.ui-dark output{background:var(--d-raised-2);color:var(--d-text);border-color:var(--d-line)}
+.ui-dark #drawing-measure,.ui-dark #dimension-inspection-result{background:transparent}

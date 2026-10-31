@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.117
+
+Professional dark theme (default): dark panels, menus, command bar, dialogs and tables; tool icons are bright line glyphs on dark tiles (cyan, gold, mint, rose accents) with a cyan glow on hover and gold for the open group. View menu switches between dark and light; the choice is remembered on this computer.
+
 LEVEL7 and MTM 0.9.116
 
 Speed: each document's part analysis and history replay are computed once and reused (documents never change; edits create a new document, and results are returned as copies). On ALAA2026.mdl opening went from 28.6 s to 2.1 s, six part switches from 72.8 s to 3.8 s and 30 zoom steps from 5.8 s to 2.0 s (software rendering). Geometry is unchanged: all 1299 objects still within 0.2 mm of GRAFIS.
