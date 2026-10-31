@@ -450,18 +450,35 @@ export class App {
     });
   }
 
+  /** Add the blocks of a library file (blocks with the same name are replaced). */
+  importLibrary(text: string): void {
+    let blocks: LibBlock[];
+    try {
+      const v = JSON.parse(text);
+      blocks = (Array.isArray(v) ? v : []).filter((b) => b && typeof b.name === "string" && Array.isArray(b.steps) && Array.isArray(b.measurements));
+    } catch {
+      blocks = [];
+    }
+    if (!blocks.length) return this.toast("الملف ليس مكتبة قوالب LEVEL7");
+    const names = new Set(blocks.map((b) => b.name));
+    if (this.storeLibrary([...this.library().filter((b) => !names.has(b.name)), ...blocks])) {
+      this.toast(`أُضيف ${blocks.length} قالب إلى المكتبة`);
+      if (document.querySelector(".lib-win")) this.openLibrary();
+    }
+  }
+
   /** Inherit a basic block: it becomes a new part of this design; X / Z it needs that the
    * design does not have are added. */
   openLibrary(): void {
     document.querySelector(".lib-win")?.remove();
     const list = this.library();
-    if (!list.length) return this.toast("المكتبة فارغة؛ احفظ بارتاً فيها أولاً (حفظ البارت في مكتبة القوالب)");
     const el = document.createElement("section");
     el.className = "z-assistant inherit-win lib-win";
     el.dir = "rtl";
     el.innerHTML = `<div class="za-head"><b>Inherit basic blocks · مكتبة القوالب</b><button data-lb="close">×</button></div>
       <div class="za-body"><div class="ih-main"><div class="ih-list"><ul>${list.map((b, k) => `<li><label><input type="radio" name="lib" value="${k}" ${k ? "" : "checked"}/> <b>${esc(b.name)}</b> <i dir="ltr">${b.steps.length} RS · ${new Date(b.saved).toLocaleDateString("en-GB")}</i></label></li>`).join("")}</ul></div><svg class="pg-preview"></svg></div>
-      <p class="za-msg"></p><div class="za-foot"><button class="primary" data-lb="ok">✓ إدراج كبارت جديد</button><button data-lb="del" class="danger">حذف من المكتبة</button><button data-lb="close">إلغاء</button></div></div>`;
+      ${list.length ? "" : '<p class="empty">المكتبة فارغة: احفظ بارتاً فيها، أو استورد ملف مكتبة.</p>'}
+      <p class="za-msg"></p><div class="za-foot"><button class="primary" data-lb="ok"${list.length ? "" : " disabled"}>✓ إدراج كبارت جديد</button><button data-lb="del" class="danger"${list.length ? "" : " disabled"}>حذف من المكتبة</button><button data-lb="export" title="حفظ المكتبة في ملف لنقلها إلى جهاز آخر"${list.length ? "" : " disabled"}>⤒ تصدير المكتبة</button><button data-lb="import" title="إضافة قوالب من ملف مكتبة">⤓ استيراد مكتبة</button><button data-lb="close">إلغاء</button></div></div>`;
     document.body.append(el);
     const chosen = () => Number((el.querySelector('input[name="lib"]:checked') as HTMLInputElement | null)?.value ?? -1);
     const draw = () => {
@@ -477,7 +494,17 @@ export class App {
     el.addEventListener("click", (e) => {
       const a = (e.target as HTMLElement).closest<HTMLElement>("[data-lb]")?.dataset.lb, k = chosen(), b = list[k];
       if (a === "close") el.remove();
-      else if (a === "del" && b && confirm(`حذف «${b.name}» من المكتبة؟`)) {
+      else if (a === "export") download("LEVEL7 library.level7lib.json", JSON.stringify(list), "application/json");
+      else if (a === "import") {
+        if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:open-json", purpose: "library" }, "*");
+        else {
+          const inp = document.createElement("input");
+          inp.type = "file";
+          inp.accept = ".json";
+          inp.onchange = async () => inp.files?.[0] && this.importLibrary(await inp.files[0].text());
+          inp.click();
+        }
+      } else if (a === "del" && b && confirm(`حذف «${b.name}» من المكتبة؟`)) {
         list.splice(k, 1);
         this.storeLibrary(list);
         el.remove();
@@ -668,7 +695,7 @@ export class App {
 
   render(): void {
     const r = this.svg.getBoundingClientRect();
-    const parts: string[] = [this.gridSvg(r.width, r.height)];
+    const parts: string[] = [this.imagesSvg(), this.gridSvg(r.width, r.height)];
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
 
@@ -700,6 +727,7 @@ export class App {
     parts.push(this.vis.dims ? this.dimsSvg() : "");
     parts.push(this.vis.marks ? this.marksSvg() : "");
     parts.push(this.vis.texts ? this.textsSvg() : "");
+    if (this.vis.lengths) parts.push(this.lengthsSvg());
     if (this.showDup) parts.push(this.duplicatesSvg());
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
@@ -2123,6 +2151,11 @@ export class App {
         return;
       }
       if (e.button !== 0 || e.detail >= 2) return; // the second click of a double-click edits (below)
+      if (this.calibrating !== null) {
+        const rr = svg.getBoundingClientRect();
+        this.calibrateClick(this.toWorld(e.clientX - rr.left, e.clientY - rr.top));
+        return;
+      }
       {
         const r0 = svg.getBoundingClientRect(), hh = this.handleAt(e.clientX - r0.left, e.clientY - r0.top);
         if (hh) {
@@ -2648,7 +2681,7 @@ export class App {
 
   // ---- view options (as GRAFIS View menu): what the drawing shows, remembered here
   vis = (() => {
-    const d = { points: true, dims: true, marks: true, texts: true, ghosts: true };
+    const d = { points: true, dims: true, marks: true, texts: true, ghosts: true, lengths: false, images: true };
     try {
       return { ...d, ...JSON.parse(localStorage.getItem("level7.visibility") || "{}") } as typeof d;
     } catch {
@@ -2665,6 +2698,174 @@ export class App {
     if (k === "dims" && !on) this.dimHits = [];
     if (k === "texts" && !on) this.textHits = [];
     this.render();
+  }
+
+  /** F8: the length of every line and curve written on it. */
+  private lengthsSvg(): string {
+    const inch = this.model.unit === "in", out: string[] = [];
+    for (const o of this.res.objects.values()) {
+      if (o.kind !== "line") continue;
+      const L = polyLen(o.pts), m = Math.floor(o.pts.length / 2), a = o.pts[Math.max(0, m - 1)], b = o.pts[Math.min(o.pts.length - 1, m + (o.pts.length === 2 ? 0 : 1))];
+      const [x1, y1] = this.toScreen(o.pts.length === 2 ? o.pts[0] : a), [x2, y2] = this.toScreen(o.pts.length === 2 ? o.pts[1] : b);
+      let ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+      if (ang > 90) ang -= 180;
+      if (ang < -90) ang += 180;
+      const [mx, my] = o.pts.length === 2 ? [(x1 + x2) / 2, (y1 + y2) / 2] : this.toScreen(o.pts[m]);
+      const v = inch ? `${fmt(Math.round((L / 25.4) * 100) / 100)}″` : fmt(Math.round(L * 10) / 10);
+      out.push(`<text class="len-label" x="${mx}" y="${my - 4}" text-anchor="middle" transform="rotate(${ang.toFixed(1)} ${mx} ${my})">\u2066${v}\u2069</text>`);
+    }
+    return out.join("");
+  }
+
+  /** Background pictures (under the grid and the drawing). */
+  private imagesSvg(): string {
+    if (!this.vis.images) return "";
+    return (this.model.images ?? [])
+      .filter((im) => im.visible && /^data:image\/(png|jpeg|gif|webp);base64,/.test(im.data))
+      .map((im) => {
+        const [x, y] = this.toScreen([im.x, im.y + im.h]), [x2, y2] = this.toScreen([im.x + im.w, im.y]);
+        return `<image href="${im.data}" x="${x}" y="${y}" width="${Math.max(1, x2 - x)}" height="${Math.max(1, y2 - y)}" opacity="${im.opacity}" preserveAspectRatio="none"/>`;
+      })
+      .join("");
+  }
+
+  /** Pictures window (F9 shows / hides them): add a picture, place it in mm, set its width,
+   * transparency, or calibrate it from two clicked points and their real distance. */
+  openImages(): void {
+    document.querySelector(".img-win")?.remove();
+    const list = (this.model.images ??= []);
+    const el = document.createElement("section");
+    el.className = "z-assistant img-win";
+    el.dir = "rtl";
+    const rows = list.map((im, k) => `<div class="img-row" data-k="${k}"><label class="za-r"><input type="checkbox" data-ik="visible" ${im.visible ? "checked" : ""}/> <b>${esc(im.name)}</b></label>
+      <div class="img-f"><span>X مم</span><input data-ik="x" value="${im.x}"/><span>Y مم</span><input data-ik="y" value="${im.y}"/><span>العرض مم</span><input data-ik="w" value="${Math.round(im.w * 10) / 10}"/></div>
+      <div class="img-f"><span>الشفافية</span><input type="range" min="0.1" max="1" step="0.05" data-ik="opacity" value="${im.opacity}"/><button data-ia="cal" title="انقر نقطتين معروفتين على الصورة ثم اكتب المسافة الحقيقية">📏 معايرة بنقطتين</button><button data-ia="del" class="danger">حذف</button></div></div>`).join("");
+    el.innerHTML = `<div class="za-head"><b>Pixel images · صور الخلفية (F9)</b><button data-ia="close">×</button></div><div class="za-body">${rows || '<p class="empty">لا توجد صور. أضف صورة باترون لتتبعها بالرسم.</p>'}
+      <div class="za-foot"><button class="primary" data-ia="add">＋ إضافة صورة</button><button data-ia="close">إغلاق</button></div></div>`;
+    document.body.append(el);
+    el.addEventListener("change", (e) => {
+      const t = e.target as HTMLInputElement, k = Number(t.closest<HTMLElement>(".img-row")?.dataset.k), im = list[k], f = t.dataset.ik;
+      if (!im || !f) return;
+      this.snapshot();
+      if (f === "visible") im.visible = t.checked;
+      else {
+        const v = Number(normalizeFormula(t.value));
+        if (!Number.isFinite(v)) return;
+        if (f === "w" && v > 0) (im.h = (im.h * v) / im.w), (im.w = v);
+        else if (f === "x" || f === "y" || f === "opacity") im[f] = v;
+      }
+      this.changed();
+    });
+    el.addEventListener("input", (e) => {
+      const t = e.target as HTMLInputElement, k = Number(t.closest<HTMLElement>(".img-row")?.dataset.k);
+      if (t.dataset.ik === "opacity" && list[k]) (list[k].opacity = Number(t.value)), this.render();
+    });
+    el.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>("[data-ia]"), a = b?.dataset.ia, k = Number(b?.closest<HTMLElement>(".img-row")?.dataset.k);
+      if (a === "close") el.remove();
+      else if (a === "del" && list[k]) {
+        this.snapshot();
+        list.splice(k, 1);
+        this.changed();
+        this.openImages();
+      } else if (a === "cal" && list[k]) {
+        el.remove();
+        this.calibrating = k;
+        this.calPts = [];
+        this.toast("انقر النقطة الأولى المعروفة على الصورة");
+      } else if (a === "add") {
+        const inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "image/png,image/jpeg,image/gif,image/webp";
+        inp.onchange = () => {
+          const file = inp.files?.[0];
+          if (!file) return;
+          if (file.size > 8_000_000) return this.toast("الصورة أكبر من 8 ميجابايت");
+          const r = new FileReader();
+          r.onload = () => {
+            const data = String(r.result), img = new Image();
+            img.onload = () => {
+              this.snapshot();
+              // placed at the view centre, 1 pixel = 1 mm until calibrated
+              const w = img.naturalWidth, h = img.naturalHeight, c = this.toWorld(this.svg.clientWidth / 2, this.svg.clientHeight / 2);
+              list.push({ id: list.reduce((m, q) => Math.max(m, q.id), 0) + 1, name: file.name, data, x: Math.round(c[0] - w / 2), y: Math.round(c[1] - h / 2), w, h, opacity: 0.5, visible: true });
+              this.changed();
+              this.openImages();
+              this.toast("أُضيفت الصورة؛ عايرها بنقطتين لتطابق المقاس الحقيقي");
+            };
+            img.src = data;
+          };
+          r.readAsDataURL(file);
+        };
+        inp.click();
+      }
+    });
+  }
+
+  private calibrating: number | null = null;
+  private calPts: Pt[] = [];
+
+  /** Calibration: the second click asks for the real distance; the picture is scaled about
+   * the first point so that the two points are that far apart. */
+  private calibrateClick(at: Pt): void {
+    this.calPts.push(at);
+    if (this.calPts.length < 2) return void this.toast("انقر النقطة الثانية");
+    const [a, b] = this.calPts, k = this.calibrating as number, im = this.model.images?.[k];
+    this.calibrating = null;
+    this.calPts = [];
+    if (!im) return;
+    const d = dist(a, b);
+    const el = document.createElement("section");
+    el.className = "z-assistant lib-save";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>معايرة الصورة</b><button data-cv="close">×</button></div><div class="za-body"><p>المسافة على الصورة الآن ${fmt(Math.round(d * 10) / 10)} مم.</p><div class="za-row"><span>الحقيقية مم</span><input data-cv="real" value=""/></div><div class="za-foot"><button class="primary" data-cv="ok">✓ معايرة</button><button data-cv="close">إلغاء</button></div></div>`;
+    document.body.append(el);
+    const inp = el.querySelector('[data-cv="real"]') as HTMLInputElement;
+    inp.focus();
+    const ok = () => {
+      const real = Number(normalizeFormula(inp.value));
+      if (!(real > 0) || !(d > 0)) return;
+      const f = real / d;
+      this.snapshot();
+      im.x = a[0] + (im.x - a[0]) * f;
+      im.y = a[1] + (im.y - a[1]) * f;
+      im.w *= f;
+      im.h *= f;
+      this.changed();
+      el.remove();
+      this.toast(`عُويرت الصورة (×${fmt(Math.round(f * 1000) / 1000)})`);
+    };
+    inp.addEventListener("keydown", (e) => e.key === "Enter" && ok());
+    el.addEventListener("click", (e) => {
+      const c = (e.target as HTMLElement).closest<HTMLElement>("[data-cv]")?.dataset.cv;
+      if (c === "close") el.remove();
+      else if (c === "ok") ok();
+    });
+  }
+
+  /** Arrange parts: all parts as large pictures; a click opens one. */
+  openArrange(): void {
+    document.querySelector(".arrange-win")?.remove();
+    const ps = this.ensureParts();
+    this.syncPart();
+    const el = document.createElement("section");
+    el.className = "arrange-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="ar-head"><b>ترتيب البارتات · ${ps.length}</b><span>انقر بارتاً لفتحه · Esc للإغلاق</span><button data-ar="close">×</button></div><div class="ar-grid">${ps
+      .map((p, k) => {
+        const pv = this.partPreview(this.partResult(k));
+        return `<div class="ar-item${k === (this.model.activePart ?? 0) ? " act" : ""}" data-ar-part="${k}"><svg viewBox="${pv.box}">${pv.svg}</svg><div><b>${String(p.no).padStart(3, "0")}</b> ${esc(p.name)}${p.production ? " ✂" : ""}</div></div>`;
+      })
+      .join("")}</div>`;
+    document.body.append(el);
+    const close = () => (el.remove(), document.removeEventListener("keydown", esc_));
+    const esc_ = (e: KeyboardEvent) => e.key === "Escape" && close();
+    document.addEventListener("keydown", esc_);
+    el.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement, it = t.closest<HTMLElement>("[data-ar-part]");
+      if (t.closest('[data-ar="close"]')) close();
+      else if (it) (this.switchPart(Number(it.dataset.arPart)), close());
+    });
   }
 
   /** Objects that lie exactly on top of another one (same points within 0.01 mm). */
@@ -2703,7 +2904,7 @@ export class App {
     const el = document.createElement("section");
     el.className = "z-assistant vis-win";
     el.dir = "rtl";
-    const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع وحواشي الخياطة"]];
+    const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع وحواشي الخياطة"], ["lengths", "أطوال الخطوط (F8)"], ["images", "صور الخلفية (F9)"]];
     el.innerHTML = `<div class="za-head"><b>Visibility · الرؤية</b><button data-v="close">×</button></div><div class="za-body">${items
       .map(([k, l]) => `<label class="za-r"><input type="checkbox" data-vk="${k}" ${(k === "pieces" ? this.showPieces : this.vis[k]) ? "checked" : ""}/> ${l}</label>`)
       .join("")}<label class="za-r"><input type="checkbox" data-vk="dup" ${this.showDup ? "checked" : ""}/> إبراز العناصر المكررة (F4)</label></div>`;

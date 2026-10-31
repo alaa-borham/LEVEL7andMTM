@@ -69,6 +69,8 @@ function shortcut(e, typing) {
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
   if (e.key === 'F4') return 'dup';
   if (e.key === 'F7') return 'dims';
+  if (e.key === 'F8') return 'lengths';
+  if (e.key === 'F9') return 'imgtoggle';
   if (e.altKey && !ctrl && k === 'o') return 'visibility';
   if (e.key === 'F6') return 'fit';
   if (e.key === 'F5') return 'tab-steps';
@@ -101,7 +103,7 @@ export function installDesignMode() {
     [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
     [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع'], ['tab-partlist', icon('parts'), 'Parts', 'البارتات (تنظيم البارتات) · Ctrl+T']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
-    [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4']],
+    [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4'], ['lengths', letter('mm'), 'F8', 'إظهار أطوال الخطوط والمنحنيات · F8'], ['images', letter('🖼'), 'F9', 'صور الخلفية للتتبع (F9 إظهار/إخفاء)'], ['arrange', icon('dock'), 'Arrange', 'ترتيب البارتات: كل البارتات بصور كبيرة']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],
     [['new', icon('new'), 'New', 'تصميم جديد · Ctrl+N'], ['open', icon('open'), 'Open', 'فتح تصميم · Ctrl+O']],
     [['aama', letter('AAMA'), 'Ctrl+E', 'تصدير القطع DXF-AAMA للتعشيق · Ctrl+E'], ['dxf', letter('DXF'), 'DXF', 'تصدير خطوط البناء DXF'], ['plt', letter('PLT'), 'PLT', 'تصدير القطع PLT للبلوتر']]
@@ -233,6 +235,11 @@ export function installDesignMode() {
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
     else if (d.type === 'l7:context') showCat(null);
+    else if (d.type === 'l7:open-json' && d.purpose === 'library') void (async () => {
+      if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
+      try { const file = await desktop.openFile({ design: true }); if (file) send({ type: 'l7:json', purpose: 'library', text: file.text, name: file.name }); }
+      catch (e) { status('تعذر فتح الملف: ' + e.message); }
+    })();
     else if (d.type === 'l7:print' && typeof d.html === 'string') void (async () => {
       if (!desktop?.printPdf) { status('الطباعة متاحة في نسخة سطح المكتب فقط.'); return; }
       try { const r = await desktop.printPdf({ html: d.html, filename: String(d.name || 'product.pdf') }); if (r) status('حُفظ PDF: ' + (r.name || '')); }
@@ -246,7 +253,7 @@ export function installDesignMode() {
       } catch (e) { status('تعذر فتح الملف: ' + e.message); }
     })();
     else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
-    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
+    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
   });
   host.addEventListener('click', e => {
     const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');

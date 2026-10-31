@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.138
+
+LEVEL7 design mode: background pictures to trace over (add a photo / scan, place it in mm, transparency, calibrate from two clicked points and their real distance; F9 shows / hides); F8 writes the length of every line and curve on it; Arrange parts shows all parts as large pictures, a click opens one; the basic blocks library can be exported to a file and imported on another computer.
+
 LEVEL7 and MTM 0.9.137
 
 LEVEL7 design mode: texts on the drawing (height, angle; {X1} / {Z3} show current values; double-click to edit); delete text by clicking it, and texts / inner symbols / stitches / notches inside a frame. View options: Visibility window (Alt+O: points, dimensions, stitches and symbols, texts, faded parts, pieces), F7 show / hide dimensions, F4 highlight duplicate objects. Product info printed to PDF (A4 sheet with texts, sizes, pictures and the part). Basic blocks library on this computer: save the active part as a block, inherit a block as a new part (adds the X / Z it needs). Convert notch: slit, T, V or castle, drawn and cut by the plotter in that shape.

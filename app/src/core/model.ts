@@ -93,6 +93,8 @@ export interface Model {
    * names / nextId / pieces; parts[activePart] holds it again whenever it is synced. */
   parts?: Part[];
   activePart?: number;
+  /** Background pictures to trace over (pixel images): placed in mm, bottom-left at x, y. */
+  images?: { id: number; name: string; data: string; x: number; y: number; w: number; h: number; opacity: number; visible: boolean }[];
   /** Product info (as GRAFIS): texts, and images as data URLs (logo, sketches, fabric). */
   product?: Record<string, string>;
 }

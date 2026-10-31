@@ -44,6 +44,7 @@ try{
  await page.locator('[data-l7d-command="product"]').click();await fr.locator('.product-win [data-pi="name"]').fill('ثوب');await fr.locator('.product-win [data-pi-act="print"]').click();
  for(let k=0;k<80&&!(await fs.stat(pdf).catch(()=>null));k++)await page.waitForTimeout(150);
  assert.equal((await fs.readFile(pdf)).subarray(0,4).toString(),'%PDF');await fr.locator('.product-win [data-pi-act="close"]').first().click();pass('product info printed to a PDF file');
+ await f.evaluate(()=>window.level7.storeLibrary([]));
  // 5 library: save the part as a block, insert it as a new part
  await page.locator('[data-l7d-cat="الوراثة"]').click({button:'right'});await page.locator('[data-l7d-tool="saveBlock"]').click();
  await fr.locator('.lib-save [data-ls="name"]').fill('أمام أساسي');await fr.locator('.lib-save [data-ls="ok"]').click();

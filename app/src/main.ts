@@ -13,6 +13,8 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   }
   if (e.key === "F4") return "dup";
   if (e.key === "F7") return "dims";
+  if (e.key === "F8") return "lengths";
+  if (e.key === "F9") return "imgtoggle";
   if (e.altKey && !ctrl && e.key.toLowerCase() === "o") return "visibility";
   if (e.key === "F6") return "fit";
   if (e.key === "F5") return "tab-steps";
@@ -146,6 +148,10 @@ if (embedded && window.parent !== window) {
     else if (action === "dup") app.toggleDuplicates();
     else if (action === "dims") app.setVis("dims", !app.vis.dims);
     else if (action === "visibility") app.openVisibility();
+    else if (action === "images") app.openImages();
+    else if (action === "imgtoggle") app.setVis("images", !app.vis.images);
+    else if (action === "lengths") app.setVis("lengths", !app.vis.lengths);
+    else if (action === "arrange") app.openArrange();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);
@@ -174,6 +180,7 @@ if (embedded && window.parent !== window) {
       }
       case "l7:theme": document.body.classList.toggle("dark", (d as { dark?: boolean }).dark === true); break;
       case "l7:cancel": app.cancelTool(); break;
+      case "l7:json": if ((d as unknown as { purpose?: string }).purpose === "library" && typeof d.text === "string") app.importLibrary(d.text); break;
       case "l7:table": void app.importXFile(String(d.name ?? ""), { text: typeof d.text === "string" ? d.text : undefined, base64: (d as unknown as { base64?: unknown }).base64 as string | undefined }); break;
       case "l7:new": app.newDesign(); break;
       case "l7:open": if (typeof d.text === "string") app.openText(d.text, d.name ?? "", d.grafis === true); break;
