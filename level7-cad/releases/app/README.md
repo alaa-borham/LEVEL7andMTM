@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.150
+
+LEVEL7 design: as GRAFIS, the line / curve / point near the pointer is marked (a glow and a dot on its nearest point), always, not only while a tool waits for a pick. View (Alt+O) has colours for straight lines, curves, points, the near mark and the drawing background, kept on this computer, with a reset. Size page as the user drew it: all buttons in one fixed row above the table (no explanation text), the header row and code / name / base / grading fixed while the sizes scroll, English digits in every field. Fix: a fast first keystroke in a new X row is no longer lost.
+
 LEVEL7 and MTM 0.9.149
 
 X table: X, name, MTM and the base size stay in place while the size columns scroll sideways (frozen like Excel); the header row stays on top. A library product takes its X values and sizes from Excel / CSV (same layout as the X table). Size names that are numbers (52, 54 ...) are read as size columns when importing X from Excel. Every small window (library, product, marker, ISO, product info ...) moves by its title bar.

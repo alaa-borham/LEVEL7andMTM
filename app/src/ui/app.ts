@@ -47,6 +47,8 @@ const grow = (t: HTMLElement): void => {
   // a hidden window has no size yet: CSS (field-sizing) sizes it when it shows
   if (t.scrollHeight) t.style.height = t.scrollHeight + 2 + "px";
 };
+/** Drawing colours the user can change (View → colours). */
+const COLOR_KEYS: [string, string][] = [["--line", "الخطوط المستقيمة"], ["--curve", "المنحنيات"], ["--point", "النقاط"], ["--near", "علامة الاقتراب من خط"], ["--canvas", "خلفية الرسم"]];
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
 type Hover = Pick | null;
@@ -91,6 +93,8 @@ export class App {
   private scale = 1;
   showNames = false;
   private nameHover: number | null = null;
+  /** As GRAFIS: the line / curve / point under the pointer and the nearest point on it. */
+  private near: { id: number; at: Pt } | null = null;
   showGrid = false;
 
   private tool: Tool | null = null;
@@ -110,6 +114,7 @@ export class App {
     this.model = restored ?? emptyModel();
     this.fromRestore = !!restored && this.unsaved;
     this.evaluate();
+    this.applyColors();
     // every small window (library, product, marker, ISO, product info ...) moves by its title bar
     document.addEventListener("pointerdown", (e) => {
       const head = (e.target as HTMLElement).closest<HTMLElement>(".z-assistant .za-head");
@@ -801,7 +806,7 @@ export class App {
     const r = this.svg.getBoundingClientRect();
     const parts: string[] = [this.imagesSvg(), this.gridSvg(r.width, r.height)];
     const highlight = this.highlighted();
-    const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
+    const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : o.pts.length > 2 ? "var(--curve, var(--line))" : "var(--line)");
 
     for (const g of this.vis.ghosts ? this.ghosts : [])
       for (const o of g.objects.values())
@@ -827,6 +832,7 @@ export class App {
     }
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
+    if (this.near && !this.pan) parts.push(this.nearSvg(this.near));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.vis.dims ? this.dimsSvg() : "");
     parts.push(this.vis.marks ? this.marksSvg() : "");
@@ -1262,6 +1268,15 @@ export class App {
       const geo = this.res.pieces.get(piece.id);
       return geo ? [{ piece, geo }] : [];
     });
+  }
+
+  /** The near-pointer mark: the object glows, its nearest point gets a dot (as GRAFIS). */
+  private nearSvg(n: { id: number; at: Pt }): string {
+    const o = this.res.objects.get(n.id);
+    if (!o) return "";
+    const [x, y] = this.toScreen(n.at);
+    const glow = o.kind === "line" ? `<polyline class="near-glow" points="${o.pts.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>` : `<circle class="near-glow" cx="${x}" cy="${y}" r="7" fill="none"/>`;
+    return `${glow}<circle class="near-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"/>`;
   }
 
   private markSvg(p: Pick, color: string): string {
@@ -2625,7 +2640,12 @@ export class App {
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
       if (!this.pan) {
         const oh = this.hit("object", sx, sy), id = oh ? pickedId(oh) : null;
-        if (id !== this.nameHover) {
+        // the object near the pointer is marked (glow) with a dot on its nearest point
+        const o = id !== null && id !== undefined ? this.res.objects.get(id) : undefined;
+        const near = o ? { id: o.id, at: o.kind === "point" ? o.pts[0] : closestOnPolyline(o.pts, this.mouse).pt } : null;
+        const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5));
+        this.near = near;
+        if (id !== this.nameHover || moved) {
           this.nameHover = id;
           this.render();
         }
@@ -3330,6 +3350,36 @@ export class App {
   }
 
   /** Visibility window (Alt+O): which kinds of elements the drawing shows. */
+  /** User colours for the drawing (kept on this computer): straight lines, curves, points,
+   * the near-pointer mark and the drawing background. */
+  private colors(): Record<string, string> {
+    try {
+      return JSON.parse(localStorage.getItem("level7.colors") || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+  private colorOf(k: string): string {
+    const c = this.colors()[k];
+    if (c) return c;
+    const v = getComputedStyle(document.body).getPropertyValue(k === "--canvas" ? "--bg" : k).trim() || "#888888";
+    return /^#[0-9a-f]{6}$/i.test(v) ? v : k === "--near" ? "#7ed321" : k === "--curve" ? this.colorOf("--line") : "#888888";
+  }
+  private setColor(k: string, v: string): void {
+    const c = this.colors();
+    c[k] = v;
+    try {
+      localStorage.setItem("level7.colors", JSON.stringify(c));
+    } catch {}
+    this.applyColors();
+    this.render();
+  }
+  applyColors(): void {
+    const c = this.colors(), st = document.body.style; // on body: the theme sets its colours there
+    for (const [k] of COLOR_KEYS) if (k !== "--canvas") c[k] ? st.setProperty(k, c[k]) : st.removeProperty(k);
+    this.svg.style.background = c["--canvas"] ?? "";
+  }
+
   openVisibility(): void {
     const old = document.querySelector(".vis-win");
     if (old) return old.remove();
@@ -3339,13 +3389,27 @@ export class App {
     const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع وحواشي الخياطة"], ["lengths", "أطوال الخطوط (F8)"], ["images", "صور الخلفية (F9)"]];
     el.innerHTML = `<div class="za-head"><b>Visibility · الرؤية</b><button data-v="close">×</button></div><div class="za-body">${items
       .map(([k, l]) => `<label class="za-r"><input type="checkbox" data-vk="${k}" ${(k === "pieces" ? this.showPieces : this.vis[k]) ? "checked" : ""}/> ${l}</label>`)
-      .join("")}<label class="za-r"><input type="checkbox" data-vk="dup" ${this.showDup ? "checked" : ""}/> إبراز العناصر المكررة (F4)</label></div>`;
+      .join("")}<label class="za-r"><input type="checkbox" data-vk="dup" ${this.showDup ? "checked" : ""}/> إبراز العناصر المكررة (F4)</label>
+      <div class="vis-colors"><b>الألوان</b>${COLOR_KEYS.map(([k, l]) => `<label class="za-r"><input type="color" data-ck="${k}" value="${this.colorOf(k)}"/> ${l}</label>`).join("")}<button data-v="reset-colors">الألوان الأصلية</button></div></div>`;
     document.body.append(el);
     el.addEventListener("change", (e) => {
       const t = e.target as HTMLInputElement, k = t.dataset.vk;
       if (k === "pieces") (this.showPieces = t.checked), this.render();
       else if (k === "dup") this.showDup !== t.checked && this.toggleDuplicates();
       else if (k) this.setVis(k as keyof App["vis"], t.checked);
+    });
+    el.addEventListener("input", (e) => {
+      const t = e.target as HTMLInputElement;
+      if (t.dataset.ck) this.setColor(t.dataset.ck, t.value);
+    });
+    el.addEventListener("click", (e) => {
+      if (!(e.target as HTMLElement).closest('[data-v="reset-colors"]')) return;
+      try {
+        localStorage.removeItem("level7.colors");
+      } catch {}
+      this.applyColors();
+      el.querySelectorAll<HTMLInputElement>("[data-ck]").forEach((i) => (i.value = this.colorOf(i.dataset.ck as string)));
+      this.render();
     });
     el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-v="close"]') && el.remove());
   }
@@ -3664,7 +3728,7 @@ export class App {
           ${
             sz.kind === "customer"
               ? `<div class="step">زبون</div>`
-              : `<div class="step">درجة <input type="number" lang="en" dir="ltr" step="any" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>`
+              : `<div class="step">درجة <input type="text" inputmode="decimal" lang="en" dir="ltr" data-sstep="${i}" value="${sz.step}" title="عدد درجات التدرج عن الأساسي"/></div>`
           }
           <button class="danger" data-sdel="${i}" title="حذف المقاس">×</button></th>`,
       )
@@ -3674,27 +3738,23 @@ export class App {
         (m) => `<tr>
           <td class="id">X${m.id}</td><td class="mname">${esc(m.name)}</td>
           <td class="base">${m.value}</td>
-          <td><input class="expr" type="number" lang="en" dir="ltr" step="any" data-grade="${m.id}" value="${g[m.id] ?? ""}" placeholder="0"/></td>
-          ${sizes.map((sz, i) => `<td><input class="expr" type="number" lang="en" dir="ltr" step="any" data-sv="${i}:${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${m.value}"/></td>`).join("")}
+          <td class="grade"><input class="expr" type="text" inputmode="decimal" lang="en" dir="ltr" data-grade="${m.id}" value="${g[m.id] ?? ""}" placeholder="0"/></td>
+          ${sizes.map((sz, i) => `<td><input class="expr" type="text" inputmode="decimal" lang="en" dir="ltr" data-sv="${i}:${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${m.value}"/></td>`).join("")}
         </tr>`,
       )
       .join("");
     box.innerHTML = `
-      <p class="empty">كل عمود مقاس أو زبون. الخانة الفارغة تأخذ القيمة الأساسية. اختر المقاس المعروض من أعلى الشاشة، والباترون يُعاد بناؤه بقياساته.</p>
-      <div class="table-actions">
-        <button data-sadd>إضافة مقاس</button>
+      <div class="table-actions size-top">
+        <button data-sadd title="الخانة الفارغة في عمود مقاس تأخذ القيمة الأساسية">إضافة مقاس</button>
         <button data-cadd>إضافة زبون</button>
         <button data-sfill title="قيمة كل مقاس = الأساسي + الدرجة × التدرج">تعبئة بالتدرج</button>
-      </div>
-      <div class="table-actions">
         <button data-cimport title="CSV: سطر لكل زبون، أو JSON: طلب أو قائمة طلبات">استيراد زبائن (CSV / JSON)</button>
         <label class="field-inline">وحدة الملف <select data-cunit><option value="mm">مم</option><option value="cm">سم</option><option value="in">إنش</option></select></label>
+        <button class="primary" data-sizes-mlib title="إنشاء منتجات في مكتبة القياسات، إضافة قياساتها وتعديلها، أو نسخ جدول منتج إلى هذا التصميم">📚 مكتبة القياسات</button>
       </div>
       <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات (فوق بعض أو جنباً إلى جنب من زر «Grading» في الشريط)</label>
       ${this.showNest ? `<div class="legend">${this.nest.map((n) => `<span><i style="background:${n.color}"></i>${esc(n.name)}</span>`).join("")}</div>` : ""}
-      <div class="size-table"><table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>${esc(sizeName(this.model, -1))}</th><th>التدرج</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="table-actions"><button class="primary" data-sizes-mlib title="إنشاء منتجات في مكتبة القياسات، إضافة قياساتها وتعديلها، أو نسخ جدول منتج إلى هذا التصميم">📚 مكتبة القياسات</button></div>
-      <p class="size-export-note">التصدير لكل المقاسات وAAMA مع قواعد التدرج (RUL): من زر «Export» في شريط الأوامر.</p>`;
+      <div class="size-table"><table class="grid"><thead><tr><th class="id">رمز</th><th class="mname">القياس</th><th class="base">${esc(sizeName(this.model, -1))}</th><th class="grade">التدرج</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
 
     let snapped = false;
     const edit = (fn: () => void, panels = false) => {
@@ -3706,7 +3766,7 @@ export class App {
       this.changed(panels);
       if (!panels) this.renderSizeSelect();
     };
-    const num = (v: string) => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
+    const num = (v: string) => { const t = normalizeFormula(v).trim(); return t === "" || Number.isNaN(Number(t)) ? undefined : Number(t); }; // Arabic digits are read too
     box.querySelectorAll<HTMLInputElement>("input").forEach((inp) => inp.addEventListener("change", () => (snapped = false)));
     box.querySelectorAll<HTMLInputElement>("[data-sname]").forEach((inp) =>
       inp.addEventListener("input", () => edit(() => (sizes[Number(inp.dataset.sname)].name = inp.value))),
@@ -3874,7 +3934,10 @@ export class App {
         this.changed(false);
       });
       inp.addEventListener("change", () => (snapped = false));
-      inp.addEventListener("focus", () => setTimeout(() => inp.select(), 0));
+      inp.addEventListener("focus", () => {
+        const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
+        setTimeout(() => inp.value === v0 && inp.select(), 0);
+      });
       inp.addEventListener("keydown", (e) => {
         if (e.key !== "Enter") return;
         e.preventDefault();
@@ -4181,7 +4244,10 @@ export class App {
         this.renderSteps();
       });
       // a field opens with its text selected, so typing replaces the old value (0)
-      inp.addEventListener("focus", () => setTimeout(() => inp.select(), 0));
+      inp.addEventListener("focus", () => {
+        const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
+        setTimeout(() => inp.value === v0 && inp.select(), 0);
+      });
       // Enter saves the value at once and moves to the same field of the next row
       inp.addEventListener("keydown", (e) => {
         if (e.key !== "Enter") return;

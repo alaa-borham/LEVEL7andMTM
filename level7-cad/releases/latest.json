@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.149",
- "notes": "تجميد أعمدة X، إكسل لمنتجات المكتبة، نوافذ تتحرك",
+ "version": "0.9.150",
+ "notes": "علامة الاقتراب مثل GRAFIS، ألوان الخطوط، صفحة المقاسات الجديدة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b197cd97fa2329e1843e9cf21a3fc30f09395cec9b1ae32c549521bba99ee42b",
-   "size": 136376
+   "sha256": "8933999135bff0c98f41dd34d5d2fce4a6147ca853e42d8e5e3c9e0b21c4b3e0",
+   "size": 136978
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-ChQXXHn9.css",
-   "sha256": "be8d97dfd6052962c5c1d991967afa51dbaaa01de5f4e6ae05e48400070fbe7a",
-   "size": 35089
+   "path": "assets/l7design/assets/index-CAdXEBHv.js",
+   "sha256": "68846fd087f090bf8b27b51604dc685f7e51cea8f830b442ae5ab7ae563ac490",
+   "size": 252632
   },
   {
-   "path": "assets/l7design/assets/index-D_2ejTzf.js",
-   "sha256": "1203feff157b639bfc60ebabc0e0ce7d303e95c17a645218774d9aec3497705f",
-   "size": 250639
+   "path": "assets/l7design/assets/index-R9lVB7Wq.css",
+   "sha256": "a5ea480f8b48ae822ae47957f345a106e6833f8ac644e86d53f23bcf765ab3f3",
+   "size": 37109
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "2cde48f04742b1cee726954f5a4c065d222d5bab7a4add582822ca703d5e0ea9",
+   "sha256": "b86f0950247cccb9575ffc8db3c8434d6e21934d473071e7b4ba659367df7e53",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "9908b70df1e1fbbdaf03e93a910e66d94b0adacab590e6ace87e7f098a6243a5",
+   "sha256": "5da51b159ad804738af7f9ea82b76560005ba1fb69055716a288e5b92026b886",
    "size": 301
   },
   {
