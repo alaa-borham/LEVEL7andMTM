@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.139",
- "notes": "تحويل بارتات MDL إلى تصميم LEVEL7",
+ "version": "0.9.140",
+ "notes": "تعشيق: ملف AAMA واحد لكل بارتات الإنتاج بكل المقاسات وعملاء MTM",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "88d1f3ad3d54af0e3715caa8d828ae505401e2f5f4535cca44b205e0628d29c6",
-   "size": 130905
+   "sha256": "f630bac665279a1f14ba0fe8718bed88643609393b108bff87206b6058594a6f",
+   "size": 131261
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-CBv3Fd5b.js",
-   "sha256": "b157f95940cbed7d4702d54163b8c5f89f7da4b14d893d60eff7ff420f679602",
-   "size": 212110
+   "path": "assets/l7design/assets/index-BkYKiYh5.js",
+   "sha256": "dc3e9d092296d1e7fa4f280d542dab130ce43aca3f1179d86dd09f6b185bd492",
+   "size": 214789
   },
   {
-   "path": "assets/l7design/assets/index-kQDRyIu7.css",
-   "sha256": "a35c0dc01ec895eef80450bd33a5bda2fcfc64d5add344cfb07b6569620aa301",
-   "size": 28504
+   "path": "assets/l7design/assets/index-qIM2Tv-2.css",
+   "sha256": "ac16c2c9775c38e3dbf927a4fa7f3cba0f66a8e60afa9054a8550c23a1e53260",
+   "size": 28635
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "f0a30893c199f9ca2eb8deeeaa302be52e2438732998d7a89f9a21210f27036d",
+   "sha256": "93fe90a6fa4e202e511b55c24ceb0aeaffc0f062dd08a9dc7b1f9a2ee0195126",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "0dee8cde3862d3b711e3103a8187e0ccb001cdc7399050cb3d378dee3d447b27",
+   "sha256": "88d3e3c0b0dd4376c0190b53869b06b96412f3c5e143bdbc8fb692f696cca254",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "08e8d725fccbadf45fd414089717dfaa35c97dac385d4c3dd5b271a3bee9f15f",
-   "size": 31412
+   "sha256": "59cca7c5e0c9fb788b1718f10b741297e31b3151298158c47aee6be003ae6f42",
+   "size": 31565
   },
   {
    "path": "src/line-transform-ui.js",

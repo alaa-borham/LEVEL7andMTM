@@ -851,3 +851,4 @@ body.embedded .hist-bar { left: 104px; }
 .ar-item b { font-family: Consolas, monospace; color: var(--muted); }
 .ar-item.act { border-color: var(--live); } .ar-item.act svg .rec-old { stroke: #2fa4dd; }
 .ar-item:hover { border-color: var(--accent); }
+.marker-win { width: 520px; } .mk-list { max-height: 50vh; overflow: auto; font-size: 12.5px; padding-inline-start: 18px; } .mk-list li { margin: 3px 0; }

@@ -21,6 +21,59 @@ export function allSizeItems(model: Model): { items: ExportItem[]; errors: strin
   return { items, errors };
 }
 
+/** Marker making: the pieces of every production part of the design, in every size and
+ * customer, with the part's amounts: the normal pieces (quantity × amount) and, when the
+ * part has mirrored ones, a mirrored copy (quantity × mirrored). A design without parts
+ * counts as one production part. */
+export function markerItems(model: Model): { items: ExportItem[]; errors: string[]; parts: number } {
+  const items: ExportItem[] = [];
+  const errors: string[] = [];
+  const parts = model.parts?.length
+    ? model.parts.map((p, k) => ({ p, k, live: k === (model.activePart ?? 0) })).filter(({ p }) => p.production)
+    : [{ p: { no: 1, name: "", steps: model.steps, names: model.names, nextId: model.nextId, pieces: model.pieces, amount: 1, mirrored: 0, production: true }, k: 0, live: true }];
+  for (const { p, k, live } of parts) {
+    const pieces = (live ? model.pieces : p.pieces) ?? [];
+    const steps = live ? model.steps : p.steps;
+    if (!pieces.length) {
+      errors.push(`البارت ${String(p.no).padStart(3, "0")} ${p.name}: لا توجد قطع؛ عرّف القطعة بأداة «قطعة من الحدود»`);
+      continue;
+    }
+    const amount = p.amount ?? 1, mirrored = p.mirrored ?? 0;
+    for (let i = -1; i < (model.sizes?.length ?? 0); i++) {
+      const r = evaluateModel(withSize({ ...model, steps, names: live ? model.names : p.names, pieces, activePart: model.parts?.length ? k : model.activePart }, i));
+      const size = sizeName(model, i);
+      for (const piece of pieces) {
+        const geo = r.pieces.get(piece.id);
+        if (!geo) {
+          errors.push(`${p.name || "بارت"} / ${piece.name} (${size}): ${r.pieceErrors.get(piece.id) ?? "خطأ"}`);
+          continue;
+        }
+        const name = [p.name, piece.name].filter(Boolean).join(" - ");
+        if (amount > 0) items.push({ piece: { ...piece, name, quantity: piece.quantity * amount }, geo, size });
+        if (mirrored > 0) items.push({ piece: { ...piece, name: `${name} (M)`, quantity: piece.quantity * mirrored }, geo: mirrorGeo(geo), size });
+      }
+    }
+  }
+  return { items, errors, parts: parts.length };
+}
+
+/** A piece turned over (mirrored about the vertical line through its centre). */
+function mirrorGeo(g: PieceGeo): PieceGeo {
+  const cx = g.centre[0], m = (p: Pt): Pt => [2 * cx - p[0], p[1]];
+  const rev = (pts: Pt[]) => pts.map(m).reverse(); // keep the outline counter-clockwise
+  return {
+    ...g,
+    sew: rev(g.sew),
+    cut: rev(g.cut),
+    cutEdges: g.cutEdges.map(rev).reverse(),
+    edges: g.edges.map(rev).reverse(),
+    order: [...g.order].reverse(),
+    notches: g.notches.map((n) => ({ ...n, at: m(n.at), to: m(n.to), shape: n.shape.map((s) => s.map(m)) })),
+    grain: [m(g.grain[0]), m(g.grain[1])],
+    centre: m(g.centre),
+  };
+}
+
 /** AAMA layer numbers used here. */
 export const AAMA = { boundary: 1, turn: 2, notch: 4, grain: 7, sew: 14 } as const;
 

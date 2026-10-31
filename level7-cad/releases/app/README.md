@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.140
+
+LEVEL7 design mode, command bar "Marker": one AAMA DXF for marker making with the pieces of every production part (Parts window), in the base size, every size and every MTM customer, with each piece's quantity times the part amount and mirrored copies marked (M). Parts without pieces are listed instead of being skipped silently.
+
 LEVEL7 and MTM 0.9.139
 
 File > "Convert MDL parts to a LEVEL7 design": every part of the open MDL that has stored geometry becomes a part of a new LEVEL7 design, with its name, as fixed points, lines and curves of the base size (seam helper lines left out). The MDL file is not changed. All LEVEL7 tools work on the converted geometry; the converted elements are not parametric (they do not follow X / Z), new steps drawn on them are.

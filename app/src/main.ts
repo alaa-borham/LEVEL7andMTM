@@ -152,6 +152,7 @@ if (embedded && window.parent !== window) {
     else if (action === "imgtoggle") app.setVis("images", !app.vis.images);
     else if (action === "lengths") app.setVis("lengths", !app.vis.lengths);
     else if (action === "arrange") app.openArrange();
+    else if (action === "marker") app.exportMarker();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);

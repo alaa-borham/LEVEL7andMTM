@@ -2,7 +2,7 @@ import { toGradedAama } from "../core/aama-graded";
 import { FUNCTION_NAMES, normalizeFormula, references } from "../core/formula";
 import { fromBase64, readCsv, readXlsx, writeXlsx } from "../core/xlsx";
 import { importXTable, xTableRows } from "../core/xtable";
-import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
+import { allSizeItems, markerItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
@@ -2841,6 +2841,24 @@ export class App {
       if (c === "close") el.remove();
       else if (c === "ok") ok();
     });
+  }
+
+  /** Marker making: one AAMA file with the pieces of every production part, every size and
+   * customer, with the amounts (mirrored pieces turned over). */
+  exportMarker(): void {
+    this.syncPart();
+    const r = markerItems(this.model);
+    if (!r.parts) return this.toast("لا توجد بارتات إنتاج: حدّد «بارت إنتاج» من نافذة Parts");
+    if (r.items.length) download(`${safeFileName(this.model.name)} marker.dxf`, toAamaDxf(r.items, { style: this.model.name, size: "" }), "application/dxf");
+    const sizes = new Set(r.items.map((i) => i.size)).size, n = r.items.reduce((a, i) => a + i.piece.quantity, 0);
+    if (!r.errors.length) return this.toast(`للتعشيق: ${n} قطعة من ${r.parts} بارت إنتاج × ${sizes} مقاس`);
+    document.querySelector(".marker-win")?.remove();
+    const el = document.createElement("section");
+    el.className = "z-assistant marker-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>التصدير للتعشيق</b><button data-mk="close">×</button></div><div class="za-body"><p>${r.items.length ? `صُدّر ${n} قطعة (${sizes} مقاس). ` : "لم يُصدَّر شيء. "}هذه تحتاج مراجعة:</p><ul class="mk-list">${r.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul></div>`;
+    document.body.append(el);
+    el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-mk="close"]') && el.remove());
   }
 
   /** Arrange parts: all parts as large pictures; a click opens one. */
