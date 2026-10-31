@@ -734,3 +734,9 @@ body.embedded .zwin #tab-z { display: block !important; flex: 1; overflow: auto;
 .xg-search input { width: 150px; height: 26px; }
 .xg-search button, .xg-foot > button { height: 26px; padding: 0 8px; }
 body:not(.dark) .xg-table td.xv input { color: #9a7400; }
+.xg-io { display: flex; gap: 4px; }
+.xg-io button { height: 26px; padding: 0 8px; font-size: 12px; white-space: nowrap; }
+.xg-io [data-xa="import"] { color: #3ba55c; }
+.xg-io [data-xa="export"] { color: #3ba55c; }
+/* a message never blocks the drawing under it */
+.toast { pointer-events: none; }

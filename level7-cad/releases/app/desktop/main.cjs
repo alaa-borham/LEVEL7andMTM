@@ -25,7 +25,9 @@ const FORMATS = Object.freeze({
   dxf: { name: 'ASCII DXF pattern', extensions: ['dxf'], suffix: '.dxf' },
   hpgl: { name: 'HPGL plotter drawing', extensions: ['plt', 'hpgl'], suffix: '.plt' },
   design: { name: 'LEVEL7 design', extensions: ['json'], suffix: '.level7.json' },
-  rul: { name: 'AAMA grade rules', extensions: ['rul'], suffix: '.rul' }
+  rul: { name: 'AAMA grade rules', extensions: ['rul'], suffix: '.rul' },
+  xlsx: { name: 'Excel workbook', extensions: ['xlsx'], suffix: '.xlsx', base64: true },
+  csv: { name: 'CSV table (Excel)', extensions: ['csv'], suffix: '.csv' }
 });
 
 // Keep installed application data in the current user profile.
@@ -251,7 +253,16 @@ function registerIpc() {
   });
 
   registerOperation('pattern:open-file', async options => {
-    const measurements = options?.measurements === true, design = options?.design === true;
+    const measurements = options?.measurements === true, design = options?.design === true, table = options?.table === true;
+    if (table) {
+      // 0.9.133: X values from Excel (.xlsx, read as bytes) or CSV / tab text
+      const pick = await dialog.showOpenDialog(mainWindow, { title: 'Import X values from Excel', properties: ['openFile'], filters: [{ name: 'Excel / CSV', extensions: ['xlsx', 'csv', 'txt'] }] });
+      if (pick.canceled || !pick.filePaths[0]) return null;
+      const chosen = pick.filePaths[0], ext = path.extname(chosen).toLowerCase();
+      if (!['.xlsx', '.csv', '.txt'].includes(ext)) throw new Error('اختر ملف إكسل ‎.xlsx أو ‎.csv.');
+      if (ext === '.xlsx') return { name: path.basename(chosen), base64: Buffer.from(await readBounded(chosen, { binary: true })).toString('base64') };
+      return { text: await readBounded(chosen), name: path.basename(chosen) };
+    }
     const result = await dialog.showOpenDialog(mainWindow, {
       title: design ? 'Open LEVEL7 design' : measurements ? 'Import measurement table' : 'Open project or import geometry',
       properties: ['openFile'],
@@ -276,9 +287,10 @@ function registerIpc() {
     const format = FORMATS[options?.kind];
     if (!Object.hasOwn(FORMATS, options?.kind) || options?.kind === 'mdl') throw new Error('Unsupported text export kind.');
     const text = textPayload(options?.text, 'Export');
+    if (format.base64 && !/^[A-Za-z0-9+/]*={0,2}$/.test(text)) throw new Error('Invalid binary export.');
     const destination = await chooseSave(options?.filename, format);
     if (!destination) return null;
-    await atomicWrite(destination, text);
+    await atomicWrite(destination, format.base64 ? Buffer.from(text, 'base64') : text);
     return { saved: true, name: path.basename(destination) };
   });
 

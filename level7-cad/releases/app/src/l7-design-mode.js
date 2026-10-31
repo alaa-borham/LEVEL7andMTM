@@ -42,7 +42,7 @@ const HINT = {
   measureDist: 'اختر نقطتين لقياس المسافة بينهما.',
   measureLength: 'اختر خطاً أو منحنى لقياس طوله.'
 };
-const KIND = name => /\.level7\.json$|\.json$/i.test(name) ? 'design' : /\.plt$/i.test(name) ? 'hpgl' : /\.rul$/i.test(name) ? 'rul' : /\.dxf$/i.test(name) ? 'dxf' : null;
+const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'csv' : /\.level7\.json$|\.json$/i.test(name) ? 'design' : /\.plt$/i.test(name) ? 'hpgl' : /\.rul$/i.test(name) ? 'rul' : /\.dxf$/i.test(name) ? 'dxf' : null;
 /** Same shortcuts as the program's toolbox (and the engine frame, which forwards them). */
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
@@ -209,6 +209,13 @@ export function installDesignMode() {
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
     else if (d.type === 'l7:context') showCat(null);
+    else if (d.type === 'l7:open-table') void (async () => {
+      if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
+      try {
+        const file = await desktop.openFile({ table: true });
+        if (file) send({ type: 'l7:table', name: file.name, text: file.text, base64: file.base64 });
+      } catch (e) { status('تعذر فتح الملف: ' + e.message); }
+    })();
     else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
     else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`)) run(d.action);
   });

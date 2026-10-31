@@ -32,6 +32,24 @@ export function parseModel(raw: string): Model {
   return m;
 }
 
+/** A binary file (Excel); inside LEVEL7 and MTM it is saved through the program's dialog. */
+export function downloadBytes(name: string, bytes: Uint8Array, type: string): void {
+  if (document.body.classList.contains("embedded") && window.parent !== window) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    window.parent.postMessage({ type: "l7:download", name, text: btoa(s), mime: type }, "*");
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function download(name: string, text: string, type: string): void {
   // Inside LEVEL7 and MTM the host program saves through its own file dialog.
   if (document.body.classList.contains("embedded") && window.parent !== window) {

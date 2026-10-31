@@ -1,5 +1,7 @@
 import { toGradedAama } from "../core/aama-graded";
 import { FUNCTION_NAMES, normalizeFormula, references } from "../core/formula";
+import { fromBase64, readCsv, readXlsx, writeXlsx } from "../core/xlsx";
+import { importXTable, xTableRows } from "../core/xtable";
 import { allSizeItems, toAamaDxf, toPlt } from "../core/export";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
@@ -23,7 +25,7 @@ import {
 } from "../core/model";
 import { thobeSample } from "../core/sample";
 import { describe, describeMeasure } from "./describe";
-import { autosave, download, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
+import { autosave, download, downloadBytes, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
 import { applyFields, pickedId, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
@@ -371,22 +373,43 @@ export class App {
     return out;
   }
 
-  /** Through-points of the selected curve that are free points (plain numbers): draggable. */
-  private curvePoints(): { step: number; s: Pt }[] {
+  /** Every point the selected curve passes through can be dragged in any direction:
+   * a free point moves itself; a point tied to a line (on a line, intersection, line end …)
+   * gets an offset (dx, dy) from where it is tied, so it still follows its line. */
+  private curvePoints(): { k: number; ref: PointRef; s: Pt }[] {
     const s = this.model.steps[this.selectedStep];
     if (!s || s.op !== "curve" || this.form) return [];
-    const out: { step: number; s: Pt }[] = [];
-    for (const r of s.through) {
-      if (r.end) continue;
-      const k = this.model.steps.findIndex((t) => t.op === "point" && t.id === r.obj);
-      const t = this.model.steps[k] as Extract<Step, { op: "point" }> | undefined;
-      if (!t || !/^-?\d+(\.\d+)?$/.test(t.x.trim()) || !/^-?\d+(\.\d+)?$/.test(t.y.trim())) continue;
-      out.push({ step: k, s: this.toScreen(this.pointOf(r)) });
-    }
-    return out;
+    const n = s.through.length;
+    return s.through.flatMap((ref, k) => {
+      if (k === 0 || k === n - 1) return []; // the ends have the direction handles
+      try {
+        return [{ k, ref, s: this.toScreen(this.pointOf(ref)) }];
+      } catch {
+        return [];
+      }
+    });
   }
 
-  private dragPoint: number | null = null;
+  private dragPoint: { step: number; mode: "xy" | "offset"; base: Pt } | null = null;
+
+  /** Start dragging through-point k of the curve at step index ci. */
+  private grabCurvePoint(ci: number, k: number): void {
+    const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
+    const ref = curve.through[k];
+    const plain = (v: string) => /^-?\d+(\.\d+)?$/.test(v.trim());
+    const si = ref.end ? -1 : this.model.steps.findIndex((t) => (t.op === "point" || t.op === "pointOffset") && t.id === ref.obj);
+    const st = this.model.steps[si];
+    this.snapshot();
+    if (st?.op === "point" && plain(st.x) && plain(st.y)) return void (this.dragPoint = { step: si, mode: "xy", base: [0, 0] });
+    if (st?.op === "pointOffset" && plain(st.dx) && plain(st.dy)) return void (this.dragPoint = { step: si, mode: "offset", base: this.pointOf(st.from) });
+    // tied point: put an offset point between it and the curve, just before the curve
+    const id = newId(this.model, "point");
+    this.model.steps.splice(ci, 0, { op: "pointOffset", id, from: { ...ref }, dx: "0", dy: "0" });
+    curve.through[k] = { obj: id };
+    this.selectedStep = ci + 1;
+    this.evaluate();
+    this.dragPoint = { step: ci, mode: "offset", base: this.pointOf(ref) };
+  }
 
   private handleAt(sx: number, sy: number) {
     return this.curveHandles().find((h) => Math.hypot(h.hs[0] - sx, h.hs[1] - sy) <= 9) ?? null;
@@ -1443,8 +1466,7 @@ export class App {
         const sx = e.clientX - r0.left, sy = e.clientY - r0.top;
         const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 7 && Math.abs(p.s[1] - sy) <= 7);
         if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
-          this.snapshot();
-          this.dragPoint = cp.step;
+          this.grabCurvePoint(this.selectedStep, cp.k);
           e.preventDefault();
           return;
         }
@@ -1491,10 +1513,11 @@ export class App {
       }
       this.mouse = this.toWorld(sx, sy);
       if (this.dragPoint !== null) {
-        const t = this.model.steps[this.dragPoint] as Extract<Step, { op: "point" }>;
         const q = this.ptRaster > 0 ? this.ptRaster : 0.1;
-        t.x = String(Math.round(Math.round(this.mouse[0] / q) * q * 10) / 10);
-        t.y = String(Math.round(Math.round(this.mouse[1] / q) * q * 10) / 10);
+        const r = (v: number) => String(Math.round(Math.round(v / q) * q * 10) / 10);
+        const t = this.model.steps[this.dragPoint.step];
+        if (t.op === "point") (t.x = r(this.mouse[0])), (t.y = r(this.mouse[1]));
+        else if (t.op === "pointOffset") (t.dx = r(this.mouse[0] - this.dragPoint.base[0])), (t.dy = r(this.mouse[1] - this.dragPoint.base[1]));
         this.evaluate();
         this.render();
         return;
@@ -2189,7 +2212,7 @@ export class App {
         <span class="xg-info">${this.model.measurements.length} X · ${sizes.length + 1} ${sizes.length ? "مقاسات" : "مقاس"}</span></div>
       <div class="xg-table"><table><thead><tr><th class="xid">X</th><th class="xn">الاسم · Name</th><th class="xc">MTM</th><th class="xv">${esc(sizeName(this.model, -1))}</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
       <div class="xg-foot"><span class="xg-search">⌕<input data-xa="search" value="${esc(this.xFilter)}" placeholder="بحث بالاسم أو الرقم"/><button data-xa="clear" title="مسح البحث">✕</button></span>
-        <button data-xa="copy" title="نسخ الجدول (يُلصق في إكسل)">⧉ نسخ</button></div></div>`;
+        <span class="xg-io"><button data-xa="import" title="رفع القياسات من ملف إكسل (.xlsx) أو CSV">⤓ استيراد Excel</button><button data-xa="export" title="تحميل القياسات كملف إكسل (.xlsx)">⤒ تصدير Excel</button><button data-xa="copy" title="نسخ الجدول (يُلصق في إكسل)">⧉ نسخ</button></span></div></div>`;
     this.bindTable(box, "measurements");
     const tbody = box.querySelector("tbody") as HTMLElement;
     tbody.addEventListener("focusin", (e) => {
@@ -2242,6 +2265,24 @@ export class App {
       again.focus();
       if (pos !== null) again.setSelectionRange(pos, pos);
     });
+    box.querySelector('[data-xa="export"]')?.addEventListener("click", () => {
+      downloadBytes(`${safeFileName(this.model.name)} X.xlsx`, writeXlsx(xTableRows(this.model)), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    });
+    box.querySelector('[data-xa="import"]')?.addEventListener("click", () => {
+      if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:open-table" }, "*");
+      else {
+        const inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = ".xlsx,.csv,.txt";
+        inp.onchange = async () => {
+          const file = inp.files?.[0];
+          if (!file) return;
+          if (/\.xlsx$/i.test(file.name)) await this.importXFile(file.name, { bytes: new Uint8Array(await file.arrayBuffer()) });
+          else await this.importXFile(file.name, { text: await file.text() });
+        };
+        inp.click();
+      }
+    });
     box.querySelector('[data-xa="clear"]')?.addEventListener("click", () => ((this.xFilter = ""), this.renderX()));
     box.querySelector('[data-xa="copy"]')?.addEventListener("click", async () => {
       const lines = [["X", "Name", "MTM", sizeName(this.model, -1), ...sizes.map((z) => z.name)].join("\t")];
@@ -2253,6 +2294,22 @@ export class App {
         this.toast("تعذر النسخ");
       }
     });
+  }
+
+  /** X values from an Excel (.xlsx) or CSV file: merged into the table (see importXTable). */
+  async importXFile(name: string, data: { text?: string; bytes?: Uint8Array; base64?: string }): Promise<void> {
+    try {
+      const bytes = data.bytes ?? (data.base64 ? fromBase64(data.base64) : undefined);
+      const rows = bytes ? await readXlsx(bytes) : readCsv(data.text ?? "");
+      const before = JSON.stringify(this.model);
+      const r = importXTable(this.model, rows);
+      this.undoStack.push(before);
+      this.redoStack = [];
+      this.changed();
+      this.toast(`استُورد من ${name}: ${r.added} قياس جديد، ${r.updated} محدَّث${r.sizes.length ? `، المقاسات: ${r.sizes.join("، ")}` : ""}`);
+    } catch (e) {
+      this.toast(`تعذر الاستيراد: ${(e as Error).message}`);
+    }
   }
 
   private renderZ(): void {

@@ -40,11 +40,22 @@ try{
   await page.mouse.move(box.x+h0.hs[0],box.y+h0.hs[1]);await page.mouse.down();await page.mouse.move(box.x+ex+ux*140,box.y+ey+uy*140,{steps:6});await page.mouse.up();
   await f.waitForFunction(()=>Number(window.level7.model.steps.at(-1).endTension)>=180);
   pass('curve: pulling the end handle further makes the curve stronger at that end (tension '+await f.evaluate(()=>window.level7.model.steps.at(-1).endTension)+'%)');
-  const pts=await f.evaluate(()=>window.level7.curvePoints());assert(pts.length>=1);const mid=pts.find(p=>p.step===5)||pts[1]||pts[0];
-  const before=await f.evaluate(k=>({...window.level7.model.steps[k]}),mid.step);
+  const pts=await f.evaluate(()=>window.level7.curvePoints());assert(pts.length>=1);const mid=pts[0];
   await page.mouse.move(box.x+mid.s[0],box.y+mid.s[1]);await page.mouse.down();await page.mouse.move(box.x+mid.s[0]+40,box.y+mid.s[1]-30,{steps:5});await page.mouse.up();
-  const after=await f.evaluate(k=>({...window.level7.model.steps[k]}),mid.step);assert(after.x!==before.x&&after.y!==before.y,JSON.stringify([before,after]));
-  pass('curve: dragging a point the curve passes through reshapes it ('+before.x+','+before.y+' → '+after.x+','+after.y+')');}
+  const after=await f.evaluate(()=>window.level7.curvePoints()[0].s);assert(Math.hypot(after[0]-mid.s[0]-40,after[1]-mid.s[1]+30)<3,JSON.stringify([mid.s,after]));
+  pass('curve: dragging a point the curve passes through reshapes it');}
+ // a curve through a point ON A LINE: the point can be dragged in any direction, and stays tied to its line
+ await page.mouse.click(...await at(150,150),{button:'right'});await page.keyboard.press('Escape');
+ await f.evaluate(()=>{const a=window.level7,m=a.model;m.steps.push({op:'pointOn',id:40,on:4,dist:'50',unit:'%',from:'start'},{op:'curve',id:41,through:[{obj:3},{obj:40},{obj:2}],startAngle:'',endAngle:''});m.names[40]='P40';m.names[41]='C40';m.nextId=42;a.changed();a.selectedStep=m.steps.length-1;a.render();});
+ {const p0=await f.evaluate(()=>window.level7.curvePoints()[0].s);await page.mouse.move(box.x+p0[0],box.y+p0[1]);await page.mouse.down();await page.mouse.move(box.x+p0[0]-30,box.y+p0[1]-60,{steps:5});await page.mouse.up();
+  const r=await f.evaluate(()=>{const m=window.level7.model,c=m.steps.find(s=>s.id===41),o=m.steps.find(s=>s.op==='pointOffset'&&s.from.obj===40);return{through:c.through[1].obj,off:o&&{id:o.id,dx:o.dx,dy:o.dy},offIdx:m.steps.indexOf(o),curveIdx:m.steps.indexOf(c)};});
+  assert(r.off&&r.through===r.off.id&&r.offIdx===r.curveIdx-1&&Number(r.off.dy)>0,JSON.stringify(r));
+  pass('curve through a point on a line: dragged freely (offset '+r.off.dx+', '+r.off.dy+'), the curve now passes through the moved point');
+  const p1=await f.evaluate(id=>window.level7.res.objects.get(id).pts[0],r.off.id);
+  await f.evaluate(()=>{const a=window.level7;a.model.steps[0].x='300';a.changed();});
+  const p2=await f.evaluate(id=>window.level7.res.objects.get(id).pts[0],r.off.id);assert(Math.abs(p2[0]-p1[0]-50)<1e-6,JSON.stringify([p1,p2]));
+  pass('the moved point stays tied to its line: the line grows, the point follows (+50 mm)');}
+ await f.evaluate(()=>{const a=window.level7;a.model.steps[0].x='200';a.changed();a.selectedStep=-1;a.render();});
  // dimensions
  await tool('dimH');await page.mouse.click(...await at(200,0));await page.mouse.click(...await at(0,200));await fr.locator('#tool-box [data-ok]').waitFor();
  await page.mouse.move(...await at(100,30),{steps:4});await f.waitForFunction(()=>document.querySelector('#canvas g.dim.live text')?.textContent.includes('200'));

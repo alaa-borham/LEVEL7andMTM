@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.132",
- "notes": "جدول X مثل GRAFIS؛ حفظ خطوة الزاوية؛ تصفير لوحة النقاط بعد كل عملية",
+ "version": "0.9.133",
+ "notes": "رفع وتحميل القياسات من إكسل؛ تحريك نقطة الكرف في أي اتجاه",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "4216f7a0faa38ebf6174a73bdbf785350d9b0fa4fb6c78b00a8ecda058626878",
-   "size": 126587
+   "sha256": "80291a0e8470d1d8144a9b78005b94a7238cf0a8462b2034e85e73be0b28b6a1",
+   "size": 127102
   },
   {
    "path": "assets/icon.ico",
@@ -34,24 +34,24 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-Bojy-ZGZ.css",
-   "sha256": "38abd08037cfb01bc46f92beb9264d11bebb6f5fff0f8ef68a2341d0fd120815",
-   "size": 21196
+   "path": "assets/l7design/assets/index-DCsN9aId.css",
+   "sha256": "8ca2f79d5d1aa9d260e3c3c307d59813ff9167e185507e77eccad6a8694e831a",
+   "size": 21387
   },
   {
-   "path": "assets/l7design/assets/index-D-S9djW7.js",
-   "sha256": "5be2411095036641b48eafbcbc755cf556e18da067b692f313decbc23e6e6af8",
-   "size": 137226
+   "path": "assets/l7design/assets/index-Do0DeQ9i.js",
+   "sha256": "220cd2de3aa382d72c51fb9e22323cd623a6d6bbd516ae6f31862f3080b3bb79",
+   "size": 150664
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "572b5f875f454b152cf77e21d90ef57946781891c1bc1a6de3d1cdf3ac02696c",
+   "sha256": "c5a94ca46802d6c7e8ef7a3ab333736469c2c1ad5a9dfed4ba436b93c1ed6785",
    "size": 3317
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "d09b8f0a1bcdd736831f378a2fb33ba96e745a56a0f36c3e8b413f2e4aa0389c",
-   "size": 23075
+   "sha256": "fa9c4adbc798c843ca2eaede2319363aef5c74c2700ed2003c04bce25e044022",
+   "size": 24218
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -60,8 +60,8 @@
   },
   {
    "path": "desktop/preload.cjs",
-   "sha256": "bd6784a48462fc7ed553340ff96e67520d5909a1a3a08600bb20dc5e1f5e3348",
-   "size": 2470
+   "sha256": "0e38e26518c630e9518a6ab0c9c46ebf006d570dad3ac404b23394a64c9f779b",
+   "size": 2502
   },
   {
    "path": "desktop/remote-update.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "6b3877114721b3103be3e17fb5d0c13ac1c6c9e89312eadddd43ac47c72b2112",
+   "sha256": "f5367bd780f07b426d431e152c6a13111ec22a78260bbbc8b5f8b89e83c02e58",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "67bfbc1059ad3d1da2bd358a74b09c003d7994c2ed239678d8db2f48e7075be5",
-   "size": 21250
+   "sha256": "11ca252a62bea6005c49dbd544c5db1c0b86cb3addc1d6a5610891a5631469d6",
+   "size": 21760
   },
   {
    "path": "src/line-transform-ui.js",

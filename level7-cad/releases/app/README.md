@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.133
+
+X values: import from Excel (.xlsx) or CSV and export to Excel (.xlsx) through the program's dialogs; columns are found by their headers (X, Name, MTM, Standard, sizes) or by content; existing X are updated, new ones added, size columns filled (a value equal to the base means "same as base"). Curves: every point a curve passes through can be dragged in any direction; a point tied to a line gets an offset (dx, dy) and stays tied to its line. Messages never block the drawing under them.
+
 LEVEL7 and MTM 0.9.132
 
 X values laid out as GRAFIS: dense table X | Name | MTM | Standard (yellow) | one column per size (empty = base value), a tool bar (⊕ add, ✕ delete the selected row), search and copy (pastes into Excel). The angle step of live lines and the raster of free points are remembered until changed. After an operation is finished or a tool is closed, the point panel starts clean (values 0, plain point mode).
