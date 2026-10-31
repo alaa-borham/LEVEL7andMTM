@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.141
+
+LEVEL7 design mode, command bar "ISO": cutter file in the ISO (Gerber ISO) format read by Bullmer, FK and Yin cutters, from a marker nested in another program and saved as AAMA / ASTM DXF (blocks with position, rotation, scale and mirror; LWPOLYLINE / POLYLINE / LINE / ARC / CIRCLE) or HPGL .plt. Metric 5.1 (G71, 0.1 mm), origin at the lower-left corner of the marker, one N block per piece: drill holes (M43) first, then internal cut-outs, notches as knife slits (optional), the outline last; knife M14 / M15, M0 at the end. Sewing, grain and internal lines are not cut.
+
 LEVEL7 and MTM 0.9.140
 
 LEVEL7 design mode, command bar "Marker": one AAMA DXF for marker making with the pieces of every production part (Parts window), in the base size, every size and every MTM customer, with each piece's quantity times the part amount and mirrored copies marked (M). Parts without pieces are listed instead of being skipped silently.

@@ -32,7 +32,7 @@ contextBridge.exposeInMainWorld('desktop', Object.freeze({
     zOverrides: options?.zOverrides
   }),
   exportParametersToMdl: options => ipcRenderer.invoke('pattern:transfer-parameters-mdl', {bytes:options?.bytes,filename:options?.filename,edits:options?.edits}),
-  openFile: options => ipcRenderer.invoke('pattern:open-file', { measurements: options?.measurements === true, design: options?.design === true, table: options?.table === true }),
+  openFile: options => ipcRenderer.invoke('pattern:open-file', { measurements: options?.measurements === true, design: options?.design === true, table: options?.table === true, marker: options?.marker === true }),
   saveFile: options => ipcRenderer.invoke('pattern:save-file', {
     text: options?.text,
     filename: options?.filename,

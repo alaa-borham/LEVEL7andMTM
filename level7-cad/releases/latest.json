@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.140",
- "notes": "تعشيق: ملف AAMA واحد لكل بارتات الإنتاج بكل المقاسات وعملاء MTM",
+ "version": "0.9.141",
+ "notes": "ملفات قص ISO (Bullmer / FK / Yin) من ملف تعشيق DXF أو PLT",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "f630bac665279a1f14ba0fe8718bed88643609393b108bff87206b6058594a6f",
-   "size": 131261
+   "sha256": "aa12868fe030971cada8df3070c21f5840a9611eb2c176bc927f443f7bbe6d93",
+   "size": 131860
   },
   {
    "path": "assets/icon.ico",
@@ -34,24 +34,24 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BkYKiYh5.js",
-   "sha256": "dc3e9d092296d1e7fa4f280d542dab130ce43aca3f1179d86dd09f6b185bd492",
-   "size": 214789
+   "path": "assets/l7design/assets/index-BNMZgzjc.js",
+   "sha256": "cbc36b996557a27ba54c4e867ac9921fd5b1c00388a6cef8e37dcc16434fae74",
+   "size": 223524
   },
   {
-   "path": "assets/l7design/assets/index-qIM2Tv-2.css",
-   "sha256": "ac16c2c9775c38e3dbf927a4fa7f3cba0f66a8e60afa9054a8550c23a1e53260",
-   "size": 28635
+   "path": "assets/l7design/assets/index-tCW5ave4.css",
+   "sha256": "632a6f7239f52b08fcedaa5a953d40667a54db23a2a63c95795aa822e7168378",
+   "size": 28685
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "93fe90a6fa4e202e511b55c24ceb0aeaffc0f062dd08a9dc7b1f9a2ee0195126",
+   "sha256": "ee2e404e3e72f4b9df32d3bdbb0253bb476181a8bf3f251e9c9df02b018cb194",
    "size": 3594
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "fa9c4adbc798c843ca2eaede2319363aef5c74c2700ed2003c04bce25e044022",
-   "size": 24218
+   "sha256": "be3e5e61af8a0c4f4a12aba5b054f4a694d17065864150ff092eeb224643b748",
+   "size": 24976
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -60,8 +60,8 @@
   },
   {
    "path": "desktop/preload.cjs",
-   "sha256": "0e38e26518c630e9518a6ab0c9c46ebf006d570dad3ac404b23394a64c9f779b",
-   "size": 2502
+   "sha256": "5eb7c43be105689a66457e1230355da2909ae80f219893b5fc5e2a91dec6ff8a",
+   "size": 2536
   },
   {
    "path": "desktop/remote-update.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "88d3e3c0b0dd4376c0190b53869b06b96412f3c5e143bdbc8fb692f696cca254",
+   "sha256": "b22d902b53f5ffab95319bad9159e14b1632b494c6d98f85494d69b2fa73fa04",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "59cca7c5e0c9fb788b1718f10b741297e31b3151298158c47aee6be003ae6f42",
-   "size": 31565
+   "sha256": "6b95352721eb1449bacfa846e0fea869043419163ddbfb56ef4136688c315510",
+   "size": 32139
   },
   {
    "path": "src/line-transform-ui.js",

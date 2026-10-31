@@ -3,6 +3,7 @@ import { FUNCTION_NAMES, normalizeFormula, references } from "../core/formula";
 import { fromBase64, readCsv, readXlsx, writeXlsx } from "../core/xlsx";
 import { importXTable, xTableRows } from "../core/xtable";
 import { allSizeItems, markerItems, toAamaDxf, toPlt } from "../core/export";
+import { parseMarker, toIsoCut, type Marker } from "../core/iso";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
 import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
@@ -2859,6 +2860,53 @@ export class App {
     el.innerHTML = `<div class="za-head"><b>التصدير للتعشيق</b><button data-mk="close">×</button></div><div class="za-body"><p>${r.items.length ? `صُدّر ${n} قطعة (${sizes} مقاس). ` : "لم يُصدَّر شيء. "}هذه تحتاج مراجعة:</p><ul class="mk-list">${r.errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul></div>`;
     document.body.append(el);
     el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-mk="close"]') && el.remove());
+  }
+
+  /** ISO cutter file (Bullmer / FK / Yin, Gerber ISO) from a marker nested in another program. */
+  openMarkerForIso(): void {
+    if (document.body.classList.contains("embedded") && window.parent !== window) return void window.parent.postMessage({ type: "l7:open-marker" }, "*");
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = ".dxf,.plt,.hpgl";
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (file) this.isoFromMarker(file.name, await file.text());
+    };
+    inp.click();
+  }
+
+  isoFromMarker(name: string, text: string): void {
+    let m: Marker;
+    try {
+      m = parseMarker(name, text);
+    } catch (e) {
+      return this.toast("تعذر قراءة ملف التعشيق: " + (e as Error).message);
+    }
+    document.querySelector(".iso-win")?.remove();
+    const base = safeFileName(name.replace(/\.(dxf|plt|hpgl)$/i, "")) || "marker";
+    const n = (f: (p: Marker["pieces"][number]) => number) => m.pieces.reduce((a, p) => a + f(p), 0);
+    const el = document.createElement("section");
+    el.className = "z-assistant marker-win iso-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>ملف قص ISO</b><button data-iso="close">×</button></div><div class="za-body">
+      <p dir="rtl"><b>${esc(name)}</b></p>
+      <ul class="mk-list"><li>القطع: <b>${m.pieces.length}</b></li><li>طول التعشيق × العرض: <b><bdi dir="ltr">${m.length.toFixed(1)} × ${m.width.toFixed(1)} mm</bdi></b></li>
+      <li>نوتشات: ${n((p) => p.notches.length)} · فتحات داخلية: ${n((p) => p.holes.length)} · ثقوب: ${n((p) => p.drills.length)}</li>
+      ${m.skipped ? `<li>خطوط لا تُقص (خياطة / نسيج / نص): ${m.skipped}</li>` : ""}</ul>
+      <label class="field-inline"><input type="checkbox" data-iso="notch" checked/> قص النوتشات بالسكين</label>
+      <label class="field-inline"><input type="checkbox" data-iso="nl" checked/> كل أمر في سطر</label>
+      <p class="iso-hint">الصيغة: Gerber ISO متري (G71، وحدة 0.1 mm)، السكين M14 / M15، الثقوب M43. الداخل يُقص قبل حد القطعة.</p>
+      <div class="za-foot"><button class="primary" data-iso="save">حفظ ملف ISO</button></div></div>`;
+    document.body.append(el);
+    el.addEventListener("click", (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>("[data-iso]")?.dataset.iso;
+      if (t === "close") el.remove();
+      if (t !== "save") return;
+      const q = (k: string) => el.querySelector<HTMLInputElement>(`[data-iso="${k}"]`)!.checked;
+      download(`${base}.iso`, toIsoCut(m, { name: base, notches: q("notch") ? "slit" : "none", newline: q("nl") }), "text/plain");
+      el.remove();
+      this.toast(`ملف ISO: ${m.pieces.length} قطعة`);
+    });
   }
 
   /** Arrange parts: all parts as large pictures; a click opens one. */

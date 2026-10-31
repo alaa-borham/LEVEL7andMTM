@@ -27,7 +27,8 @@ const FORMATS = Object.freeze({
   design: { name: 'LEVEL7 design', extensions: ['json'], suffix: '.level7.json' },
   rul: { name: 'AAMA grade rules', extensions: ['rul'], suffix: '.rul' },
   xlsx: { name: 'Excel workbook', extensions: ['xlsx'], suffix: '.xlsx', base64: true },
-  csv: { name: 'CSV table (Excel)', extensions: ['csv'], suffix: '.csv' }
+  csv: { name: 'CSV table (Excel)', extensions: ['csv'], suffix: '.csv' },
+  iso: { name: 'ISO cutter file (Gerber ISO)', extensions: ['iso', 'cut'], suffix: '.iso' }
 });
 
 // Keep installed application data in the current user profile.
@@ -254,6 +255,14 @@ function registerIpc() {
 
   registerOperation('pattern:open-file', async options => {
     const measurements = options?.measurements === true, design = options?.design === true, table = options?.table === true;
+    if (options?.marker === true) {
+      // 0.9.141: a marker nested in another program, to be written as an ISO cutter file
+      const pick = await dialog.showOpenDialog(mainWindow, { title: 'Open marker (DXF / PLT)', properties: ['openFile'], filters: [{ name: 'Marker DXF / HPGL', extensions: ['dxf', 'plt', 'hpgl'] }] });
+      if (pick.canceled || !pick.filePaths[0]) return null;
+      const chosen = pick.filePaths[0];
+      if (!['.dxf', '.plt', '.hpgl'].includes(path.extname(chosen).toLowerCase())) throw new Error('اختر ملف تعشيق ‎.dxf أو ‎.plt.');
+      return { text: await readBounded(chosen), name: path.basename(chosen) };
+    }
     if (table) {
       // 0.9.133: X values from Excel (.xlsx, read as bytes) or CSV / tab text
       const pick = await dialog.showOpenDialog(mainWindow, { title: 'Import X values from Excel', properties: ['openFile'], filters: [{ name: 'Excel / CSV', extensions: ['xlsx', 'csv', 'txt'] }] });
