@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.154
+
+LEVEL7 design: Space = zoom mode (as GRAFIS): left click zooms in, right click zooms out, at the click (the point under the pointer stays in place); Space again or Esc leaves it; not while typing in a field.
+
 LEVEL7 and MTM 0.9.153
 
 LEVEL7 design: choosing from the X or Z list beside a value replaces the field (it is added only after an operator typed on purpose, e.g. "X3/2+"); no suggestion arrow inside the value fields.

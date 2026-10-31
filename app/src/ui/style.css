@@ -979,3 +979,4 @@ body.embedded #canvas.panning { cursor: grabbing; }
 .ztable textarea.zdesc:focus { border-style: solid; color: var(--text); font-style: normal; }
 .ztable th:nth-child(2) { color: #ffd866; } .ztable th:nth-child(3) { color: var(--muted); font-style: italic; }
 body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th:nth-child(2) { color: #7a5c00; }
+#canvas.zoom-mode, body.embedded #canvas.zoom-mode { cursor: zoom-in; }

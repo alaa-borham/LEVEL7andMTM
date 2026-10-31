@@ -7,6 +7,8 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   // GRAFIS: Ctrl+6 grade all parts, Ctrl+Shift+6 test run all parts
   if (ctrl && !e.altKey && e.code === "Digit6") return e.shiftKey ? "testAll" : "gradeAll";
+  // Space (not while typing): zoom mode, as GRAFIS
+  if (!typing && !ctrl && !e.altKey && e.code === "Space") return "zoomMode";
   if (ctrl && !e.shiftKey && !e.altKey) {
     const map: Record<string, string> = { s: "save", n: "new", o: "open", e: "aama", g: "tab-sizes", t: "tab-partlist" };
     if (map[k]) return map[k];
@@ -198,6 +200,7 @@ if (embedded && window.parent !== window) {
     else if (action === "arrange") app.openArrange();
     else if (action === "marker") app.exportMarker();
     else if (action === "gradeview") app.cycleGradeView();
+    else if (action === "zoomMode") app.toggleZoomMode();
     else if (action === "aamaAll") app.exportAllSizes("aama");
     else if (action === "pltAll") app.exportAllSizes("plt");
     else if (action === "aamaGraded") app.exportGraded();
@@ -233,7 +236,7 @@ if (embedded && window.parent !== window) {
         break;
       }
       case "l7:theme": document.body.classList.toggle("dark", (d as { dark?: boolean }).dark === true); break;
-      case "l7:cancel": app.cancelTool(); break;
+      case "l7:cancel": app.leaveZoom(); app.cancelTool(); break;
       case "l7:json": if (typeof d.text === "string") { const pu = (d as unknown as { purpose?: string }).purpose; if (pu === "library") app.importLibrary(d.text); else if (pu === "mlib") app.importMLib(d.text); } break;
       case "l7:marker": if (typeof d.text === "string") app.isoFromMarker(String(d.name ?? ""), d.text); break;
       case "l7:table": void app.importXFile(String(d.name ?? ""), { text: typeof d.text === "string" ? d.text : undefined, base64: (d as unknown as { base64?: unknown }).base64 as string | undefined }); break;

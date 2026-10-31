@@ -72,6 +72,7 @@ const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'cs
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && !e.altKey && e.code === 'Digit6') return e.shiftKey ? 'testAll' : 'gradeAll';
+  if (!typing && !ctrl && !e.altKey && e.code === 'Space') return 'zoomMode'; // as GRAFIS: zoom mode
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
   if (e.key === 'F4') return 'dup';
   if (e.key === 'F7') return 'dims';
@@ -375,7 +376,7 @@ export function installDesignMode() {
       } catch (e) { status('تعذر فتح الملف: ' + e.message); }
     })();
     else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
-    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
+    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || d.action === 'zoomMode' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
   });
   host.addEventListener('click', e => {
     const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');
@@ -407,6 +408,8 @@ export function installDesignMode() {
     const action = shortcut(e, e.target.matches?.('input, select, textarea'));
     if (action) { run(action); e.preventDefault(); e.stopImmediatePropagation(); }
   }, true);
+  // Space toggles zoom mode: a focused toolbar button must not also be pressed by it (on key up)
+  document.addEventListener('keyup', e => { if (!host.hidden && e.code === 'Space' && !e.target.matches?.('input, select, textarea')) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   new MutationObserver(() => send({ type: 'l7:theme', dark: dark() })).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   // File menu: new / open LEVEL7 design, next to the MDL commands.

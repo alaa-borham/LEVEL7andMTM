@@ -809,6 +809,25 @@ export class App {
     this.render();
   }
 
+  /** Zoom mode (Space, as GRAFIS): left click zooms in, right click zooms out, at the click. */
+  private zoomMode = false;
+  toggleZoomMode(on = !this.zoomMode): void {
+    this.zoomMode = on;
+    this.svg.classList.toggle("zoom-mode", on);
+    this.toast(on ? "وضع الزووم: كليك يسار تكبير · كليك يمين تصغير · Space أو Esc للخروج" : "خروج من وضع الزووم");
+  }
+  leaveZoom(): void {
+    if (this.zoomMode) this.toggleZoomMode(false);
+  }
+  private zoomAt(sx: number, sy: number, f: number): void {
+    const before = this.toWorld(sx, sy);
+    this.scale = Math.min(200, Math.max(0.02, this.scale * f));
+    const after = this.toWorld(sx, sy);
+    this.cx += before[0] - after[0];
+    this.cy += before[1] - after[1];
+    this.render();
+  }
+
   render(): void {
     const r = this.svg.getBoundingClientRect();
     const parts: string[] = [this.imagesSvg(), this.gridSvg(r.width, r.height)];
@@ -2541,6 +2560,12 @@ export class App {
     });
     svg.addEventListener("mousedown", (e) => {
       svg.focus();
+      if (this.zoomMode && (e.button === 0 || e.button === 2)) {
+        const rz = svg.getBoundingClientRect();
+        this.zoomAt(e.clientX - rz.left, e.clientY - rz.top, e.button === 0 ? 1.6 : 1 / 1.6);
+        e.preventDefault();
+        return;
+      }
       if (e.button === 2) this.rightDown = { x: e.clientX, y: e.clientY };
       if (e.button === 1 || e.button === 2) {
         this.pan = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
@@ -2621,7 +2646,7 @@ export class App {
       }
       const rd = this.rightDown;
       this.rightDown = null;
-      if (e.button === 2 && rd && Math.hypot(e.clientX - rd.x, e.clientY - rd.y) < 5) this.rightConfirm();
+      if (e.button === 2 && rd && !this.zoomMode && Math.hypot(e.clientX - rd.x, e.clientY - rd.y) < 5) this.rightConfirm();
       this.pan = null;
       svg.classList.remove("panning");
     });
@@ -2745,6 +2770,7 @@ export class App {
       } else if (typing) {
         return;
       } else if (e.key === "Escape") {
+        this.leaveZoom();
         this.cancelTool();
       } else if (e.key === "Enter" && this.collecting) {
         this.finishPicks();

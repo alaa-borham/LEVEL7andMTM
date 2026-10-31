@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.153",
- "notes": "اختيار X / Z يستبدل الخانة",
+ "version": "0.9.154",
+ "notes": "المسطرة (Space) لوضع الزووم",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "187d6d9ebcf3548662be8739526be6698cc02eb84ffbf7b4b0bc532ad5066b3f",
-   "size": 137884
+   "sha256": "cde8e8129c8210ceffbe71ff58a84e02e5ccf662559ada9d30314754049e93f4",
+   "size": 138117
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-Cru5nknW.js",
-   "sha256": "72634bfdf5618e9a33e6232be1db903571c1c20bcb68b4a0d973d5503389431b",
-   "size": 253659
+   "path": "assets/l7design/assets/index-D2aM1VFM.js",
+   "sha256": "c0b1dbef7ac00fcac0b272531c9fcd8451fad51672a265621053959b61ca5115",
+   "size": 254471
   },
   {
-   "path": "assets/l7design/assets/index-Cz9wE9Cd.css",
-   "sha256": "52ae8523c67615094d23fc1195414b693398b4bd9b1b91cc8b396f26f402f598",
-   "size": 37813
+   "path": "assets/l7design/assets/index-DnoADqBb.css",
+   "sha256": "71a32a09fb199e4e7674c8dc6bb56cc8f2d2816a6e0f1814a2ca663c03121f1f",
+   "size": 37878
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "34310812bc5d98c24a4caa87eb96d8e479e73edb38386c4758a50dd80441b076",
+   "sha256": "0bcda6528624ccdab7385df18e29a0abeb29495d6cdbd069cc9dbcc5699e5c42",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "88aa1b09de428ad2565bc294ef8140758e52a332b3a35e9f67276096fe8581ac",
+   "sha256": "d39a07e2558c6ebc5bd5018515b7183bbf4a4bc1832d19b79216c9ca40a617a7",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "ed527c1fb925205dd2244fc20cfaf1b88332bc654c58bb43c2702a8cc822e4ce",
-   "size": 44344
+   "sha256": "c14ef94b71570d7f3e4d044552ab33703bf9896e7514a2e5df92096c6170001b",
+   "size": 44769
   },
   {
    "path": "src/l7-icons.js",
