@@ -34,7 +34,7 @@ try{
  assert(msgs.some(m=>m.includes('X1')&&m.includes('مستخدمة في 1')),JSON.stringify(msgs));assert.equal(await f.evaluate(()=>window.level7.model.measurements.length),1);
  pass('deleting X1 used by a formula asks first (cancel keeps it)');
  // a design saved to a file: "New" no longer asks
- const dir=await fs.mkdtemp(path.join(os.tmpdir(),'sfs-'));await fs.chmod(dir,0o777);const out=path.join(dir,'work.level7.json');
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'sfs-'));await fs.chmod(dir,0o777);const out=path.join(dir,'work.level7');
  await app.evaluate(({dialog},o)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:o});},out);
  await page.locator('.l7-design-bar [data-l7d-command="save"]').click();for(let k=0;k<60&&!(await fs.stat(out).catch(()=>null));k++)await page.waitForTimeout(100);
  await page.waitForTimeout(300);msgs.length=0;await newDesign(page);await page.waitForTimeout(300);

@@ -24,7 +24,7 @@ const FORMATS = Object.freeze({
   svg: { name: 'SVG pattern (millimetres)', extensions: ['svg'], suffix: '.svg' },
   dxf: { name: 'ASCII DXF pattern', extensions: ['dxf'], suffix: '.dxf' },
   hpgl: { name: 'HPGL plotter drawing', extensions: ['plt', 'hpgl'], suffix: '.plt' },
-  design: { name: 'LEVEL7 design', extensions: ['json'], suffix: '.level7.json' },
+  design: { name: 'LEVEL7 design', extensions: ['level7'], suffix: '.level7' }, // 0.9.148: own extension (double-click opens it)
   rul: { name: 'AAMA grade rules', extensions: ['rul'], suffix: '.rul' },
   xlsx: { name: 'Excel workbook', extensions: ['xlsx'], suffix: '.xlsx', base64: true },
   csv: { name: 'CSV table (Excel)', extensions: ['csv'], suffix: '.csv' },
@@ -275,14 +275,14 @@ function registerIpc() {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: design ? 'Open LEVEL7 design' : measurements ? 'Import measurement table' : 'Open project or import geometry',
       properties: ['openFile'],
-      filters: design ? [{ name: 'LEVEL7 design', extensions: ['json'] }] : measurements
+      filters: design ? [{ name: 'LEVEL7 design', extensions: ['level7', 'json'] }] : measurements
         ? [{ name: 'Measurement tables', extensions: ['csv', 'mas'] }, { name: 'Supported files', extensions: ['json', 'dxf', 'csv', 'mas'] }]
         : [{ name: 'LEVEL7 and MTM and interchange', extensions: ['json', 'dxf', 'csv', 'mas'] }]
     });
     if (result.canceled || !result.filePaths[0]) return null;
     const selected = result.filePaths[0];
-    if (design && path.extname(selected).toLowerCase() !== '.json') throw new Error('افتح ملف تصميم LEVEL7 بامتداد ‎.json.');
-    if (!['.json', '.dxf', '.csv', '.mas'].includes(path.extname(selected).toLowerCase())) throw new Error('Supported imports: JSON, DXF, CSV, and MAS.');
+    if (design && !['.level7', '.json'].includes(path.extname(selected).toLowerCase())) throw new Error('افتح ملف تصميم LEVEL7 بامتداد ‎.level7 (أو ‎.level7.json القديم).');
+    if (!['.json', '.dxf', '.csv', '.mas', ...(design ? ['.level7'] : [])].includes(path.extname(selected).toLowerCase())) throw new Error('Supported imports: JSON, DXF, CSV, and MAS.');
     return { text: await readBounded(selected), name: path.basename(selected) };
   });
 
@@ -448,11 +448,51 @@ function fixShortcutIcons() {
   }
 }
 
+// 0.9.148: a design file double-clicked in Windows (or given on the command line) opens in the
+// program: the first instance reads it at start, a second launch hands it to the open window.
+const DESIGN_FILE = /\.level7(\.json)?$/i;
+function designArg(argv) {
+  for (const a of argv.slice(1)) {
+    if (!DESIGN_FILE.test(a)) continue;
+    try { if (fs.statSync(a).isFile()) return path.resolve(a); } catch { /* not a file */ }
+  }
+  return null;
+}
+let pendingDesign = designArg(process.argv);
+async function designPayload(file) {
+  return { name: path.basename(file), text: await readBounded(file) };
+}
+if (app.isPackaged && !app.requestSingleInstanceLock()) app.quit();
+else app.on('second-instance', (_event, argv) => {
+  const file = designArg(argv);
+  if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
+  if (file && mainWindow) void designPayload(file).then(d => mainWindow.webContents.send('pattern:open-design', d)).catch(() => {});
+});
+// Windows: .level7 files open with this program and show its icon (current user only, idempotent)
+function registerDesignFiles() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  const { execFile } = require('node:child_process');
+  const exe = process.execPath, ico = path.join(APP_ROOT, 'assets', 'icon.ico'), root = 'HKCU\\Software\\Classes';
+  const keys = [
+    [`${root}\\.level7`, 'LEVEL7.Design'],
+    [`${root}\\LEVEL7.Design`, 'LEVEL7 design'],
+    [`${root}\\LEVEL7.Design\\DefaultIcon`, `"${ico}"`],
+    [`${root}\\LEVEL7.Design\\shell\\open\\command`, `"${exe}" "%1"`]
+  ];
+  for (const [key, value] of keys) execFile('reg', ['add', key, '/ve', '/d', value, '/f'], { windowsHide: true }, () => {});
+}
+
 app.whenReady().then(async () => {
   try { fixShortcutIcons(); } catch { /* ignore */ }
   Menu.setApplicationMenu(null);
   lockSession(session.defaultSession);
   registerIpc();
+  ipcMain.handle('pattern:take-open-design', async event => {
+    assertMainSender(event);
+    const file = pendingDesign; pendingDesign = null;
+    return file ? designPayload(file) : null;
+  });
+  try { registerDesignFiles(); } catch { /* ignore */ }
   registerUpdates();
   await createWindow();
   if (updater.enabled) { setTimeout(() => void updater.check(), 8000); setInterval(() => void updater.check(), 6 * 60 * 60 * 1000); }

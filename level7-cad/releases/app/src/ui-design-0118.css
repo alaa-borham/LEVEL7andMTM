@@ -206,3 +206,5 @@ body.ui-dark .l7-size-btn b.l7-size-role{color:#4aa8ff}
 .l7-run-menu button svg{width:20px;height:20px;flex:none;color:#1f7fd1}
 body.ui-dark .l7-run-menu button svg{color:#4aa8ff}
 .l7-run-menu kbd{margin-inline-start:auto;font:11px Consolas,monospace;color:#8a9aab;direction:ltr}
+.l7-design-mdl{position:relative}.l7-mdl-menu{min-width:230px}
+.l7-design-export{position:relative}.l7-exp-menu{min-width:260px}.l7-exp-menu kbd{margin-inline-start:auto;font:11px Consolas,monospace;color:#8a9aab;direction:ltr}.l7-exp-menu button{display:flex;align-items:center;gap:8px}

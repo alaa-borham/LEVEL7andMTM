@@ -1457,13 +1457,13 @@ export class App {
               ? lib
                   .map(
                     (e) => `<li data-id="${esc(e.id)}"${from?.id === e.id ? ' class="cur"' : ""}><div><b>${esc(e.name)}</b><small dir="ltr">${e.measurements.length} X · ${(e.sizes?.length ?? 0) + 1} sizes · ${day(e.saved)}</small></div>
-                <span><button class="primary" data-ml="use" title="نسخ هذا الجدول إلى التصميم (يستبدل قياسات X والمقاسات؛ Z والرسم لا يتغيران)">استخدام</button><button data-ml="update" title="استبدال جدول المكتبة بجدول هذا التصميم">تحديث المكتبة</button><button class="danger" data-ml="del" title="حذف من المكتبة">×</button></span></li>`,
+                <span><button class="primary" data-ml="use" title="نسخ هذا الجدول إلى التصميم (يستبدل قياسات X والمقاسات؛ Z والرسم لا يتغيران)">استخدام</button><button data-ml="edit" title="تعديل قياسات هذا المنتج داخل المكتبة (لا يغيّر التصميم المفتوح)">✎ تعديل</button><button data-ml="update" title="استبدال جدول المكتبة بجدول هذا التصميم">تحديث المكتبة</button><button class="danger" data-ml="del" title="حذف من المكتبة">×</button></span></li>`,
                   )
                   .join("")
               : `<li class="empty">المكتبة فارغة: احفظ جدول هذا التصميم فيها، أو استورد ملف مكتبة.</li>`
           }</ul>
           <div class="za-row ml-save"><span>حفظ جدول هذا التصميم باسم</span><input data-ml="name" value="${esc(from?.name ?? this.model.name)}"/><button class="primary" data-ml="save">＋ حفظ كجدول جديد</button></div>
-          <div class="za-foot"><button data-ml="export">⤒ تصدير المكتبة (ملف)</button><button data-ml="import">⤓ استيراد مكتبة</button></div>
+          <div class="za-foot"><button class="primary" data-ml="new" title="منتج جديد في المكتبة: تكتب قياساته ومقاساته مباشرة">＋ منتج جديد</button><button data-ml="export">⤒ تصدير المكتبة (ملف)</button><button data-ml="import">⤓ استيراد مكتبة</button></div>
         </div>`;
     };
     draw();
@@ -1480,6 +1480,8 @@ export class App {
       const act = b.dataset.ml, id = b.closest<HTMLElement>("li[data-id]")?.dataset.id;
       const lib = this.mlib(), entry = lib.find((x) => x.id === id);
       if (act === "close") return el.remove();
+      if (act === "new") return this.editMEntry(null);
+      if (act === "edit" && entry) return this.editMEntry(entry.id);
       if (act === "use" && entry) {
         if (this.model.measurements.length && !confirm(`استبدال قياسات X والمقاسات في هذا التصميم بجدول «${entry.name}»؟\n(المعادلات Z والرسم لا يتغيران؛ يمكن التراجع بإعادة الاختيار)`)) return;
         this.syncPart();
@@ -1522,6 +1524,86 @@ export class App {
           inp.onchange = async () => inp.files?.[0] && this.importMLib(await inp.files[0].text());
           inp.click();
         }
+      }
+    });
+  }
+
+  /** Edit a library product (or a new one) in the library itself: name, base size, X rows
+   * (number, name, base value) and one column per size. The open design is not touched. */
+  editMEntry(id: string | null): void {
+    document.querySelector(".mlib-edit")?.remove();
+    const lib = this.mlib();
+    const orig = id ? lib.find((x) => x.id === id) : undefined;
+    const e: MEntry = orig ? JSON.parse(JSON.stringify(orig)) : { id: `m${Date.now().toString(36)}`, name: "", saved: new Date().toISOString(), size: "", measurements: [], sizes: [], grading: {} };
+    e.sizes ??= [];
+    const el = document.createElement("section");
+    el.className = "z-assistant marker-win mlib-edit";
+    el.dir = "rtl";
+    const num = (v: string) => Number(normalizeFormula(v).trim());
+    const draw = () => {
+      const sz = e.sizes ?? [];
+      el.innerHTML = `<div class="za-head"><b>${orig ? "تعديل منتج في المكتبة" : "منتج جديد في المكتبة"}</b><button data-me="close">×</button></div>
+        <div class="za-body">
+          <div class="za-row me-top"><span>اسم المنتج</span><input data-me="name" value="${esc(e.name)}" placeholder="مثل: ثوب سعودي كلاسيك"/><span>اسم المقاس الأساسي</span><input data-me="base" value="${esc(e.size ?? "")}" placeholder="الأساسي" lang="en" dir="ltr"/></div>
+          <div class="me-table"><table class="grid"><thead><tr><th>X</th><th>القياس</th><th>${esc(e.size || "الأساسي")}</th>${sz
+            .map((z, i) => `<th><input data-sn="${i}" value="${esc(z.name)}" lang="en" dir="ltr"/><button class="danger" data-me="delsize" data-i="${i}" title="حذف المقاس">×</button></th>`)
+            .join("")}<th></th></tr></thead><tbody>${e.measurements
+            .map(
+              (m, r) => `<tr><td class="xid" dir="ltr">X${m.id}</td><td><input data-mn="${r}" value="${esc(m.name)}" placeholder="—"/></td><td><input class="num" data-mv="${r}" value="${m.value}" lang="en" dir="ltr"/></td>${sz
+                .map((z, i) => `<td><input class="num" data-sv="${i}:${m.id}" value="${z.values[m.id] ?? ""}" placeholder="${m.value}" lang="en" dir="ltr"/></td>`)
+                .join("")}<td><button class="danger" data-me="delrow" data-r="${r}" title="حذف القياس">×</button></td></tr>`,
+            )
+            .join("")}</tbody></table></div>
+          <div class="table-actions"><button data-me="addrow">＋ قياس X</button><button data-me="addsize">＋ مقاس</button></div>
+          <p class="ml-note">الخانة الفارغة في عمود مقاس تأخذ قيمة المقاس الأساسي. الحفظ يغيّر المكتبة فقط؛ التصاميم التي نُسخ إليها هذا المنتج لا تتغير.</p>
+          <div class="za-foot"><button class="primary" data-me="save">✓ حفظ في المكتبة</button><button data-me="close">إلغاء</button></div>
+        </div>`;
+    };
+    draw();
+    document.body.append(el);
+    el.addEventListener("input", (ev) => {
+      const t = ev.target as HTMLInputElement, d = t.dataset;
+      if (d.me === "name") e.name = t.value;
+      else if (d.me === "base") e.size = t.value.trim() || undefined;
+      else if (d.mn !== undefined) e.measurements[Number(d.mn)].name = t.value;
+      else if (d.mv !== undefined && t.value.trim() !== "" && !Number.isNaN(num(t.value))) e.measurements[Number(d.mv)].value = num(t.value);
+      else if (d.sn !== undefined) e.sizes![Number(d.sn)].name = t.value;
+      else if (d.sv !== undefined) {
+        const [i, xid] = d.sv.split(":").map(Number), z = e.sizes![i];
+        if (t.value.trim() === "") delete z.values[xid];
+        else if (!Number.isNaN(num(t.value))) z.values[xid] = num(t.value);
+      }
+    });
+    el.addEventListener("click", (ev) => {
+      const b = (ev.target as HTMLElement).closest<HTMLElement>("[data-me]");
+      if (!b) return;
+      const act = b.dataset.me;
+      if (act === "close") return el.remove();
+      if (act === "addrow") {
+        const nid = e.measurements.reduce((a, m) => Math.max(a, m.id), 0) + 1;
+        e.measurements.push({ id: nid, name: "", value: 0 });
+        draw();
+        el.querySelector<HTMLInputElement>(`[data-mn="${e.measurements.length - 1}"]`)?.focus();
+      } else if (act === "addsize") {
+        e.sizes!.push({ name: `S${e.sizes!.length + 1}`, step: e.sizes!.length + 1, values: {} });
+        draw();
+      } else if (act === "delrow" && confirm(`حذف X${e.measurements[Number(b.dataset.r)].id} من هذا المنتج؟`)) {
+        e.measurements.splice(Number(b.dataset.r), 1);
+        draw();
+      } else if (act === "delsize" && confirm(`حذف المقاس «${e.sizes![Number(b.dataset.i)].name}» من هذا المنتج؟`)) {
+        e.sizes!.splice(Number(b.dataset.i), 1);
+        draw();
+      } else if (act === "save") {
+        if (!e.name.trim()) return this.toast("اكتب اسم المنتج");
+        e.name = e.name.trim();
+        e.saved = new Date().toISOString();
+        const list = this.mlib(), k = list.findIndex((x) => x.id === e.id);
+        if (k >= 0) list[k] = e;
+        else list.push(e);
+        if (!this.setMLib(list)) return;
+        this.toast(`حُفظ «${e.name}» في المكتبة: ${e.measurements.length} X و${e.sizes!.length + 1} مقاس`);
+        el.remove();
+        if (document.querySelector(".mlib-win")) this.openMLib();
       }
     });
   }
@@ -2688,7 +2770,7 @@ export class App {
     this.syncPart();
     // inside LEVEL7 and MTM the file is written by the program, which confirms with l7:saved
     if (!(document.body.classList.contains("embedded") && window.parent !== window)) this.markSaved();
-    download(`${safeFileName(this.model.name)}.level7.json`, JSON.stringify(this.model, null, 1), "application/json");
+    download(`${safeFileName(this.model.name)}.level7`, JSON.stringify(this.model, null, 1), "application/json");
   }
 
   private importGrafis(text: string): void {
@@ -3580,13 +3662,8 @@ export class App {
       <label class="field-inline"><input type="checkbox" data-nest ${this.showNest ? "checked" : ""}/> عرض كل المقاسات (فوق بعض أو جنباً إلى جنب من زر «Grading» في الشريط)</label>
       ${this.showNest ? `<div class="legend">${this.nest.map((n) => `<span><i style="background:${n.color}"></i>${esc(n.name)}</span>`).join("")}</div>` : ""}
       <div class="size-table"><table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>${esc(sizeName(this.model, -1))}</th><th>التدرج</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="table-actions">
-        <button data-xall="aama">تصدير AAMA لكل المقاسات</button>
-        <button data-xall="plt">تصدير PLT لكل المقاسات</button>
-      </div>
-      <div class="table-actions">
-        <button class="primary" data-graded title="المقاس الأساسي مع أرقام قواعد التدرج + ملف جدول القواعد RUL">تصدير AAMA مع قواعد التدرج + RUL</button>
-      </div>`;
+      <div class="table-actions"><button class="primary" data-sizes-mlib title="إنشاء منتجات في مكتبة القياسات، إضافة قياساتها وتعديلها، أو نسخ جدول منتج إلى هذا التصميم">📚 مكتبة القياسات</button></div>
+      <p class="size-export-note">التصدير لكل المقاسات وAAMA مع قواعد التدرج (RUL): من زر «Export» في شريط الأوامر.</p>`;
 
     let snapped = false;
     const edit = (fn: () => void, panels = false) => {
@@ -3664,48 +3741,50 @@ export class App {
       fillGrading(this.model);
       this.changed();
     });
+    box.querySelector("[data-sizes-mlib]")?.addEventListener("click", () => this.openMLib());
     box.querySelector<HTMLInputElement>("[data-nest]")?.addEventListener("change", (e) => {
       this.gradeView = (e.target as HTMLInputElement).checked ? "stack" : "off";
       this.evaluate();
       this.renderSizes();
       this.render();
     });
-    box.querySelector("[data-graded]")?.addEventListener("click", () => {
-      if (!this.model.pieces?.length) {
-        this.toast("لا توجد قطع للتصدير");
-        return;
-      }
-      if (!this.model.sizes?.length) {
-        this.toast("أضف مقاسات أولاً: قواعد التدرج تحتاج أكثر من مقاس");
-        return;
-      }
-      const steps = [0, ...this.model.sizes.filter((s) => s.kind !== "customer").map((s) => s.step)];
-      if (new Set(steps).size !== steps.length) {
-        this.toast("لكل مقاس درجة مختلفة في جدول التدرج (والأساسي درجته 0). الزبائن لا تُصدَّر بقواعد التدرج");
-        return;
-      }
-      const r = toGradedAama(this.model);
-      const base = safeFileName(this.model.name);
-      download(`${base}.dxf`, r.dxf, "application/dxf");
-      setTimeout(() => download(`${base}.rul`, r.rul, "text/plain"), 300);
-      this.toast(
-        r.errors.length
-          ? `صُدّر مع أخطاء: ${r.errors[0]}`
-          : `صُدّر ${this.model.pieces.length} قطعة بـ ${r.rules} قاعدة تدرج للمقاسات ${r.sizes.join(" ")} (الأساسي ${r.sample})`,
-      );
-    });
-    box.querySelectorAll<HTMLElement>("[data-xall]").forEach((b) =>
-      b.addEventListener("click", () => {
-        const { items, errors } = allSizeItems(this.model);
-        if (!items.length) {
-          this.toast("لا توجد قطع للتصدير");
-          return;
-        }
-        const base = `${safeFileName(this.model.name)}_all-sizes`;
-        if (b.dataset.xall === "aama") download(`${base}.dxf`, toAamaDxf(items, { style: this.model.name, size: "" }), "application/dxf");
-        else download(`${base}.plt`, toPlt(items, { size: "" }), "application/vnd.hp-hpgl");
-        if (errors.length) this.toast(`لم تُصدَّر ${errors.length} قطعة بسبب أخطاء: ${errors[0]}`);
-      }),
+  }
+
+  /** Export (command bar): AAMA / PLT of every active size in one file. */
+  exportAllSizes(kind: "aama" | "plt"): void {
+    this.syncPart();
+    const { items, errors } = allSizeItems(this.model);
+    if (!items.length) return this.toast("لا توجد قطع للتصدير");
+    const base = `${safeFileName(this.model.name)}_all-sizes`;
+    if (kind === "aama") download(`${base}.dxf`, toAamaDxf(items, { style: this.model.name, size: "" }), "application/dxf");
+    else download(`${base}.plt`, toPlt(items, { size: "" }), "application/vnd.hp-hpgl");
+    if (errors.length) this.toast(`لم تُصدَّر ${errors.length} قطعة بسبب أخطاء: ${errors[0]}`);
+  }
+
+  /** Export (command bar): AAMA of the base size with grade rule numbers + the RUL table. */
+  exportGraded(): void {
+    this.syncPart();
+    if (!this.model.pieces?.length) {
+      this.toast("لا توجد قطع للتصدير");
+      return;
+    }
+    if (!this.model.sizes?.length) {
+      this.toast("أضف مقاسات أولاً: قواعد التدرج تحتاج أكثر من مقاس");
+      return;
+    }
+    const steps = [0, ...this.model.sizes.filter((s) => s.kind !== "customer").map((s) => s.step)];
+    if (new Set(steps).size !== steps.length) {
+      this.toast("لكل مقاس درجة مختلفة في جدول التدرج (والأساسي درجته 0). الزبائن لا تُصدَّر بقواعد التدرج");
+      return;
+    }
+    const r = toGradedAama(this.model);
+    const base = safeFileName(this.model.name);
+    download(`${base}.dxf`, r.dxf, "application/dxf");
+    setTimeout(() => download(`${base}.rul`, r.rul, "text/plain"), 300);
+    this.toast(
+      r.errors.length
+        ? `صُدّر مع أخطاء: ${r.errors[0]}`
+        : `صُدّر ${this.model.pieces.length} قطعة بـ ${r.rules} قاعدة تدرج للمقاسات ${r.sizes.join(" ")} (الأساسي ${r.sample})`,
     );
   }
 

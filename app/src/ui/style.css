@@ -923,3 +923,14 @@ th.sz-off { opacity: .45; text-decoration: line-through; }
 .ml-list li button { height: 28px; padding: 0 10px; }
 .ml-save { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ml-save input { flex: 1; min-width: 140px; }
+/* library product editor */
+.mlib-edit { width: min(900px, calc(100vw - 40px)); }
+.me-top { display: grid; grid-template-columns: auto 1fr auto 140px; gap: 6px 8px; align-items: center; }
+.me-table { max-height: 52vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; margin: 8px 0; }
+.me-table table { width: max-content; min-width: 100%; }
+.me-table th, .me-table td { padding: 3px 4px; }
+.me-table th input { width: 70px; font-weight: 600; text-align: center; }
+.me-table td input { width: 100%; min-width: 120px; box-sizing: border-box; }
+.me-table td input.num { min-width: 64px; width: 70px; text-align: center; font-family: Consolas, monospace; }
+.me-table td.xid { color: var(--muted); font: 12px Consolas, monospace; }
+.size-export-note { color: var(--muted); font-size: 12.5px; }

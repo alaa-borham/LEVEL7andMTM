@@ -67,7 +67,7 @@ const HINT = {
   measureDist: 'اختر نقطتين لقياس المسافة بينهما.',
   measureLength: 'اختر خطاً أو منحنى لقياس طوله.'
 };
-const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'csv' : /\.level7\.json$|\.json$/i.test(name) ? 'design' : /\.plt$/i.test(name) ? 'hpgl' : /\.rul$/i.test(name) ? 'rul' : /\.dxf$/i.test(name) ? 'dxf' : /\.iso$/i.test(name) ? 'iso' : null;
+const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'csv' : /library(\.level7lib)?\.json$/i.test(name) ? 'project' : /\.level7$|\.level7\.json$|\.json$/i.test(name) ? 'design' : /\.plt$/i.test(name) ? 'hpgl' : /\.rul$/i.test(name) ? 'rul' : /\.dxf$/i.test(name) ? 'dxf' : /\.iso$/i.test(name) ? 'iso' : null;
 /** Same shortcuts as the program's toolbox (and the engine frame, which forwards them). */
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
@@ -112,7 +112,7 @@ export function installDesignMode() {
     [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4'], ['lengths', letter('mm'), 'F8', 'إظهار أطوال الخطوط والمنحنيات · F8'], ['images', letter('🖼'), 'F9', 'صور الخلفية للتتبع (F9 إظهار/إخفاء)'], ['arrange', icon('dock'), 'Arrange', 'ترتيب البارتات: كل البارتات بصور كبيرة']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],
     [['new', icon('new'), 'New', 'تصميم جديد · Ctrl+N'], ['open', icon('open'), 'Open', 'فتح تصميم · Ctrl+O']],
-    [['marker', letter('✂'), 'Marker', 'التعشيق: كل بارتات الإنتاج بكل المقاسات والكميات (ملف AAMA واحد)'], ['iso', letter('ISO'), 'ISO/PLT', 'ملف القص بعد التعشيق: ISO لماكينة القص (Bullmer / FK / Yin) أو PLT، من ملف تعشيق DXF أو PLT'], ['aama', letter('AAMA'), 'Ctrl+E', 'تصدير القطع DXF-AAMA للتعشيق · Ctrl+E'], ['dxf', letter('DXF'), 'DXF', 'تصدير خطوط البناء DXF'], ['plt', letter('PLT'), 'PLT', 'تصدير القطع PLT للبلوتر']]
+    [['marker', letter('✂'), 'Marker', 'التعشيق: كل بارتات الإنتاج بكل المقاسات والكميات (ملف AAMA واحد)'], ['iso', letter('ISO'), 'ISO/PLT', 'ملف القص بعد التعشيق: ISO لماكينة القص (Bullmer / FK / Yin) أو PLT، من ملف تعشيق DXF أو PLT']]
   ];
   const barBox = host.querySelector('.l7-design-bar');
   for (const group of bar) {
@@ -125,6 +125,36 @@ export function installDesignMode() {
     barBox.append(g);
   }
   const cmdBox = barBox;
+  // 0.9.148: every export in one button (AAMA / PLT of the current size or all sizes, AAMA with
+  // grade rules + RUL, DXF); Ctrl+E still exports AAMA of the current size.
+  const expBox = document.createElement('div'); expBox.className = 'palette-group l7-design-export';
+  expBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-exp-btn" data-l7d-expbtn title="التصدير: AAMA وPLT للمقاس الحالي أو لكل المقاسات، AAMA مع قواعد التدرج + RUL، DXF" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 3v11M8 10l4 4 4-4M4 15v5h16v-5"/></svg><small>Export</small></button><div class="l7-size-menu l7-exp-menu" role="menu" hidden><header>التصدير</header><button type="button" role="menuitem" data-l7d-command="aama"><span>AAMA للمقاس الحالي (للتعشيق)</span><kbd>Ctrl+E</kbd></button><button type="button" role="menuitem" data-l7d-command="aamaAll"><span>AAMA لكل المقاسات</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="aamaGraded"><span>AAMA مع قواعد التدرج + RUL</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="plt"><span>PLT للمقاس الحالي (للبلوتر)</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="pltAll"><span>PLT لكل المقاسات</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="dxf"><span>DXF خطوط البناء</span><kbd></kbd></button></div>';
+  barBox.append(expBox);
+  const expMenu = expBox.querySelector('.l7-exp-menu');
+  expBox.querySelector('[data-l7d-expbtn]').addEventListener('click', () => { expMenu.hidden = !expMenu.hidden; });
+  expMenu.addEventListener('click', () => { expMenu.hidden = true; });
+  document.addEventListener('pointerdown', e => { if (!expMenu.hidden && !e.target.closest?.('.l7-design-export')) expMenu.hidden = true; }, true);
+  window.addEventListener('blur', () => { expMenu.hidden = true; });
+  // 0.9.148: the program starts in LEVEL7 design; the GRAFIS (MDL) commands are kept in one
+  // button here (open / new MDL, the X/Z example, the MDL workspace). Each leaves design mode.
+  const mdlBox = document.createElement('div'); mdlBox.className = 'palette-group l7-design-mdl';
+  mdlBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-mdl-btn" data-l7d-mdlbtn title="ملفات GRAFIS (MDL): فتح، جديد، مثال X/Z، مساحة MDL" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 3h10l4 4v14H5zM14 3v5h5M8 13h8M8 17h5"/></svg><small>GRAFIS</small></button><div class="l7-size-menu l7-mdl-menu" role="menu" hidden><header>ملفات GRAFIS (MDL)</header>'
+    + '<button type="button" role="menuitem" data-mdl-act="open">فتح ملف GRAFIS (MDL)…</button>'
+    + '<button type="button" role="menuitem" data-mdl-act="new-template">ملف MDL جديد (القالب)</button>'
+    + '<button type="button" role="menuitem" data-mdl-act="open-parametric-example">مثال X/Z (ملف تجريبي)</button>'
+    + '<button type="button" role="menuitem" data-mdl-act="workspace">مساحة عمل MDL (إغلاق التصميم)</button></div>';
+  barBox.append(mdlBox);
+  const mdlMenu = mdlBox.querySelector('.l7-mdl-menu');
+  mdlBox.querySelector('[data-l7d-mdlbtn]').addEventListener('click', () => { mdlMenu.hidden = !mdlMenu.hidden; });
+  mdlMenu.addEventListener('click', e => {
+    const act = e.target.closest('[data-mdl-act]')?.dataset.mdlAct; if (!act) return;
+    mdlMenu.hidden = true; close();
+    if (act === 'workspace') return;
+    // the program's own command (same checks and dialogs as its File menu)
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.action = act; b.hidden = true; document.body.append(b); b.click(); b.remove();
+  });
+  document.addEventListener('pointerdown', e => { if (!mdlMenu.hidden && !e.target.closest?.('.l7-design-mdl')) mdlMenu.hidden = true; }, true);
+  window.addEventListener('blur', () => { mdlMenu.hidden = true; });
   // 0.9.147: test run / grade (as GRAFIS) in one button with a short list; Ctrl+6, Ctrl+Shift+6
   const runBox = document.createElement('div'); runBox.className = 'palette-group l7-design-run';
   runBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-run-btn" data-l7d-runbtn title="تشغيل تجريبي وتدريج البارتات (مثل GRAFIS)" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 3v9M5 8l4 4 4-4M15 3v9M11 8l4 4 4-4M4 16h16M4 20h16"/></svg><small>Run</small></button><div class="l7-size-menu l7-run-menu" role="menu" hidden><header>تشغيل وتدريج</header><button type="button" role="menuitem" data-l7d-command="testPart" title="Test run current part"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12M8 12l4 4 4-4M6 20h12"/></svg><span>تشغيل تجريبي للبارت الحالي</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="gradePart" title="Grade current part"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 4v12M5 12l4 4 4-4M15 4v12M11 12l4 4 4-4M5 20h14"/></svg><span>تدريج البارت الحالي</span><kbd></kbd></button><button type="button" role="menuitem" data-l7d-command="testAll" title="Test run all parts · Ctrl+Shift+6"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 3v9M8 8l4 4 4-4M5 16h14M5 20h14"/></svg><span>تشغيل تجريبي لكل البارتات</span><kbd>Ctrl+Shift+6</kbd></button><button type="button" role="menuitem" data-l7d-command="gradeAll" title="Grade all parts · Ctrl+6"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 3v9M5 8l4 4 4-4M15 3v9M11 8l4 4 4-4M4 16h16M4 20h16"/></svg><span>تدريج كل البارتات</span><kbd>Ctrl+6</kbd></button></div>';
@@ -390,4 +420,13 @@ export function installDesignMode() {
   // Empty canvas: a direct entry next to Open MDL.
   const empty = document.querySelector('#canvas-empty .empty-actions');
   if (empty) { const b = document.createElement('button'); b.type = 'button'; b.id = 'empty-l7-design'; b.textContent = 'تصميم LEVEL7 جديد'; b.addEventListener('click', () => { open(); send({ type: 'l7:new' }); }); empty.append(b); }
+  // 0.9.148: LEVEL7 design is the default: the program opens straight into it (the last design,
+  // kept by the autosave, or an empty one). The MDL workspace stays one click away (× or GRAFIS).
+  setTimeout(() => { if (host.hidden) open(); }, 0);
+  // a design file double-clicked in Windows opens here (also while the program is already open)
+  const openPassed = d => { if (d && typeof d.text === 'string') { open(); send({ type: 'l7:open', text: d.text, name: String(d.name || '') }); status('تم فتح ' + (d.name || '')); } };
+  if (desktop?.takeOpenDesign) void desktop.takeOpenDesign().then(openPassed).catch(() => {});
+  desktop?.onOpenDesign?.(openPassed);
+  // opening or creating an MDL from the program's menus shows the MDL workspace
+  document.addEventListener('click', e => { if (!host.hidden && e.target.closest?.('[data-action="open"],[data-action="open-any"],[data-action="new-template"],[data-action="open-parametric-example"]')) close(); }, true);
 }

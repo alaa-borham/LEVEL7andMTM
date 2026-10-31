@@ -198,6 +198,9 @@ if (embedded && window.parent !== window) {
     else if (action === "arrange") app.openArrange();
     else if (action === "marker") app.exportMarker();
     else if (action === "gradeview") app.cycleGradeView();
+    else if (action === "aamaAll") app.exportAllSizes("aama");
+    else if (action === "pltAll") app.exportAllSizes("plt");
+    else if (action === "aamaGraded") app.exportGraded();
     else if (action === "testPart") app.runCheck(false, false);
     else if (action === "gradePart") app.runCheck(false, true);
     else if (action === "testAll") app.runCheck(true, false);

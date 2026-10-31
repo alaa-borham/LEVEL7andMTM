@@ -59,7 +59,7 @@ try{
  pass('command bar and shortcuts (X, F11, F5, +/−, Ctrl+Z/Y) drive the engine, also with focus in the drawing');
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  // Save through the host dialog.
- const file=path.join(tmp,'design.level7.json');await app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
+ const file=path.join(tmp,'design.level7');await app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
  await frame.locator('#canvas').click({position:{x:1000,y:620},button:'middle'});await page.keyboard.press('Control+s');await page.waitForFunction(()=>/تم الحفظ/.test(document.querySelector('.l7-design-status').textContent));
  const saved=JSON.parse(await fs.readFile(file,'utf8'));assert.equal(saved.steps.length,3);pass('save writes a LEVEL7 design file, not MDL');
  await f.evaluate(()=>window.level7.newDesign());assert.equal(await f.evaluate(()=>window.level7.model.steps.length),0);

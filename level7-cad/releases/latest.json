@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.147",
- "notes": "أيقونات جديدة، مكتبة القياسات، Run، تفعيل المقاسات، التراجع للرسم فقط",
+ "version": "0.9.148",
+ "notes": "LEVEL7 افتراضي، ‎.level7 بدابل كليك، زر Export، إدارة مكتبة القياسات",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "5e6120236efc8b70bff6d31292987181137c8b8e7581d01e25de6ecffb338757",
-   "size": 135109
+   "sha256": "7208e9f7a97f769e59767c2f2737079aedca80f6d8fa26be508beb4ee032c1e6",
+   "size": 135926
   },
   {
    "path": "assets/icon.ico",
@@ -34,24 +34,24 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BnMT9hAW.css",
-   "sha256": "542df99c89281710e107c317fb8ef35ec3e7926ae5a3b0995ad2ec3bff59eed8",
-   "size": 32761
+   "path": "assets/l7design/assets/index-DIaJOj_f.css",
+   "sha256": "02017e46cbe7b774f6912d287dd1055bf9fd09b3e4a5d51921fbff1da82a4bea",
+   "size": 33444
   },
   {
-   "path": "assets/l7design/assets/index-thQIpzw-.js",
-   "sha256": "f2b8b0901efac8b72b6292be6b4e3ee37b032e9118e3835222de30768498a628",
-   "size": 243934
+   "path": "assets/l7design/assets/index-pvFiwmPm.js",
+   "sha256": "309b3d1c56510ca0798e1a2fe4c215701fb30cc1153425307dab4292794d6e2c",
+   "size": 248655
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "61a9455a5c204b7e759a997919f2ddd0a18e3bbe40005507bda6bd93c93099b4",
+   "sha256": "0904e6e01b3a1ceff8283ec09a39c754cd968eca353d103aa7b79e88038bff94",
    "size": 3594
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "0ba84f73748354edf0f71c4daa634bd996a21d33a74a7272b38a0f9a17207160",
-   "size": 26223
+   "sha256": "8db9137c0ba2c25cddc4557738abe46c209077bd758bd7c7804db1f2a46913ad",
+   "size": 28342
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -60,8 +60,8 @@
   },
   {
    "path": "desktop/preload.cjs",
-   "sha256": "5eb7c43be105689a66457e1230355da2909ae80f219893b5fc5e2a91dec6ff8a",
-   "size": 2536
+   "sha256": "757db3d74c8582abba559524c48193845075f5434b589af25844496f752be924",
+   "size": 2973
   },
   {
    "path": "desktop/remote-update.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "48b380618f0a95593faab2b7388f245b5938bb2c9cabb586c0191a0b10462806",
+   "sha256": "36a9a3aa6a536b53f08edb69077c05192f8dd48e503e5209eb654031fb391eb9",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "e0dd457fca4924188629f6169124992cb898d6dc574cd44b174590168040e8d9",
-   "size": 39230
+   "sha256": "ed527c1fb925205dd2244fc20cfaf1b88332bc654c58bb43c2702a8cc822e4ce",
+   "size": 44344
   },
   {
    "path": "src/l7-icons.js",
@@ -1510,8 +1510,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "6731780096ac0dab0d733be771e3aa8a3f8bd84242cdf5358ecf588de32a4528",
-   "size": 19447
+   "sha256": "b31c6aa24df4a577b1a0318c156a55ce9bb624351a97074c158a399595cf3798",
+   "size": 19735
   },
   {
    "path": "src/ui-guide-0113.js",

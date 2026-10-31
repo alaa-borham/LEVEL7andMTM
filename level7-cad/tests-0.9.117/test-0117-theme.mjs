@@ -5,7 +5,7 @@ import path from'node:path';import fs from'node:fs/promises';import os from'node
 const src=process.env.L7_SRC,exe=process.env.L7_EXE||path.join(src,'node_modules/electron/dist/electron'),args=process.env.L7_EXE?['--no-sandbox']:['--no-sandbox',src];
 const env={...process.env,LOCALAPPDATA:await fs.mkdtemp(path.join(os.tmpdir(),'l7theme-'))};delete env.ELECTRON_RUN_AS_NODE;
 const pass=t=>console.log('PASS '+t);let failed=0;
-const launch=async()=>{const app=await _electron.launch({executablePath:exe,args,env,timeout:60000});const page=await app.firstWindow();page.setDefaultTimeout(20000);await page.waitForSelector('#tool-guide');return{app,page};};
+const launch=async()=>{const app=await _electron.launch({executablePath:exe,args,env,timeout:60000});const page=await app.firstWindow();page.setDefaultTimeout(20000);await page.waitForSelector('#tool-guide');await page.waitForSelector('.l7-design-cat');await page.locator('[data-l7d="close"]').click();await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on')); /* 0.9.148: the program starts in LEVEL7 design; these steps test the MDL workspace */return{app,page};};
 const lum=c=>{const m=c.match(/\d+(\.\d+)?/g).map(Number);return(0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;};
 const toggle=async page=>{await page.locator('.menubar summary',{hasText:'View'}).click();await page.locator('#menu-theme-toggle').click();};
 try{

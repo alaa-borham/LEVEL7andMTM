@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('desktop', Object.freeze({
   checkLocalUpdates: () => ipcRenderer.invoke('update:check'),
   onLocalUpdateStatus: handler => { if (typeof handler !== 'function') throw new Error('A status handler is required.'); const listener = (_event, state) => handler(state); ipcRenderer.on('update:status', listener); return () => ipcRenderer.removeListener('update:status', listener); },
   openMdl: () => ipcRenderer.invoke('pattern:open-mdl'),
+  // 0.9.148: a design file the program was started with (double-click), and later ones
+  takeOpenDesign: () => ipcRenderer.invoke('pattern:take-open-design'),
+  onOpenDesign: handler => { if (typeof handler !== 'function') throw new Error('A handler is required.'); const listener = (_event, d) => handler(d); ipcRenderer.on('pattern:open-design', listener); return () => ipcRenderer.removeListener('pattern:open-design', listener); },
   copyText: text => ipcRenderer.invoke('pattern:copy-text', {text}),
   saveMdl: options => ipcRenderer.invoke('pattern:save-mdl', {
     bytes: options?.bytes,
