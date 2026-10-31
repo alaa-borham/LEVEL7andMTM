@@ -623,6 +623,7 @@ export class App {
   }
 
   cancelTool(): void {
+    if (this.tool) this.resetPointPanel();
     this.tool = null;
     this.picks = [];
     this.extra = [];
@@ -663,7 +664,14 @@ export class App {
   ptMm = "100";
   ptDx = "0";
   ptDy = "0";
-  ptRaster = 1;
+  ptRaster = (() => {
+    try {
+      const v = Number(localStorage.getItem("level7.ptRaster"));
+      return [0.1, 1, 5, 10].includes(v) ? v : 1;
+    } catch {
+      return 1;
+    }
+  })();
 
   /** Where the point of the current mode would be for a click at `at` (no step made). */
   private modeCandidate(at: Pt, sx: number, sy: number): { pt: Pt; step: (id: number) => Step } | null {
@@ -785,7 +793,12 @@ export class App {
         if (row) (this.ptMode = row.dataset.pmRow as App["ptMode"]), mark();
       }),
     );
-    (box.querySelector("[data-raster]") as HTMLSelectElement).addEventListener("change", (e) => (this.ptRaster = Number((e.target as HTMLSelectElement).value)));
+    (box.querySelector("[data-raster]") as HTMLSelectElement).addEventListener("change", (e) => {
+      this.ptRaster = Number((e.target as HTMLSelectElement).value);
+      try {
+        localStorage.setItem("level7.ptRaster", String(this.ptRaster));
+      } catch {}
+    });
     const head = box.querySelector(".pt-head") as HTMLElement;
     head.addEventListener("pointerdown", (e) => {
       const r = box.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
@@ -805,6 +818,17 @@ export class App {
   }
 
   private pointPanel: HTMLElement | null = null;
+
+  /** After an operation is finished or the tool is closed, the point panel starts clean:
+   * all values 0 and the plain point mode (•). The raster step is kept. */
+  private resetPointPanel(): void {
+    this.ptMode = "free";
+    this.ptPct = this.ptMm = this.ptDx = this.ptDy = "0";
+    const box = this.pointPanel;
+    if (!box) return;
+    box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) => (inp.value = "0"));
+    box.querySelectorAll<HTMLElement>("[data-pm]").forEach((b) => b.classList.toggle("on", b.dataset.pm === "free"));
+  }
 
   // ---- back / forward arrows on the drawing (as Excel): ↶ with a list to go back several
   // steps; ↷ appears once something was undone
@@ -1095,7 +1119,15 @@ export class App {
   }
 
   /** Angle step for live drawing, in degrees (0 = free). */
-  angleStep = 1;
+  // remembered on this computer until changed (angle step of live lines, raster of free points)
+  angleStep = (() => {
+    try {
+      const v = Number(localStorage.getItem("level7.angleStep"));
+      return [0, 1, 5, 15, 45, 90].includes(v) && localStorage.getItem("level7.angleStep") !== null ? v : 1;
+    } catch {
+      return 1;
+    }
+  })();
   private autoPoint: number | null = null;
 
   private rightDown: { x: number; y: number } | null = null;
@@ -1186,6 +1218,7 @@ export class App {
       const err = this.res.stepErrors.get(this.model.steps.length - 1);
       if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
     }
+    this.resetPointPanel();
     this.restartTool();
     this.render();
   }
@@ -1286,6 +1319,9 @@ export class App {
       box.querySelector(".hint")?.before(step);
       (step.querySelector("select") as HTMLSelectElement).addEventListener("change", (e) => {
         this.angleStep = Number((e.target as HTMLSelectElement).value);
+        try {
+          localStorage.setItem("level7.angleStep", String(this.angleStep));
+        } catch {}
         live.follow?.(this.mouse);
       });
       const hint = box.querySelector(".hint") as HTMLElement;
@@ -2124,23 +2160,99 @@ export class App {
     );
   }
 
+  /** X values, laid out as GRAFIS: a dense table X | name | MTM | Standard | one column per
+   * size, a tool bar (add / delete the selected row) and a search box. */
+  private xSel = -1;
+  private xFilter = "";
+
   private renderX(): void {
     const box = $("#tab-x");
+    const sizes = this.model.sizes ?? [];
+    const f = this.xFilter.trim().toLowerCase();
     const rows = this.model.measurements
-      .map(
-        (m, i) => `<tr>
-          <td class="id">X${m.id}</td>
-          <td><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="اسم القياس"/></td>
-          <td style="width:90px"><input class="expr" data-i="${i}" data-f="code" value="${esc(m.code ?? "")}" placeholder="—" title="اسم هذا القياس في نظام MTM أو ملف الاستيراد"/></td>
-          <td style="width:90px"><input class="expr num" type="text" inputmode="decimal" dir="ltr" lang="en" data-i="${i}" data-f="value" value="${m.value}"/></td>
-          <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
-        </tr>`,
-      )
+      .map((m, i) => {
+        if (f && !`x${m.id} ${m.name} ${m.code ?? ""}`.toLowerCase().includes(f)) return "";
+        const cells = sizes
+          .map((sz, k) => `<td class="xv sz"><input class="num" type="text" inputmode="decimal" dir="ltr" lang="en" data-sz="${k}" data-xid="${m.id}" value="${sz.values[m.id] ?? ""}" placeholder="${fmt(m.value)}" title="${esc(sz.name)}"/></td>`)
+          .join("");
+        return `<tr data-row="${i}" class="${i === this.xSel ? "sel" : ""}">
+          <td class="xid">X${m.id}</td>
+          <td class="xn"><input data-i="${i}" data-f="name" value="${esc(m.name)}" placeholder="0"/></td>
+          <td class="xc"><input dir="ltr" data-i="${i}" data-f="code" value="${esc(m.code ?? "")}" placeholder="—" title="اسم هذا القياس في نظام MTM أو ملف الاستيراد"/></td>
+          <td class="xv"><input class="expr num" type="text" inputmode="decimal" dir="ltr" lang="en" data-i="${i}" data-f="value" value="${m.value}"/></td>${cells}
+        </tr>`;
+      })
       .join("");
-    box.innerHTML =
-      `<table class="grid"><thead><tr><th>رمز</th><th>القياس</th><th>رمز MTM</th><th>القيمة مم</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
-      `<div class="table-actions"><button data-add>إضافة قياس</button></div>`;
+    const head = sizes.map((sz) => `<th class="sz" title="${sz.kind === "customer" ? "زبون" : "مقاس"}">${esc(sz.name)}</th>`).join("");
+    box.innerHTML = `<div class="xgrid">
+      <div class="xg-bar"><button data-add class="xg-add" title="إضافة قياس X">⊕</button><button data-xa="del" class="xg-del" title="حذف القياس المحدد"${this.xSel < 0 ? " disabled" : ""}>✕</button>
+        <span class="xg-info">${this.model.measurements.length} X · ${sizes.length + 1} ${sizes.length ? "مقاسات" : "مقاس"}</span></div>
+      <div class="xg-table"><table><thead><tr><th class="xid">X</th><th class="xn">الاسم · Name</th><th class="xc">MTM</th><th class="xv">${esc(sizeName(this.model, -1))}</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="xg-foot"><span class="xg-search">⌕<input data-xa="search" value="${esc(this.xFilter)}" placeholder="بحث بالاسم أو الرقم"/><button data-xa="clear" title="مسح البحث">✕</button></span>
+        <button data-xa="copy" title="نسخ الجدول (يُلصق في إكسل)">⧉ نسخ</button></div></div>`;
     this.bindTable(box, "measurements");
+    const tbody = box.querySelector("tbody") as HTMLElement;
+    tbody.addEventListener("focusin", (e) => {
+      const tr = (e.target as HTMLElement).closest<HTMLElement>("tr[data-row]");
+      if (!tr) return;
+      this.xSel = Number(tr.dataset.row);
+      tbody.querySelectorAll("tr.sel").forEach((r) => r.classList.remove("sel"));
+      tr.classList.add("sel");
+      (box.querySelector('[data-xa="del"]') as HTMLButtonElement).disabled = false;
+    });
+    // values per size (empty = the base value)
+    let snapped = false;
+    box.querySelectorAll<HTMLInputElement>("input[data-sz]").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        if (!snapped) (this.snapshot(), (snapped = true));
+        const sz = sizes[Number(inp.dataset.sz)], id = Number(inp.dataset.xid);
+        const v = Number(normalizeFormula(inp.value).trim());
+        if (inp.value.trim() === "") delete sz.values[id];
+        else if (!Number.isNaN(v)) sz.values[id] = v;
+        this.changed(false);
+      });
+      inp.addEventListener("change", () => (snapped = false));
+      inp.addEventListener("focus", () => setTimeout(() => inp.select(), 0));
+      inp.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        const rows = [...tbody.querySelectorAll<HTMLInputElement>(`input[data-sz="${inp.dataset.sz}"]`)];
+        const next = rows[rows.indexOf(inp) + 1];
+        if (next) next.focus();
+        else inp.blur();
+      });
+    });
+    box.querySelector(".xg-bar")?.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLElement>("[data-xa]")?.dataset.xa;
+      if (a === "del" && this.xSel >= 0 && this.model.measurements[this.xSel]) {
+        const m = this.model.measurements[this.xSel];
+        this.snapshot();
+        this.model.measurements.splice(this.xSel, 1);
+        this.xSel = Math.min(this.xSel, this.model.measurements.length - 1);
+        this.changed();
+        this.toast(`حُذفت X${m.id}`);
+      }
+    });
+    const search = box.querySelector('[data-xa="search"]') as HTMLInputElement;
+    search.addEventListener("input", () => {
+      this.xFilter = search.value;
+      const pos = search.selectionStart;
+      this.renderX();
+      const again = $("#tab-x").querySelector('[data-xa="search"]') as HTMLInputElement;
+      again.focus();
+      if (pos !== null) again.setSelectionRange(pos, pos);
+    });
+    box.querySelector('[data-xa="clear"]')?.addEventListener("click", () => ((this.xFilter = ""), this.renderX()));
+    box.querySelector('[data-xa="copy"]')?.addEventListener("click", async () => {
+      const lines = [["X", "Name", "MTM", sizeName(this.model, -1), ...sizes.map((z) => z.name)].join("\t")];
+      for (const m of this.model.measurements) lines.push([`X${m.id}`, m.name, m.code ?? "", String(m.value), ...sizes.map((z) => String(z.values[m.id] ?? m.value))].join("\t"));
+      try {
+        await navigator.clipboard.writeText(lines.join("\n"));
+        this.toast("نُسخ الجدول؛ الصقه في إكسل");
+      } catch {
+        this.toast("تعذر النسخ");
+      }
+    });
   }
 
   private renderZ(): void {

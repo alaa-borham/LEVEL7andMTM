@@ -702,3 +702,35 @@ body.embedded .zwin #tab-z { display: block !important; flex: 1; overflow: auto;
 .hist-menu[hidden] { display: none; }
 .hist-menu button { justify-content: space-between; height: 28px; width: 100%; padding: 0 10px; font-size: 12.5px; }
 .hist-menu button i { font-style: normal; color: var(--muted); font-size: 11px; }
+
+/* 0.9.132 X values as GRAFIS: dense grid, Standard + size columns, tool bar and search */
+#tab-x { padding: 0 !important; }
+.xgrid { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.xg-bar, .xg-foot { display: flex; align-items: center; gap: 4px; padding: 6px 8px; flex: none; }
+.xg-bar { border-bottom: 1px solid var(--border); }
+.xg-foot { border-top: 1px solid var(--border); justify-content: space-between; }
+.xg-bar button { width: 30px; height: 28px; padding: 0; font-size: 17px; border: 1px solid transparent; background: transparent; }
+.xg-bar button:hover:not(:disabled) { border-color: var(--border); }
+.xg-add { color: #f5c400; }
+.xg-del { color: var(--danger); }
+.xg-bar button:disabled { opacity: 0.3; }
+.xg-info { margin-inline-start: auto; color: var(--muted); font-size: 11px; }
+.xg-table { flex: 1; min-height: 0; overflow: auto; }
+.xg-table table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.xg-table th { position: sticky; top: 0; z-index: 1; background: var(--bg); color: var(--muted); font-weight: 600; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; text-align: center; }
+.xg-table td { padding: 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); border-inline-start: 1px solid color-mix(in srgb, var(--border) 45%, transparent); height: 26px; }
+.xg-table td.xid { width: 44px; padding: 0 6px; color: var(--muted); font: 12px Consolas, monospace; direction: ltr; text-align: left; }
+.xg-table td.xc { width: 74px; }
+.xg-table td.xv { width: 76px; }
+.xg-table td input { width: 100%; height: 25px; border: none; border-radius: 0; background: transparent; color: var(--text); padding: 0 6px; font-size: 12.5px; }
+.xg-table td input:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--surface); }
+.xg-table td.xv input { color: #f5c400; text-align: center; font: 600 12.5px Consolas, monospace; }
+.xg-table td.xv.sz input { color: #d9c46a; font-weight: normal; }
+.xg-table td.xv.sz input::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.xg-table td.xc input { font: 11.5px Consolas, monospace; color: var(--muted); }
+.xg-table tr:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.xg-table tr.sel td { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.xg-search { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.xg-search input { width: 150px; height: 26px; }
+.xg-search button, .xg-foot > button { height: 26px; padding: 0 8px; }
+body:not(.dark) .xg-table td.xv input { color: #9a7400; }

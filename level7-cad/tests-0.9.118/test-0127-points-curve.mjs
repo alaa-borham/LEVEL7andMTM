@@ -40,5 +40,10 @@ try{
  assert.equal(await frame.locator('.pt-modes [data-pv="ptPct"]').inputValue(),'X1');pass('point panel: X / Z list fills the value (X1)');
  await frame.locator('.pt-modes [data-pm="free"]').click();await page.mouse.click(...await at(0,0),{button:'right'});
  assert(await frame.locator('.pt-modes').isHidden());pass('point panel hides when no point is expected');
+ await (async()=>{const b=page.locator('[data-l7d-tool="line"]');if(!await b.isVisible())await page.locator('[data-l7d-cat="الخطوط"]').click({button:"right"});await b.click();})();
+ await frame.locator('.pt-modes').waitFor();
+ const vals=await frame.locator('.pt-modes [data-pv]').evaluateAll(a=>a.map(i=>i.value));assert.deepEqual(vals,['0','0','0','0']);
+ assert.equal(await frame.locator('.pt-modes [data-pm="free"]').getAttribute('class'),'on');
+ pass('next time the point panel opens, all its values are 0 and the plain point mode is on');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

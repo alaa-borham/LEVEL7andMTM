@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.132
+
+X values laid out as GRAFIS: dense table X | Name | MTM | Standard (yellow) | one column per size (empty = base value), a tool bar (⊕ add, ✕ delete the selected row), search and copy (pastes into Excel). The angle step of live lines and the raster of free points are remembered until changed. After an operation is finished or a tool is closed, the point panel starts clean (values 0, plain point mode).
+
 LEVEL7 and MTM 0.9.131
 
 LEVEL7 design mode: X and Z windows can be open at the same time (Z has its own window; both buttons light up). Excel-style Z formulas: IF (nested without limit), IFS (any number of conditions), AND, OR, NOT, MIN, MAX, SUM, AVERAGE, ROUND/ROUNDUP/ROUNDDOWN, INT, ABS, SQRT, POWER, MOD, SIN/COS/TAN/ASIN/ACOS/ATAN (degrees), PI, comparisons as 1/0, ^ and ; or , separators; the branch not taken is not evaluated. Z assistant: unlimited IF / ELSE IF rows, an "Excel formula" mode with a function list; only X values and Z rows before the current one may be used. Back arrow on the drawing with a list to go back several steps; the forward arrow appears after going back (as Excel). Curves: the handle distance sets the strength at that end (tension %), and the points a curve passes through can be dragged to reshape it.

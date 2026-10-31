@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.131",
- "notes": "X وZ معاً؛ معادلات مثل إكسل؛ سهم رجوع وإعادة؛ مرونة الكيرف",
+ "version": "0.9.132",
+ "notes": "جدول X مثل GRAFIS؛ حفظ خطوة الزاوية؛ تصفير لوحة النقاط بعد كل عملية",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "d7f2a999d490822f7b2963a87a392920638d4bc3e9d0eb302df60ee1365b3a69",
-   "size": 126154
+   "sha256": "4216f7a0faa38ebf6174a73bdbf785350d9b0fa4fb6c78b00a8ecda058626878",
+   "size": 126587
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-D82yZYDU.js",
-   "sha256": "03a8e4ac425543cd5f4134a7c42a19817527b6de4e93acb52203574202687ff3",
-   "size": 133174
+   "path": "assets/l7design/assets/index-Bojy-ZGZ.css",
+   "sha256": "38abd08037cfb01bc46f92beb9264d11bebb6f5fff0f8ef68a2341d0fd120815",
+   "size": 21196
   },
   {
-   "path": "assets/l7design/assets/index-DEQScaYU.css",
-   "sha256": "20a9e2d8e9fdc8b1fb2aca980ed6611fd77dae3471d31a070defe0f6d4990c25",
-   "size": 18965
+   "path": "assets/l7design/assets/index-D-S9djW7.js",
+   "sha256": "5be2411095036641b48eafbcbc755cf556e18da067b692f313decbc23e6e6af8",
+   "size": 137226
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "1e3c4c3449a16c799c2ce5d718d5be9df169d55793f92a254aaa6f69f650c1f7",
+   "sha256": "572b5f875f454b152cf77e21d90ef57946781891c1bc1a6de3d1cdf3ac02696c",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "cfb184f2a2b3f2283f2c477838b52dcdeee3c949ad519d01244c1324c490de1a",
+   "sha256": "6b3877114721b3103be3e17fb5d0c13ac1c6c9e89312eadddd43ac47c72b2112",
    "size": 301
   },
   {

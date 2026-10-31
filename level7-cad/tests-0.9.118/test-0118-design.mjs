@@ -82,6 +82,7 @@ try{
  assert.equal(live.a,'45');assert(live.l>0&&/45° · /.test(live.label||''),JSON.stringify(live));
  const n0=await f.evaluate(()=>window.level7.model.steps.length);await page.mouse.click(x0+120,y0-110);
  await f.waitForFunction(n=>window.level7.model.steps.length===n+1,n0);const st=await f.evaluate(()=>window.level7.model.steps.at(-1));assert.equal(st.op,'lineAngle');assert.equal(st.angle,'45');
+ assert.equal(await f.evaluate(()=>localStorage.getItem('level7.angleStep')),'45');
  pass('angle line follows the mouse with a 45° step and a click fixes it ('+st.length+' mm)');
  // step card: picture and back arrow
  assert(await page.locator('.l7-design-guide:not([hidden]) .l7g-pic svg').count()===1);
