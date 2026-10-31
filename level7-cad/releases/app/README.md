@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.116
+
+Speed: each document's part analysis and history replay are computed once and reused (documents never change; edits create a new document, and results are returned as copies). On ALAA2026.mdl opening went from 28.6 s to 2.1 s, six part switches from 72.8 s to 3.8 s and 30 zoom steps from 5.8 s to 2.0 s (software rendering). Geometry is unchanged: all 1299 objects still within 0.2 mm of GRAFIS.
+
 LEVEL7 and MTM 0.9.115
 
 Newer GRAFIS files (MDL variant VB) now open with their stored drawings for viewing (read-only; editing and saving stay VA-only). Tool cards grow to use the free height of the right panel without a scrollbar, with two-line captions on large cards, tactile tile styling and fabric-filled pattern pieces in the icons.

@@ -296,10 +296,16 @@ function editGate(bytes,parsed,partId,history,cache){
   return[...new Set(reasons)];
 }
 
+// 0.9.116: a document never changes after parseMdl/makeDocument (edits build a new
+// document from a copy), so its per-part analysis is computed once. Switching parts
+// used to re-validate the whole file every time.
+const analysisCache=new WeakMap();
 function analyze(doc,partId){
+  let perPart=analysisCache.get(doc);if(!perPart){perPart=new Map();analysisCache.set(doc,perPart);}
+  const known=perPart.get(partId);if(known)return known;
   const {bytes,parsed}=documentState(doc);
   const history=readHistory(bytes,parsed,partId),cache=inspectCache(bytes,parsed,partId,history),reasons=editGate(bytes,parsed,partId,history,cache);
-  return{history,cache,reasons};
+  const result={history,cache,reasons};perPart.set(partId,result);return result;
 }
 
 export function decodeSupportedHistory(doc,partId=1,{throughRecord}={}){

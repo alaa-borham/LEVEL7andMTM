@@ -256,7 +256,18 @@ function runPartPrefix(bytes,doc,{partId,sizeKey,resolveParent}){
 }
 /** A private immutable document snapshot and a memoized dependency traversal.
  * Returned copies cannot inject geometry into the parent cache. */
+// 0.9.116: one calculation per document and size. A document never changes (edits
+// build a new one) and get()/all() return clones, so tools that ask for the same
+// part reuse the replay instead of copying the file and replaying it again.
+const calculationCache=new WeakMap();
 export function createPartHistoryCalculation(document,{sizeKey}={}){
+ let bySize=document&&typeof document==='object'?calculationCache.get(document):null;
+ if(bySize?.has(sizeKey))return bySize.get(sizeKey);
+ const calculation=buildPartHistoryCalculation(document,{sizeKey});
+ if(document&&typeof document==='object'){if(!bySize){bySize=new Map();calculationCache.set(document,bySize);}bySize.set(sizeKey,calculation);}
+ return calculation;
+}
+function buildPartHistoryCalculation(document,{sizeKey}={}){
  const bytes=serializeMdl(document),doc=parseMdl(bytes),results=new Map(),active=[];
  const partIds=[...new Set(doc.blocks.filter(b=>b.id[0]===3).map(b=>b.id[1]))].sort((a,b)=>a-b);
  const resolve=partId=>{

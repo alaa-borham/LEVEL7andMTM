@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.115",
- "notes": "LEVEL7 and MTM 0.9.115: فتح ملفات جرافس الأحدث (VB) للعرض، وأيقونات أكبر تملأ اللوحة.",
+ "version": "0.9.116",
+ "notes": "LEVEL7 and MTM 0.9.116: البرنامج أسرع بكثير في فتح الملفات والتنقل بين البارتات.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "c0805397b76b6da4ddb0af87260227ea53477d02176e32b26d97a50a86c03b26",
-   "size": 117385
+   "sha256": "cf6a09e5c1575495d2a405dbf284e80b1c40628ad82f673f8074cf53bf7c8101",
+   "size": 117807
   },
   {
    "path": "assets/icon.ico",
@@ -110,7 +110,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "5d040d5ed54197733cf8a4e34bd66594ffa3dafcd2c2de2fdba0750b6174e8c1",
+   "sha256": "93b778411c7f287b1f00fb599affa4543ad78c952403f9175273343264028b9b",
    "size": 301
   },
   {
@@ -580,8 +580,8 @@
   },
   {
    "path": "src/native-mdl.js",
-   "sha256": "0621c4f20fc846a62e17d7644273989d4ad2bafa6690a83a35bcc435e1000ab5",
-   "size": 47682
+   "sha256": "35db5c64fe630a5d72563e6bdef2a77d71335a433c9bd746f01b6220de8363e4",
+   "size": 48142
   },
   {
    "path": "src/native-measurements.js",
@@ -1385,8 +1385,8 @@
   },
   {
    "path": "src/part-history-engine.mjs",
-   "sha256": "9c49bad80fdf1458c29799d6984afdb1a0902f41d8769a6cf065280a26af8a03",
-   "size": 51503
+   "sha256": "a426588165154c9d37b00d11e35fb5b5ff43765639000983918b56e3e034b4f7",
+   "size": 52229
   },
   {
    "path": "src/part-inheritance-kernel.mjs",

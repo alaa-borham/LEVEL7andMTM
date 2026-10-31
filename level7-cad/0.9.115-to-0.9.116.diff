@@ -1,0 +1,65 @@
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/releases/app/README.md dev/README.md
+--- /home/user/LEVEL7andMTM/level7-cad/releases/app/README.md	2026-10-31 07:59:38.168187775 +0000
++++ dev/README.md	2026-10-31 08:30:26.284100390 +0000
+@@ -1,3 +1,7 @@
++LEVEL7 and MTM 0.9.116
++
++Speed: each document's part analysis and history replay are computed once and reused (documents never change; edits create a new document, and results are returned as copies). On ALAA2026.mdl opening went from 28.6 s to 2.1 s, six part switches from 72.8 s to 3.8 s and 30 zoom steps from 5.8 s to 2.0 s (software rendering). Geometry is unchanged: all 1299 objects still within 0.2 mm of GRAFIS.
++
+ LEVEL7 and MTM 0.9.115
+ 
+ Newer GRAFIS files (MDL variant VB) now open with their stored drawings for viewing (read-only; editing and saving stay VA-only). Tool cards grow to use the free height of the right panel without a scrollbar, with two-line captions on large cards, tactile tile styling and fabric-filled pattern pieces in the icons.
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/releases/app/package.json dev/package.json
+--- /home/user/LEVEL7andMTM/level7-cad/releases/app/package.json	2026-10-31 07:59:38.170763653 +0000
++++ dev/package.json	2026-10-31 08:30:26.282343263 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.115",
++  "version": "0.9.116",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/releases/app/src/native-mdl.js dev/src/native-mdl.js
+--- /home/user/LEVEL7andMTM/level7-cad/releases/app/src/native-mdl.js	2026-10-31 07:59:38.179121760 +0000
++++ dev/src/native-mdl.js	2026-10-31 08:24:22.185464117 +0000
+@@ -296,10 +296,16 @@
+   return[...new Set(reasons)];
+ }
+ 
++// 0.9.116: a document never changes after parseMdl/makeDocument (edits build a new
++// document from a copy), so its per-part analysis is computed once. Switching parts
++// used to re-validate the whole file every time.
++const analysisCache=new WeakMap();
+ function analyze(doc,partId){
++  let perPart=analysisCache.get(doc);if(!perPart){perPart=new Map();analysisCache.set(doc,perPart);}
++  const known=perPart.get(partId);if(known)return known;
+   const {bytes,parsed}=documentState(doc);
+   const history=readHistory(bytes,parsed,partId),cache=inspectCache(bytes,parsed,partId,history),reasons=editGate(bytes,parsed,partId,history,cache);
+-  return{history,cache,reasons};
++  const result={history,cache,reasons};perPart.set(partId,result);return result;
+ }
+ 
+ export function decodeSupportedHistory(doc,partId=1,{throughRecord}={}){
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/releases/app/src/part-history-engine.mjs dev/src/part-history-engine.mjs
+--- /home/user/LEVEL7andMTM/level7-cad/releases/app/src/part-history-engine.mjs	2026-10-31 07:59:38.188899000 +0000
++++ dev/src/part-history-engine.mjs	2026-10-31 08:26:41.681843256 +0000
+@@ -256,7 +256,18 @@
+ }
+ /** A private immutable document snapshot and a memoized dependency traversal.
+  * Returned copies cannot inject geometry into the parent cache. */
++// 0.9.116: one calculation per document and size. A document never changes (edits
++// build a new one) and get()/all() return clones, so tools that ask for the same
++// part reuse the replay instead of copying the file and replaying it again.
++const calculationCache=new WeakMap();
+ export function createPartHistoryCalculation(document,{sizeKey}={}){
++ let bySize=document&&typeof document==='object'?calculationCache.get(document):null;
++ if(bySize?.has(sizeKey))return bySize.get(sizeKey);
++ const calculation=buildPartHistoryCalculation(document,{sizeKey});
++ if(document&&typeof document==='object'){if(!bySize){bySize=new Map();calculationCache.set(document,bySize);}bySize.set(sizeKey,calculation);}
++ return calculation;
++}
++function buildPartHistoryCalculation(document,{sizeKey}={}){
+  const bytes=serializeMdl(document),doc=parseMdl(bytes),results=new Map(),active=[];
+  const partIds=[...new Set(doc.blocks.filter(b=>b.id[0]===3).map(b=>b.id[1]))].sort((a,b)=>a-b);
+  const resolve=partId=>{
