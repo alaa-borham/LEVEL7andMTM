@@ -4,9 +4,9 @@
 # The exe keeps Electron's file icon (changing it needs rcedit on Windows); the
 # window and taskbar use assets/icon.ico. Not signed.
 set -euo pipefail
-V=${1:-0.9.113}; OUT=${2:-dist}
+V=${1:-0.9.114}; OUT=${2:-dist}
 HERE=$(cd "$(dirname "$0")" && pwd)
-SRC="$HERE/source-$V"
+SRC="$HERE/source-$V"; [ -d "$SRC" ] || SRC="$HERE/releases/app"  # from 0.9.114 the latest tree is releases/app
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 Z="$OUT/electron-v44.9.0-win32-x64.zip"
 [ -f "$Z" ] || curl -fsSL -o "$Z" https://github.com/electron/electron/releases/download/v44.9.0/electron-v44.9.0-win32-x64.zip

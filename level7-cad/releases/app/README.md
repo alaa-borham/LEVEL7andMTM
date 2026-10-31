@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.114
+
+Compact tool panel: the right panel now fits the window without a scrollbar for every tool group (checked at 1280x720, 1366x768, 1440x900 and 1920x1080): four tool cards per row with one-line Arabic captions, tool cards in reading order, and smaller spacing on short screens. Delivered through the automatic update.
+
 LEVEL7 and MTM 0.9.113
 
 Automatic updates: the program checks the LEVEL7 and MTM repository at start and every six hours, downloads only the changed application files, verifies each with SHA-256, and installs them after the next normal exit (documents and user data are never touched; a failed install restores the previous files). Status and a manual check are in the status bar. New interface theme: navy/gold title bar, card-style tool icons with Arabic captions, and a help card that names the tool under the pointer and says whether it is available. Commands, IDs and capability guards are unchanged.

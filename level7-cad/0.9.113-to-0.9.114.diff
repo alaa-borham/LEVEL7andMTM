@@ -1,0 +1,57 @@
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/README.md dev/README.md
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/README.md	2026-10-31 04:57:36.000000000 +0000
++++ dev/README.md	2026-10-31 06:09:50.749275203 +0000
+@@ -1,3 +1,7 @@
++LEVEL7 and MTM 0.9.114
++
++Compact tool panel: the right panel now fits the window without a scrollbar for every tool group (checked at 1280x720, 1366x768, 1440x900 and 1920x1080): four tool cards per row with one-line Arabic captions, tool cards in reading order, and smaller spacing on short screens. Delivered through the automatic update.
++
+ LEVEL7 and MTM 0.9.113
+ 
+ Automatic updates: the program checks the LEVEL7 and MTM repository at start and every six hours, downloads only the changed application files, verifies each with SHA-256, and installs them after the next normal exit (documents and user data are never touched; a failed install restores the previous files). Status and a manual check are in the status bar. New interface theme: navy/gold title bar, card-style tool icons with Arabic captions, and a help card that names the tool under the pointer and says whether it is available. Commands, IDs and capability guards are unchanged.
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/package.json dev/package.json
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/package.json	2026-10-31 04:57:36.000000000 +0000
++++ dev/package.json	2026-10-31 06:09:50.748150900 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.113",
++  "version": "0.9.114",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+diff -ruN -x node_modules -x .git -x '*.png' -x '*.ico' /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/src/ui-0113.css dev/src/ui-0113.css
+--- /home/user/LEVEL7andMTM/level7-cad/source-0.9.113/src/ui-0113.css	2026-10-31 04:56:50.000000000 +0000
++++ dev/src/ui-0113.css	2026-10-31 05:59:38.417962631 +0000
+@@ -69,3 +69,31 @@
+ .ui-0113 .statusbar{background:#fff;border-top:1px solid var(--l7-line)}
+ .ui-0113 #local-update-status[data-state="ready"]{color:#0f7a4f;font-weight:700}
+ .ui-0113 #local-update-status[data-state="error"]{color:#b4232a}
++
++/* 0.9.113b compact layout: the right panel fits the window without a scrollbar
++   (verified for every tool group at 1366x768, 1440x900 and 1920x1080). */
++.ui-0113 .grafis-category-grid,.ui-0113 .grafis-option-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:2px 0}
++.ui-0113 .grafis-category-grid>.grafis-icon-option{grid-column:auto!important;grid-row:auto!important}
++.ui-0113 .grafis-icon-option,.ui-0113 [data-drawing-family-panel] .grafis-icon-option{min-height:44px;padding:4px 2px 3px;gap:1px;border-radius:8px}
++.ui-0113 .grafis-icon-option svg{width:24px;height:24px}
++.ui-0113 .grafis-icon-option[data-caption]::after{-webkit-line-clamp:1;font-size:9.5px;line-height:1.2;white-space:nowrap;text-overflow:ellipsis;display:block}
++.ui-0113 .tool-section{padding:6px 8px}
++.ui-0113 .history-controls .construction-tool{min-height:34px}
++.ui-0113 .tool-guide{position:static;margin:6px 8px;padding:6px 9px;font-size:11px}
++.ui-0113 .tool-guide-title{font-size:12px}
++.ui-0113 aside.command-panel{scrollbar-width:none}
++.ui-0113 aside.command-panel::-webkit-scrollbar{width:0;height:0}
++.ui-0113 .grafis-option-grid>.grafis-icon-option{grid-column:auto!important;grid-row:auto!important}
++.ui-0113 .grafis-option-grid>label,.ui-0113 .grafis-option-grid>.grafis-points-menu-value{grid-column:1/-1!important;grid-row:auto!important;min-height:0;padding:0;gap:6px;align-items:center}
++.ui-0113 .grafis-points-menu-value>span{height:auto}
++.ui-0113 .grafis-points-menu-value input{height:24px}
++.ui-0113 .grafis-option-grid,.ui-0113 .grafis-category-grid{grid-auto-rows:auto!important;align-items:start}
++.ui-0113 .grafis-option-grid>.grafis-icon-option,.ui-0113 .grafis-category-grid>.grafis-icon-option{height:46px!important;min-height:46px}
++.ui-0113 .grafis-points-menu-value{display:flex!important;flex-direction:row!important}
++.ui-0113 .grafis-points-menu-value>span{display:flex;align-items:center;gap:3px;white-space:nowrap}
++.ui-0113 .grafis-option-grid>.grafis-icon-option,.ui-0113 .grafis-category-grid>.grafis-icon-option{margin:0!important;align-self:start}
++.ui-0113 .grafis-option-grid{row-gap:4px!important}
++@media (max-height:820px){.ui-0113 .history-controls .construction-tool{min-height:30px;padding-block:2px}.ui-0113 .history-controls .construction-tool span{font-size:10px}.ui-0113 .reset-row,.ui-0113 #replay-button{margin-block:2px}.ui-0113 .tool-guide{padding:4px 8px}}
++@media (max-height:820px){.ui-0113 .tool-section{padding:4px 8px}.ui-0113 .grafis-option-grid,.ui-0113 .grafis-category-grid{gap:3px!important}.ui-0113 .tool-guide{margin:4px 8px}}
++@media (max-height:740px){.ui-0113 .grafis-option-grid>.grafis-icon-option,.ui-0113 .grafis-category-grid>.grafis-icon-option{height:40px!important;min-height:40px}.ui-0113 .grafis-icon-option svg{width:21px;height:21px}.ui-0113 .grafis-icon-option[data-caption]::after{font-size:9px}.ui-0113 .grafis-points-menu-value input{height:22px}}
++@media (max-height:740px){.ui-0113 .tool-guide-sub{display:none}.ui-0113 .tool-guide{padding:3px 8px;margin:3px 8px}}

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.113",
- "notes": "LEVEL7 and MTM 0.9.113: واجهة جديدة وتحديث تلقائي.",
+ "version": "0.9.114",
+ "notes": "LEVEL7 and MTM 0.9.114: لوحة الأدوات تدخل في الشاشة بدون تمرير.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "0714659ef53c80742a9a37d2853d00126fe803432fb86d8b86c4ebd90e73b447",
-   "size": 116703
+   "sha256": "8bf21faa97b646627565a1bbc6b87b20d7a8848159ab5a6b35e244f5411b8059",
+   "size": 117044
   },
   {
    "path": "assets/icon.ico",
@@ -110,7 +110,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "b721f8962668cbd0a71917644ad8901eacf8cd424736864c0b9495feae9dbcf8",
+   "sha256": "55df69fc74b75f92450907524f701d3db7a27104408c40968c2a0d2fa8fc4190",
    "size": 301
   },
   {
@@ -1475,8 +1475,8 @@
   },
   {
    "path": "src/ui-0113.css",
-   "sha256": "c7bdb58a4a2365722944804845cd229617fdc53677871307e8584f127930c980",
-   "size": 6349
+   "sha256": "2a2b51ea1ea4f4242707f30f4bcc8293c8bd4313900351f556ef79e4129aa1e3",
+   "size": 9385
   },
   {
    "path": "src/ui-guide-0113.js",
