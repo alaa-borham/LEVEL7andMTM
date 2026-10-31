@@ -53,7 +53,7 @@ export interface Tool {
   /** A tool that opens a window instead of picking on the drawing (inheritance). */
   action?: boolean;
   /** Delete tools: what they remove, picked one by one or inside a frame (two corners). */
-  remove?: "points" | "lines" | "all";
+  remove?: "points" | "lines" | "all" | "texts" | "symbols" | "stitches" | "notches";
   frame?: boolean;
 }
 
@@ -309,6 +309,76 @@ export const TOOLS: Tool[] = [
     build: (c, v) => ({ op: "mark", kind: "cross", a: point(c, 0).ref, size: v.size }),
   },
   {
+    key: "convertNotch",
+    name: "تحويل النوتش (Convert notch)",
+    group: "العلامات",
+    picks: [{ kind: "canvas", prompt: "انقر النوتش في القطعة" }],
+    fields: () => [{ key: "type", label: "شكل النوتش", value: "t", options: [["slit", "شق I"], ["t", "شق T"], ["v", "شق V"], ["castle", "مربع (Castle)"]] }],
+  },
+  {
+    key: "textCreate",
+    name: "نص على الرسم",
+    group: "النصوص",
+    picks: [{ kind: "point", prompt: "انقر موضع النص" }],
+    fields: () => [
+      { key: "text", label: "النص ({X1} يعرض قيمة X1)", value: "", text: true },
+      { key: "size", label: "ارتفاع الحروف مم", value: "6" },
+      { key: "angle", label: "الزاوية °", value: "0" },
+    ],
+    build: (c, v) => ({ op: "text", at: point(c, 0).ref, text: v.text || "نص", size: v.size, angle: v.angle }),
+  },
+  {
+    key: "delText",
+    name: "حذف نص",
+    group: "الحذف",
+    picks: [{ kind: "canvas", prompt: "انقر النص المراد حذفه" }],
+    remove: "texts",
+  },
+  {
+    key: "delTextFrame",
+    name: "حذف نصوص داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "texts",
+    frame: true,
+  },
+  {
+    key: "delSymbolsFrame",
+    name: "حذف العلامات الداخلية داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "symbols",
+    frame: true,
+  },
+  {
+    key: "delStitchesFrame",
+    name: "حذف الغرز داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "stitches",
+    frame: true,
+  },
+  {
+    key: "delNotchesFrame",
+    name: "حذف النوتشات داخل إطار",
+    group: "الحذف",
+    picks: [
+      { kind: "canvas", prompt: "انقر ركن الإطار الأول" },
+      { kind: "canvas", prompt: "انقر الركن المقابل" },
+    ],
+    remove: "notches",
+    frame: true,
+  },
+  {
     key: "delPoints",
     name: "حذف نقاط",
     group: "الحذف",
@@ -360,6 +430,20 @@ export const TOOLS: Tool[] = [
   {
     key: "inheritObjects",
     name: "وراثة عناصر من بارت سابق",
+    group: "الوراثة",
+    picks: [],
+    action: true,
+  },
+  {
+    key: "inheritBlock",
+    name: "وراثة قالب أساسي من المكتبة",
+    group: "الوراثة",
+    picks: [],
+    action: true,
+  },
+  {
+    key: "saveBlock",
+    name: "حفظ البارت في مكتبة القوالب",
     group: "الوراثة",
     picks: [],
     action: true,
@@ -621,6 +705,12 @@ export function stepFields(s: Step): Field[] {
       ];
     case "parallels":
       return [{ key: "dist", label: "المسافة", value: s.dist }];
+    case "text":
+      return [
+        { key: "text", label: "النص", value: s.text, text: true },
+        { key: "size", label: "ارتفاع الحروف مم", value: s.size },
+        { key: "angle", label: "الزاوية °", value: s.angle },
+      ];
     case "mark":
       return s.kind === "grain" ? [] : [{ key: "size", label: s.obj !== undefined ? "البعد عن الحافة مم" : "الحجم مم", value: s.size }];
     case "mirror":

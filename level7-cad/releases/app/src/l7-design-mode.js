@@ -15,11 +15,16 @@ const GLYPH = {
   dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
   stitchLock: 'stitchLock', stitchDouble: 'stitchDouble', stitchZigzag: 'stitchZigzag', stitchDeco: 'stitchDeco', stitchGather: 'stitchGather',
   grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
+  textCreate: 'textCreate', delText: 'delFrame', delTextFrame: 'delFrame', delSymbolsFrame: 'delFrame', delStitchesFrame: 'delFrame', delNotchesFrame: 'delFrame',
   delPoints: 'delPoints', delLines: 'delLines', delPointsFrame: 'delFrame', delLinesFrame: 'delFrame', delAllFrame: 'delFrame',
-  inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
+  convertNotch: 'convertNotch',   inheritBlock: 'library', saveBlock: 'folder', inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
+  convertNotch: 'انقر النوتش في القطعة ثم اختر شكله: شق I أو T أو V أو مربع. يُرسم ويُقص بالبلوتر بهذا الشكل.',
+  inheritBlock: 'يفتح مكتبة القوالب: اختر قالباً فيُدرج كبارت جديد، وتُضاف قيم X/Z التي يحتاجها.', saveBlock: 'يحفظ البارت النشط في مكتبة القوالب على هذا الجهاز، لتستخدمه في أي تصميم.',
+  textCreate: 'انقر موضع النص ثم اكتبه وحدد ارتفاعه وزاويته. اكتب {X1} أو {Z3} ليظهر الرقم الحالي. دابل كليك على النص لتعديله.',
+  delText: 'انقر النص المراد حذفه.', delTextFrame: 'انقر ركني إطار: تُحذف النصوص التي تقع داخله.', delSymbolsFrame: 'انقر ركني إطار: تُحذف الأزرار والثقوب والعلامات وخطوط النسيج داخله.', delStitchesFrame: 'انقر ركني إطار: تُحذف الغرز على الخطوط الواقعة داخله.', delNotchesFrame: 'انقر ركني إطار: تُحذف نوتشات القطع داخله.',
   stitchLock: 'انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها، ثم اكتب بعدها عن الحافة.', stitchDouble: 'انقر الخط أو المنحنى في جهة الغرزة المزدوجة، ثم اكتب البعد.', stitchZigzag: 'انقر الخط أو المنحنى في جهة غرزة الزجزاج، ثم اكتب البعد.', stitchDeco: 'انقر الخط أو المنحنى في جهة الغرز الزخرفية، ثم اكتب البعد.', stitchGather: 'انقر الخط أو المنحنى في جهة الكشكشة، ثم اكتب البعد.',
   grainLine: 'انقر بداية خط النسيج ثم نهايته.', symButton: 'انقر موضع الزر ثم اكتب قطره.', symDrill: 'انقر موضع الثقب ثم اكتب قطره.', symCross: 'انقر موضع العلامة.',
   delPoints: 'انقر النقاط واحدة واحدة ثم Enter أو كليك يمين؛ ما يعتمد عليها يُسأل عنه قبل الحذف.', delLines: 'انقر الخطوط والمنحنيات ثم Enter أو كليك يمين.',
@@ -62,6 +67,9 @@ const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'cs
 function shortcut(e, typing) {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
+  if (e.key === 'F4') return 'dup';
+  if (e.key === 'F7') return 'dims';
+  if (e.altKey && !ctrl && k === 'o') return 'visibility';
   if (e.key === 'F6') return 'fit';
   if (e.key === 'F5') return 'tab-steps';
   if (e.key === 'F11') return 'tab-z';
@@ -93,6 +101,7 @@ export function installDesignMode() {
     [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
     [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع'], ['tab-partlist', icon('parts'), 'Parts', 'البارتات (تنظيم البارتات) · Ctrl+T']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
+    [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],
     [['new', icon('new'), 'New', 'تصميم جديد · Ctrl+N'], ['open', icon('open'), 'Open', 'فتح تصميم · Ctrl+O']],
     [['aama', letter('AAMA'), 'Ctrl+E', 'تصدير القطع DXF-AAMA للتعشيق · Ctrl+E'], ['dxf', letter('DXF'), 'DXF', 'تصدير خطوط البناء DXF'], ['plt', letter('PLT'), 'PLT', 'تصدير القطع PLT للبلوتر']]
@@ -224,6 +233,11 @@ export function installDesignMode() {
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
     else if (d.type === 'l7:context') showCat(null);
+    else if (d.type === 'l7:print' && typeof d.html === 'string') void (async () => {
+      if (!desktop?.printPdf) { status('الطباعة متاحة في نسخة سطح المكتب فقط.'); return; }
+      try { const r = await desktop.printPdf({ html: d.html, filename: String(d.name || 'product.pdf') }); if (r) status('حُفظ PDF: ' + (r.name || '')); }
+      catch (e) { status('تعذرت الطباعة: ' + e.message); }
+    })();
     else if (d.type === 'l7:open-table') void (async () => {
       if (!desktop?.openFile) { status('فتح الملفات متاح في نسخة سطح المكتب فقط.'); return; }
       try {

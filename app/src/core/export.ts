@@ -217,7 +217,7 @@ export function toPlt(items: ExportItem[], meta: { size: string }): string {
   for (const { piece, geo, dx, dy, size } of placed) {
     cmds.push("SP1");
     path([...geo.cut, geo.cut[0]], dx, dy);
-    for (const n of geo.notches) path([n.at, n.to], dx, dy);
+    for (const n of geo.notches) for (const sh of n.shape) path(sh, dx, dy); // the plotter cuts the notch shape
     cmds.push("SP2");
     path([...geo.sew, geo.sew[0]], dx, dy);
     path(geo.grain, dx, dy);

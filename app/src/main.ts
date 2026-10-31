@@ -11,6 +11,9 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
     if (!typing && ({ z: "undo", y: "redo", x: "tab-x" } as Record<string, string>)[k]) return ({ z: "undo", y: "redo", x: "tab-x" } as Record<string, string>)[k];
     return null;
   }
+  if (e.key === "F4") return "dup";
+  if (e.key === "F7") return "dims";
+  if (e.altKey && !ctrl && e.key.toLowerCase() === "o") return "visibility";
   if (e.key === "F6") return "fit";
   if (e.key === "F5") return "tab-steps";
   if (e.key === "F11") return "tab-z";
@@ -140,6 +143,9 @@ if (embedded && window.parent !== window) {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);
     else if (action === "confirm") app.confirmStep();
     else if (action === "product") app.openProduct();
+    else if (action === "dup") app.toggleDuplicates();
+    else if (action === "dims") app.setVis("dims", !app.vis.dims);
+    else if (action === "visibility") app.openVisibility();
     else if (action === "back") app.backStep();
     else if (action === "zoomIn") app.zoomBy(1.25);
     else if (action === "zoomOut") app.zoomBy(1 / 1.25);

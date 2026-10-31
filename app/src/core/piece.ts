@@ -12,12 +12,19 @@ export interface Piece {
   edges: number[]; // object ids, in order around the piece
   seam: string[]; // seam allowance (mm, formula) for each edge
   notches: PointRef[];
+  /** Notch shape per notch (same order): slit (default), T, V or castle (box). */
+  notchTypes?: NotchType[];
   grain: string; // grain line angle in degrees (90 = vertical)
 }
+
+export type NotchType = "slit" | "t" | "v" | "castle";
 
 export interface Notch {
   at: Pt; // on the cut line
   to: Pt; // inner end of the notch cut
+  type: NotchType;
+  /** The notch as polylines to draw and cut (a slit is just at → to). */
+  shape: Pt[][];
 }
 
 export interface PieceGeo {
@@ -177,13 +184,22 @@ export function buildPiece(inp: PieceInput): PieceGeo {
   const allowance = order.map((k) => inp.allowance[k]);
   const cl = allowance.some((a) => a > 0) ? cutLine(parts, allowance) : { pts: [...sew], edges: parts };
   const cut = cl.pts;
-  const notches = inp.notchPoints.map((x) => {
+  const notches = inp.notchPoints.map((x, idx) => {
     const { pt, n } = outwardAt(sew, x);
     const k = nearestPart(parts, pt);
     const a = allowance[k];
     const depth = a > 0 ? Math.min(a, 6) : 6;
     const at: Pt = [pt[0] + n[0] * a, pt[1] + n[1] * a];
-    return { at, to: [at[0] - n[0] * depth, at[1] - n[1] * depth] as Pt };
+    const to: Pt = [at[0] - n[0] * depth, at[1] - n[1] * depth];
+    const type: NotchType = inp.piece.notchTypes?.[idx] ?? "slit";
+    const t: Pt = [-n[1], n[0]], w = 2;
+    const off = (p: Pt, k: number): Pt => [p[0] + t[0] * k, p[1] + t[1] * k];
+    const shape: Pt[][] =
+      type === "t" ? [[at, to], [off(to, -w), off(to, w)]]
+      : type === "v" ? [[off(at, -w), to, off(at, w)]]
+      : type === "castle" ? [[off(at, -w), off(to, -w), off(to, w), off(at, w)]]
+      : [[at, to]];
+    return { at, to, type, shape };
   });
   const centre = centroid(sew);
   const ys = sew.map((p) => p[1]);

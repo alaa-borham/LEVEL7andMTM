@@ -827,3 +827,7 @@ body.embedded .hist-bar { left: 104px; }
 .pi-ro b { color: var(--text); font: 600 13px Consolas, monospace; }
 .pi-sizes { height: 120px; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 6px; font: 12px Consolas, monospace; color: var(--text); }
 .pi-foot { padding: 0 12px 12px; }
+
+#canvas text.pat-text { fill: var(--text); font-weight: 600; paint-order: stroke; stroke: var(--bg); stroke-width: 2px; }
+.vis-win { width: 300px; }
+.lib-save { width: 380px; }

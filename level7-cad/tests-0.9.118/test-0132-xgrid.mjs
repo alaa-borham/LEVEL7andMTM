@@ -16,7 +16,7 @@ try{
  await fr.locator('#tab-x [data-xa="search"]').fill('hip');assert.equal(await fr.locator('#tab-x .xg-table tbody tr').count(),1);await fr.locator('#tab-x [data-xa="clear"]').click();assert.equal(await fr.locator('#tab-x .xg-table tbody tr').count(),3);pass('search filters the rows (hip)');
  await fr.locator('#tab-x .xg-table input[data-f="name"][data-i="1"]').click();await fr.locator('#tab-x [data-xa="del"]').click();
  assert.deepEqual(await f.evaluate(()=>window.level7.model.measurements.map(m=>m.id)),[1,3]);pass('✕ deletes the selected row (X2)');
- await fr.locator('#tab-x .xg-add').click();await page.keyboard.type('700');await page.keyboard.press('Enter');assert.equal(await f.evaluate(()=>window.level7.model.measurements.at(-1).value),700);pass('⊕ adds a row and its value is typed at once (700)');
+ await fr.locator('#tab-x .xg-add').click();await f.waitForFunction(()=>document.activeElement?.dataset?.f==='value'&&document.activeElement.selectionEnd>0);await page.keyboard.type('700');await page.keyboard.press('Enter');assert.equal(await f.evaluate(()=>window.level7.model.measurements.at(-1).value),700);pass('⊕ adds a row and its value is typed at once (700)');
  await page.screenshot({path:'shot-0132-x.png'});
  // 0.9.133: export to Excel (.xlsx) through the program's dialog, then import it back
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'xl-'));await fs.chmod(dir,0o777);const xfile=path.join(dir,'measures.xlsx');

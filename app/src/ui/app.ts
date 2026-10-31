@@ -25,6 +25,7 @@ import {
   type Part,
 } from "../core/model";
 import { thobeSample } from "../core/sample";
+import type { NotchType, Piece } from "../core/piece";
 import { describe, describeMeasure } from "./describe";
 import { autosave, download, downloadBytes, fromGrafis, parseModel, restore, safeFileName, toDxf } from "./files";
 import { applyFields, pickedId, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
@@ -47,6 +48,17 @@ interface FormState {
   /** Live drawing: the line follows the mouse from `from`; angle and length fill in
    * until typed by hand, and a click on the drawing confirms. */
   live?: { from?: Pt; values?: (at: Pt, cur: Record<string, string>) => Record<string, string> | null; follow?: (at: Pt) => void; submit?: () => void };
+}
+
+interface LibBlock {
+  name: string;
+  saved: string;
+  steps: Step[];
+  names: Record<number, string>;
+  nextId: number;
+  pieces: Piece[];
+  measurements: Model["measurements"];
+  variables: Model["variables"];
 }
 
 export class App {
@@ -260,7 +272,7 @@ export class App {
         <datalist id="pi-season"><option>Summer</option><option>Winter</option><option>Ramadan</option><option>Eid</option></datalist>
         <datalist id="pi-collection"></datalist><datalist id="pi-group"><option>Thobe</option><option>Shirt</option><option>Trousers</option></datalist><datalist id="pi-audience"><option>Men</option><option>Women</option><option>Kids</option></datalist>
       </div>
-      <div class="za-foot pi-foot"><button class="primary" data-pi-act="ok">✓ حفظ</button><button data-pi-act="close">إلغاء</button></div>`;
+      <div class="za-foot pi-foot"><button class="primary" data-pi-act="ok">✓ حفظ</button><button data-pi-act="print" title="طباعة صفحة المنتج إلى PDF">🖶 طباعة PDF</button><button data-pi-act="close">إلغاء</button></div>`;
     document.body.append(el);
     el.addEventListener("input", (e) => {
       const t = e.target as HTMLInputElement;
@@ -287,6 +299,7 @@ export class App {
         delete pr[clr.dataset.pclr as string];
         show(clr.dataset.pclr as string);
       } else if (act === "close") el.remove();
+      else if (act === "print") this.printProduct(pr, sizes);
       else if (act === "ok") {
         this.snapshot();
         this.model.product = Object.fromEntries(Object.entries(pr).filter(([, v]) => v && v.trim() !== ""));
@@ -296,6 +309,30 @@ export class App {
         this.toast("حُفظت معلومات المنتج");
       }
     });
+  }
+
+  /** Product sheet as a printable page (A4): texts, sizes, pictures and the active part. */
+  private printProduct(pr: Record<string, string>, sizes: string[]): void {
+    const row = (l: string, k: string) => (pr[k] ? `<tr><th>${l}</th><td>${esc(pr[k])}</td></tr>` : "");
+    const pic = (k: string, l: string) => (pr[k] && /^data:image\/(png|jpeg|gif|webp);base64,/.test(pr[k]) ? `<figure><img src="${pr[k]}"/><figcaption>${l}</figcaption></figure>` : "");
+    const pv = this.partPreview(this.res);
+    const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+      @page{size:A4;margin:14mm}body{font-family:Arial,Tahoma,sans-serif;color:#111;font-size:11pt}h1{margin:0 0 4mm;font-size:18pt}
+      header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #333;padding-bottom:3mm;margin-bottom:4mm}header img{max-height:22mm}
+      table{border-collapse:collapse;width:100%}th{text-align:right;color:#555;font-weight:normal;width:38%;padding:1.5mm 2mm;border-bottom:1px solid #ddd}td{padding:1.5mm 2mm;border-bottom:1px solid #ddd}
+      .cols{display:grid;grid-template-columns:1fr 1fr;gap:6mm}figure{margin:0 0 4mm;text-align:center}figure img{max-width:100%;max-height:70mm}figcaption{color:#666;font-size:9pt}
+      .notes{white-space:pre-wrap;border:1px solid #ccc;padding:3mm;min-height:15mm}svg{width:100%;height:70mm;border:1px solid #ccc}svg polyline{fill:none;stroke:#111}svg circle{fill:#111}
+      </style></head><body><header><div><h1>${esc(pr.name || this.model.name)}</h1>${esc(pr.subtitle ?? "")}</div>${pr.logo && /^data:image\//.test(pr.logo) ? `<img src="${pr.logo}"/>` : ""}</header>
+      <div class="cols"><div><table>${row("الصنف · Article", "article")}${row("الإصدار · Version", "version")}${row("النوع · Variation", "variation")}${row("الموسم · Season", "season")}${row("المجموعة · Collection", "collection")}${row("فئة المنتج · Product group", "group")}${row("الفئة المستهدفة · Target audience", "audience")}${row("مرجع القالب · Block reference", "block")}${row("القماش · Fabric", "fabricName")}${row("نوع القماش · Fabric type", "fabricType")}${row("التسليم · Completion", "completion")}${row("المصمم · Author", "author")}
+        <tr><th>المقاس الأساسي · Sample size</th><td dir="ltr">${esc(sizes[0])}</td></tr><tr><th>المقاسات · Sizes</th><td dir="ltr">${sizes.map(esc).join(", ")}</td></tr></table></div>
+      <div>${pic("sketch1", "Sketch 1")}${pic("sketch2", "Sketch 2")}${pic("fabric", "Fabric")}<svg viewBox="${pv.box}">${pv.svg.replace(/class="rec-(old|now)"/g, "")}</svg></div></div>
+      ${pr.comments ? `<h3>ملاحظات · Comments</h3><div class="notes">${esc(pr.comments)}</div>` : ""}${pr.addition ? `<h3>إضافات · Addition</h3><div class="notes">${esc(pr.addition)}</div>` : ""}</body></html>`;
+    if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:print", html, name: `${safeFileName(pr.name || this.model.name)} product.pdf` }, "*");
+    else {
+      const w = window.open("", "_blank");
+      w?.document.write(html);
+      w?.print();
+    }
   }
 
   /** Parts window: list (No, eye, name, RS, Obj, production), properties and a preview. */
@@ -361,6 +398,108 @@ export class App {
       else p[k] = inp.value.trim();
       this.changed();
     }));
+  }
+
+  // ---- basic blocks library (as GRAFIS): parts kept on this computer, for any design
+  private library(): LibBlock[] {
+    try {
+      const v = JSON.parse(localStorage.getItem("level7.library") || "[]");
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private storeLibrary(list: LibBlock[]): boolean {
+    try {
+      localStorage.setItem("level7.library", JSON.stringify(list));
+      return true;
+    } catch {
+      this.toast("تعذر الحفظ في المكتبة (المساحة ممتلئة)");
+      return false;
+    }
+  }
+
+  /** Save the active part as a basic block, with the X / Z values it needs. */
+  saveBlock(): void {
+    this.syncPart();
+    if (!this.model.steps.length) return this.toast("البارت فارغ");
+    const p = this.model.parts?.[this.model.activePart ?? 0];
+    // a small window for the name (the desktop program has no prompt())
+    document.querySelector(".lib-save")?.remove();
+    const el = document.createElement("section");
+    el.className = "z-assistant lib-save";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>حفظ في مكتبة القوالب</b><button data-ls="close">×</button></div><div class="za-body"><div class="za-row"><span>الاسم</span><input data-ls="name" value="${esc(p?.name || this.model.name)}"/></div><p class="za-msg"></p><div class="za-foot"><button class="primary" data-ls="ok">✓ حفظ</button><button data-ls="close">إلغاء</button></div></div>`;
+    document.body.append(el);
+    const inp = el.querySelector('[data-ls="name"]') as HTMLInputElement;
+    inp.select();
+    const save = () => {
+      const name = inp.value.trim();
+      if (!name) return void ((el.querySelector(".za-msg") as HTMLElement).textContent = "اكتب اسماً");
+      const list = this.library().filter((b) => b.name !== name);
+      list.push({ name, saved: new Date().toISOString(), steps: this.model.steps, names: this.model.names, nextId: this.model.nextId, pieces: this.model.pieces ?? [], measurements: this.model.measurements, variables: this.model.variables });
+      if (this.storeLibrary(JSON.parse(JSON.stringify(list)))) this.toast(`حُفظ القالب «${name}» في المكتبة`);
+      el.remove();
+    };
+    inp.addEventListener("keydown", (e) => e.key === "Enter" && save());
+    el.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLElement>("[data-ls]")?.dataset.ls;
+      if (a === "close") el.remove();
+      else if (a === "ok") save();
+    });
+  }
+
+  /** Inherit a basic block: it becomes a new part of this design; X / Z it needs that the
+   * design does not have are added. */
+  openLibrary(): void {
+    document.querySelector(".lib-win")?.remove();
+    const list = this.library();
+    if (!list.length) return this.toast("المكتبة فارغة؛ احفظ بارتاً فيها أولاً (حفظ البارت في مكتبة القوالب)");
+    const el = document.createElement("section");
+    el.className = "z-assistant inherit-win lib-win";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>Inherit basic blocks · مكتبة القوالب</b><button data-lb="close">×</button></div>
+      <div class="za-body"><div class="ih-main"><div class="ih-list"><ul>${list.map((b, k) => `<li><label><input type="radio" name="lib" value="${k}" ${k ? "" : "checked"}/> <b>${esc(b.name)}</b> <i dir="ltr">${b.steps.length} RS · ${new Date(b.saved).toLocaleDateString("en-GB")}</i></label></li>`).join("")}</ul></div><svg class="pg-preview"></svg></div>
+      <p class="za-msg"></p><div class="za-foot"><button class="primary" data-lb="ok">✓ إدراج كبارت جديد</button><button data-lb="del" class="danger">حذف من المكتبة</button><button data-lb="close">إلغاء</button></div></div>`;
+    document.body.append(el);
+    const chosen = () => Number((el.querySelector('input[name="lib"]:checked') as HTMLInputElement | null)?.value ?? -1);
+    const draw = () => {
+      const b = list[chosen()];
+      if (!b) return;
+      const res = evaluateModel({ ...emptyModel(), measurements: b.measurements, variables: b.variables, steps: b.steps, names: b.names, nextId: b.nextId });
+      const pv = this.partPreview(res), svg = el.querySelector("svg") as SVGSVGElement;
+      svg.setAttribute("viewBox", pv.box);
+      svg.innerHTML = pv.svg;
+    };
+    draw();
+    el.addEventListener("change", draw);
+    el.addEventListener("click", (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLElement>("[data-lb]")?.dataset.lb, k = chosen(), b = list[k];
+      if (a === "close") el.remove();
+      else if (a === "del" && b && confirm(`حذف «${b.name}» من المكتبة؟`)) {
+        list.splice(k, 1);
+        this.storeLibrary(list);
+        el.remove();
+        if (list.length) this.openLibrary();
+      } else if (a === "ok" && b) {
+        this.snapshot();
+        const ps = this.ensureParts();
+        this.syncPart();
+        let added = 0;
+        for (const x of b.measurements) if (!this.model.measurements.some((m) => m.id === x.id)) (this.model.measurements.push({ ...x }), added++);
+        for (const z of b.variables) if (!this.model.variables.some((v) => v.id === z.id)) (this.model.variables.push({ ...z }), added++);
+        this.model.measurements.sort((p, q) => p.id - q.id);
+        this.model.variables.sort((p, q) => p.id - q.id);
+        const no = ps.reduce((m, p) => Math.max(m, p.no), 0) + 1;
+        // a block keeps only its own construction (inheritance from other parts does not travel)
+        const steps = (JSON.parse(JSON.stringify(b.steps)) as Step[]).filter((st) => st.op !== "inherit");
+        ps.push({ no, name: b.name, steps, names: { ...b.names }, nextId: b.nextId, pieces: JSON.parse(JSON.stringify(b.pieces ?? [])), amount: 1 });
+        el.remove();
+        this.switchPart(ps.length - 1);
+        this.toast(`أُدرج القالب «${b.name}» كبارت ${String(no).padStart(3, "0")}${added ? `، وأُضيف ${added} من X/Z` : ""}`);
+      }
+    });
   }
 
   /** Inherit objects (or a whole part) from an earlier part: linked copies (as GRAFIS). */
@@ -533,7 +672,7 @@ export class App {
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : "var(--line)");
 
-    for (const g of this.ghosts)
+    for (const g of this.vis.ghosts ? this.ghosts : [])
       for (const o of g.objects.values())
         if (o.kind === "line") parts.push(`<polyline class="ghost" points="${o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
     if (this.showNest) parts.push(this.nestSvg());
@@ -549,7 +688,7 @@ export class App {
       }
     }
     for (const o of this.res.objects.values()) {
-      if (o.kind !== "point") continue;
+      if (o.kind !== "point" || !this.vis.points) continue;
       const [x, y] = this.toScreen(o.pts[0]);
       const c = highlight.has(o.id) ? "var(--select)" : "var(--point)";
       parts.push(`<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`);
@@ -558,8 +697,10 @@ export class App {
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
-    parts.push(this.dimsSvg());
-    parts.push(this.marksSvg());
+    parts.push(this.vis.dims ? this.dimsSvg() : "");
+    parts.push(this.vis.marks ? this.marksSvg() : "");
+    parts.push(this.vis.texts ? this.textsSvg() : "");
+    if (this.showDup) parts.push(this.duplicatesSvg());
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     // no letters on the drawing: the name of the element under the pointer only
@@ -905,7 +1046,7 @@ export class App {
       out.push(`<rect x="${Math.min(x1, x2)}" y="${Math.min(y1, y2)}" width="${Math.abs(x2 - x1)}" height="${Math.abs(y2 - y1)}" fill="rgba(229,57,53,.08)" stroke="#e53935" stroke-dasharray="5 3"/>`);
       const a = this.picks[0].at, b = this.mouse, X0 = Math.min(a[0], b[0]), X1 = Math.max(a[0], b[0]), Y0 = Math.min(a[1], b[1]), Y1 = Math.max(a[1], b[1]);
       for (const o of this.res.objects.values())
-        if (this.kindOk(o.id, this.tool.remove ?? "all") && o.pts.every(([x, y]) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1))
+        if (["points", "lines", "all"].includes(this.tool.remove ?? "") && this.kindOk(o.id, this.tool.remove as "points" | "lines" | "all") && o.pts.every(([x, y]) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1))
           out.push(o.kind === "point" ? `<circle cx="${this.toScreen(o.pts[0])[0]}" cy="${this.toScreen(o.pts[0])[1]}" r="5" fill="none" stroke="#e53935" stroke-width="2"/>` : `<polyline points="${o.pts.map((p) => this.toScreen(p).join(",")).join(" ")}" fill="none" stroke="#e53935" stroke-width="2.5"/>`);
     }
     if (this.currentPickKind() === "point" && this.ptMode !== "free") {
@@ -969,7 +1110,7 @@ export class App {
       if (!g) continue;
       out.push(`<polygon points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="2"/>`);
       out.push(`<polygon points="${pts(g.sew)}" fill="none" stroke="var(--piece)" stroke-width="1.2" stroke-dasharray="6 4"/>`);
-      for (const n of g.notches) out.push(`<polyline points="${pts([n.at, n.to])}" stroke="var(--piece)" stroke-width="2.2"/>`);
+      for (const n of g.notches) for (const sh of n.shape) out.push(`<polyline points="${pts(sh)}" fill="none" stroke="var(--piece)" stroke-width="2.2"/>`);
       const [a, b] = g.grain.map((q) => this.toScreen(q));
       const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
       const head = (p: Pt, dir: number) =>
@@ -1099,7 +1240,9 @@ export class App {
   selectTool(t: Tool): void {
     if (t.action) {
       this.cancelTool();
-      this.openInherit(t.key === "inheritPart");
+      if (t.key === "inheritBlock") this.openLibrary();
+      else if (t.key === "saveBlock") this.saveBlock();
+      else this.openInherit(t.key === "inheritPart");
       return;
     }
     this.cancelTool();
@@ -1441,8 +1584,15 @@ export class App {
 
   private finishPicks(): void {
     const t = this.tool as Tool;
+    if (t.remove && ["texts", "symbols", "stitches", "notches"].includes(t.remove)) {
+      this.removeAnnotations(t.remove as "texts" | "symbols" | "stitches" | "notches", !!t.frame);
+      this.restartTool();
+      this.render();
+      return;
+    }
     if (t.remove) {
-      const ids = t.frame ? this.inFrame(t.remove) : this.extra.map((p) => pickedId(p)).filter((id): id is number => id !== null && this.kindOk(id, t.remove as "points" | "lines" | "all"));
+      const what = t.remove as "points" | "lines" | "all";
+      const ids = t.frame ? this.inFrame(what) : this.extra.map((p) => pickedId(p)).filter((id): id is number => id !== null && this.kindOk(id, what));
       if (!ids.length) this.toast("لا يوجد ما يُحذف");
       else this.removeObjects(new Set(ids));
       this.restartTool();
@@ -1674,6 +1824,32 @@ export class App {
 
   private commit(values: Record<string, string>): void {
     const t = this.tool as Tool;
+    if (t.key === "convertNotch") {
+      // the notch nearest the click takes the chosen shape
+      const at = this.picks[0]?.at;
+      let best: { pc: number; k: number; d: number } | null = null;
+      (this.model.pieces ?? []).forEach((pc, pi) => {
+        const g = this.res.pieces.get(pc.id);
+        g?.notches.forEach((n, k) => {
+          const d = at ? dist(n.at, at) * this.scale : Infinity;
+          if (d <= 25 && (!best || d < best.d)) best = { pc: pi, k, d };
+        });
+      });
+      const b = best as { pc: number; k: number; d: number } | null;
+      if (!b) this.toast("انقر قرب نوتش في قطعة");
+      else {
+        this.snapshot();
+        const pc = (this.model.pieces ?? [])[b.pc];
+        pc.notchTypes ??= [];
+        while (pc.notchTypes.length < pc.notches.length) pc.notchTypes.push("slit");
+        pc.notchTypes[b.k] = values.type as NotchType;
+        this.changed();
+        this.toast("تغيّر شكل النوتش");
+      }
+      this.restartTool();
+      this.render();
+      return;
+    }
     this.snapshot();
     const ctx = { model: this.model, res: this.res, picks: this.picks, extra: this.extra };
     if (t.makePiece) {
@@ -1898,6 +2074,11 @@ export class App {
     // double-click a line, curve or point: open its step with its values (angle, length, X/Z ...)
     svg.addEventListener("dblclick", (e) => {
       const r = svg.getBoundingClientRect();
+      const th = this.textHits.find((h) => Math.hypot(h.s[0] - (e.clientX - r.left), h.s[1] - (e.clientY - r.top)) <= h.r);
+      if (th && !this.tool) {
+        this.editStep(th.i);
+        return;
+      }
       const dd = this.dimAt(e.clientX - r.left, e.clientY - r.top);
       if (dd !== null) {
         this.cancelTool();
@@ -2308,7 +2489,7 @@ export class App {
     const NAMES: Record<string, string> = {
       point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
       lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
-      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", mark: "Symbol / stitch", pointOffset: "Point offset", dim: "Dimension",
+      mirror: "Mirror", curve: "Curve", corner: "Corner", parallels: "Parallels", scale: "Scale", inherit: "Inherit objects", mark: "Symbol / stitch", text: "Text", pointOffset: "Point offset", dim: "Dimension",
     };
     const steps = this.model.steps;
     const sel = this.selectedStep;
@@ -2402,6 +2583,169 @@ export class App {
         this.changed();
       },
     });
+  }
+
+  /** Texts / symbols / stitches / notches: annotations, not objects. A frame removes those
+   * whose anchor lies inside it; a click removes the text under it. */
+  private removeAnnotations(what: "texts" | "symbols" | "stitches" | "notches", frame: boolean): void {
+    let x0 = -Infinity, x1 = Infinity, y0 = -Infinity, y1 = Infinity;
+    if (frame) {
+      const [a, b] = this.picks.map((p) => p.at);
+      [x0, x1, y0, y1] = [Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[1], b[1])];
+    }
+    const inside = (p: Pt | null) => !!p && p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1;
+    const anchor = (r?: PointRef) => {
+      try {
+        return r ? this.pointOf(r) : null;
+      } catch {
+        return null;
+      }
+    };
+    const gone = new Set<number>();
+    if (what === "texts" && !frame) {
+      const [sx, sy] = this.toScreen(this.picks[0].at);
+      let best: { i: number; d: number } | null = null;
+      for (const h of this.textHits) {
+        const d = Math.hypot(h.s[0] - sx, h.s[1] - sy);
+        if (d <= h.r && (!best || d < best.d)) best = { i: h.i, d };
+      }
+      if (best) gone.add(best.i);
+    } else if (what !== "notches")
+      this.model.steps.forEach((st, i) => {
+        if (what === "texts" && st.op === "text" && inside(anchor(st.at))) gone.add(i);
+        if (st.op !== "mark") return;
+        if (what === "symbols" && st.obj === undefined && inside(anchor(st.a)) && (st.kind !== "grain" || inside(anchor(st.b)))) gone.add(i);
+        if (what === "stitches" && st.obj !== undefined) {
+          const o = this.res.objects.get(st.obj);
+          if (o && o.pts.every((p) => inside(p))) gone.add(i);
+        }
+      });
+    let notches = 0;
+    if (what === "notches") {
+      this.snapshot();
+      for (const pc of this.model.pieces ?? []) {
+        const keepIdx = pc.notches.map((r, k) => (inside(anchor(r)) ? -1 : k)).filter((k) => k >= 0);
+        notches += pc.notches.length - keepIdx.length;
+        if (pc.notchTypes) pc.notchTypes = keepIdx.map((k) => pc.notchTypes?.[k] ?? "slit");
+        pc.notches = keepIdx.map((k) => pc.notches[k]);
+      }
+      if (!notches) {
+        this.undoStack.pop();
+        return this.toast("لا توجد نوتشات داخل الإطار");
+      }
+      this.changed();
+      return this.toast(`حُذفت ${notches} نوتشات`);
+    }
+    if (!gone.size) return this.toast(what === "texts" ? "لا يوجد نص هنا" : "لا يوجد ما يُحذف داخل الإطار");
+    this.snapshot();
+    this.model.steps = this.model.steps.filter((_, i) => !gone.has(i));
+    this.selectedStep = -1;
+    this.changed();
+    this.toast(`حُذف ${gone.size}`);
+  }
+
+  private textHits: { i: number; s: Pt; r: number }[] = [];
+
+  // ---- view options (as GRAFIS View menu): what the drawing shows, remembered here
+  vis = (() => {
+    const d = { points: true, dims: true, marks: true, texts: true, ghosts: true };
+    try {
+      return { ...d, ...JSON.parse(localStorage.getItem("level7.visibility") || "{}") } as typeof d;
+    } catch {
+      return d;
+    }
+  })();
+  showDup = false;
+
+  setVis(k: keyof App["vis"], on: boolean): void {
+    this.vis[k] = on;
+    try {
+      localStorage.setItem("level7.visibility", JSON.stringify(this.vis));
+    } catch {}
+    if (k === "dims" && !on) this.dimHits = [];
+    if (k === "texts" && !on) this.textHits = [];
+    this.render();
+  }
+
+  /** Objects that lie exactly on top of another one (same points within 0.01 mm). */
+  duplicates(): number[][] {
+    const key = (o: GObj) => {
+      const p = o.pts.map(([x, y]) => `${Math.round(x * 100)},${Math.round(y * 100)}`);
+      const a = p.join(" "), b = [...p].reverse().join(" ");
+      return o.kind + ":" + (a < b ? a : b);
+    };
+    const groups = new Map<string, number[]>();
+    for (const o of this.res.objects.values()) groups.set(key(o), [...(groups.get(key(o)) ?? []), o.id]);
+    return [...groups.values()].filter((g) => g.length > 1);
+  }
+
+  private duplicatesSvg(): string {
+    const out: string[] = [];
+    for (const g of this.duplicates())
+      for (const id of g) {
+        const o = this.res.objects.get(id) as GObj;
+        out.push(o.kind === "point" ? `<circle cx="${this.toScreen(o.pts[0])[0]}" cy="${this.toScreen(o.pts[0])[1]}" r="7" fill="none" stroke="#ff00d4" stroke-width="2.5"/>` : `<polyline points="${o.pts.map((p) => this.toScreen(p).join(",")).join(" ")}" fill="none" stroke="#ff00d4" stroke-width="3.5" opacity="0.8"/>`);
+      }
+    return out.join("");
+  }
+
+  toggleDuplicates(): void {
+    this.showDup = !this.showDup;
+    const n = this.duplicates().reduce((a, g) => a + g.length - 1, 0);
+    this.toast(this.showDup ? (n ? `${n} عنصر مكرر مُبرز باللون الوردي` : "لا توجد عناصر مكررة") : "إخفاء إبراز المكرر");
+    this.render();
+  }
+
+  /** Visibility window (Alt+O): which kinds of elements the drawing shows. */
+  openVisibility(): void {
+    const old = document.querySelector(".vis-win");
+    if (old) return old.remove();
+    const el = document.createElement("section");
+    el.className = "z-assistant vis-win";
+    el.dir = "rtl";
+    const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع وحواشي الخياطة"]];
+    el.innerHTML = `<div class="za-head"><b>Visibility · الرؤية</b><button data-v="close">×</button></div><div class="za-body">${items
+      .map(([k, l]) => `<label class="za-r"><input type="checkbox" data-vk="${k}" ${(k === "pieces" ? this.showPieces : this.vis[k]) ? "checked" : ""}/> ${l}</label>`)
+      .join("")}<label class="za-r"><input type="checkbox" data-vk="dup" ${this.showDup ? "checked" : ""}/> إبراز العناصر المكررة (F4)</label></div>`;
+    document.body.append(el);
+    el.addEventListener("change", (e) => {
+      const t = e.target as HTMLInputElement, k = t.dataset.vk;
+      if (k === "pieces") (this.showPieces = t.checked), this.render();
+      else if (k === "dup") this.showDup !== t.checked && this.toggleDuplicates();
+      else if (k) this.setVis(k as keyof App["vis"], t.checked);
+    });
+    el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-v="close"]') && el.remove());
+  }
+
+  /** Texts on the drawing; {X1} / {Z3} show the current values. */
+  private textsSvg(): string {
+    this.textHits = [];
+    const vars = new Vars(withSize(this.model), undefined, this.res.z);
+    const num = (src: string, d: number) => {
+      try {
+        return vars.eval(src);
+      } catch {
+        return d;
+      }
+    };
+    const out: string[] = [];
+    this.model.steps.forEach((st, i) => {
+      if (st.op !== "text" || this.res.stepErrors.has(i)) return;
+      let at: Pt;
+      try {
+        at = this.pointOf(st.at);
+      } catch {
+        return;
+      }
+      const txt = st.text.replace(/\{\s*([XZxz]\d+)\s*\}/g, (_, r) => {
+        const v = num(r, NaN);
+        return Number.isFinite(v) ? fmt(Math.round(v * 10) / 10) : r;
+      });
+      const [x, y] = this.toScreen(at), h = Math.max(6, num(st.size || "6", 6) * this.scale), ang = -num(st.angle || "0", 0);
+      out.push(`<text class="pat-text" x="${x}" y="${y}" style="font-size:${h.toFixed(1)}px" transform="rotate(${ang} ${x} ${y})">${esc(txt)}</text>`);
+      this.textHits.push({ i, s: [x, y - h / 2], r: Math.max(14, h * Math.max(1, txt.length) * 0.35) });
+    });
+    return out.join("");
   }
 
   private kindOk(id: number, what: "points" | "lines" | "all"): boolean {
@@ -2548,6 +2892,7 @@ export class App {
         b.addEventListener("click", () => {
           this.snapshot();
           pc.notches.splice(Number(b.dataset.ndel), 1);
+          pc.notchTypes?.splice(Number(b.dataset.ndel), 1);
           this.changed();
         }),
       );

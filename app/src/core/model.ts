@@ -63,6 +63,8 @@ export type Step =
   /** Marks (annotation only): stitch lines along a line / curve on one side at a distance,
    * a grain line between two points, or a symbol (button, drill hole, cross) at a point. */
   | { op: "mark"; kind: "lock" | "double" | "zigzag" | "deco" | "gather" | "grain" | "button" | "drill" | "cross"; obj?: number; side?: 1 | -1; a?: PointRef; b?: PointRef; size: string }
+  /** A text on the drawing at a point; {X1} / {Z3} in it show the current values. */
+  | { op: "text"; at: PointRef; text: string; size: string; angle: string }
   /** Objects inherited from an earlier part (linked: they follow the source part). */
   | { op: "inherit"; part: number; items: { src: number; dst: number }[] }
   /** Scale about a centre by factor %; with angle: only along that direction (stretch). */
@@ -357,6 +359,11 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           put(s.id, "line", offsetPolyline(needLine(s.of).pts, s.side * vars.eval(s.dist)), i);
           break;
         }
+        case "text":
+          pointOf(s.at);
+          vars.eval(s.size || "5");
+          vars.eval(s.angle || "0");
+          break;
         case "mark": {
           if (s.obj !== undefined) needLine(s.obj);
           for (const r of [s.a, s.b]) if (r) pointOf(r);
@@ -547,6 +554,7 @@ export function createdIds(s: Step): number[] {
     case "trim":
     case "dim":
     case "mark":
+    case "text":
       return [];
     case "corner":
       return s.id === undefined ? [] : [s.id];
@@ -587,6 +595,8 @@ export function usedIds(s: Step): number[] {
       return s.of;
     case "inherit":
       return [];
+    case "text":
+      return [s.at.obj];
     case "mark":
       return [...(s.obj !== undefined ? [s.obj] : []), ...[s.a, s.b].filter((r): r is PointRef => !!r).map((r) => r.obj)];
     case "setLength":
