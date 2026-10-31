@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.128",
- "notes": "جدول X بدون صفر زائد وEnter يحفظ؛ كليك على الأيقونة = آخر أداة، كليك يمين = القائمة",
+ "version": "0.9.129",
+ "notes": "شاشة Z مثل GRAFIS مع مساعد المعادلات IF؛ اختيار X/Z في لوحة النقاط",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "867986981fe99828941f34c476ca5805126cde11bf4f201ba3e4c7f97ac42d3d",
-   "size": 123968
+   "sha256": "ed8478483945dd5b53910b2d9f0210c10490823d0c0d417e8277ec9191bcfc77",
+   "size": 124567
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BObQNW_L.css",
-   "sha256": "452564367b6294fff65715cc1d0c1cdd6562d55eb543183aa0924d81720ea58a",
-   "size": 13382
+   "path": "assets/l7design/assets/index-CWAet1eR.js",
+   "sha256": "6f4754a4e82cfd6067f274d3eebbd645678c06bddd2beb0c94b0cfc19e36547c",
+   "size": 114163
   },
   {
-   "path": "assets/l7design/assets/index-BlbGsllC.js",
-   "sha256": "02e98ff6cee1034c8f46aa9d9dab4f0c1e0211c55de56fa590952767599ed92e",
-   "size": 106627
+   "path": "assets/l7design/assets/index-CWo2hbmr.css",
+   "sha256": "05f52cbb6b9d05e3a2bdc56b531e7abc7ce7eb64fc76ec33af26c73a24a02bc3",
+   "size": 16406
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "3990569b0ed63ddf4bf6aebca5112433667608b8be13d8039b632674a8ce2d66",
+   "sha256": "a7e23fded6e6cb6e4b83edcafe6c098a38f9e6cdd58c11392168ede6d820339e",
    "size": 3317
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "3bcb4e942c1d4e1a8b45d3325d5092b5000229529906d853c7e9495eeb428ae4",
+   "sha256": "f56a6c13df234cca113e46a1a5265812bb823309810bc4ed98d5cec63ebd5cbb",
    "size": 301
   },
   {

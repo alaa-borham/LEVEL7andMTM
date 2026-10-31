@@ -35,6 +35,9 @@ try{
  const t=await f.evaluate(()=>{const a=window.level7,st=a.model.steps.slice(-3);return{ops:st.map(x=>x.op),dist:st[1].dist,pts:a.res.objects.get(st[2].id).pts.map(p=>p.map(v=>Math.round(v*10)/10))};});
  assert.deepEqual(t.ops,['pointOffset','pointOn','line']);assert.equal(t.dist,'X1+5');assert.deepEqual(t.pts,[[10,180],[0,50]]);
  pass('point panel: x/y offset (P3 + 10, −20) and mm along a line (X1+5 = 50 mm from the nearer end), linked to X');
+ // X / Z list in the point panel
+ await frame.locator('.pt-modes [data-pm-row="pct"] .pt-ref').focus();await frame.locator('.pt-modes [data-pm-row="pct"] .pt-ref').selectOption('X1');
+ assert.equal(await frame.locator('.pt-modes [data-pv="ptPct"]').inputValue(),'X1');pass('point panel: X / Z list fills the value (X1)');
  await frame.locator('.pt-modes [data-pm="free"]').click();await page.mouse.click(...await at(0,0),{button:'right'});
  assert(await frame.locator('.pt-modes').isHidden());pass('point panel hides when no point is expected');
 }catch(e){failed=1;console.error(e);}

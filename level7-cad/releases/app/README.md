@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.129
+
+Z values rebuilt as in GRAFIS: a table Z | Formula | Text | Value with the formula first (a formula typed into the text field while the formula is 0 is moved to the formula); Enter saves and moves on; errors show in the value cell. Z value assistant, opened only on demand (ƒx on a row or "ƒx مساعد المعادلات" for the current row): formula or distinction of cases (IF / THEN / ELSE IF / ELSE, written as CMDIF), X and Z lists with names and values, logical and arithmetic operators. Point panel: an X / Z list beside the %, mm and x/y values (stays linked).
+
 LEVEL7 and MTM 0.9.128
 
 X table: the value field is a plain number field; it opens with its value selected, so typing replaces the 0 (1500, not 01500); Enter saves the value at once and moves to the same field of the next row; a new row puts the cursor in its value field. LEVEL7 design tool strip: left click on a group icon starts the last tool used in that group (or its first) at once; right click opens the group's menu to choose another tool.

@@ -565,7 +565,7 @@ export class App {
       <button data-pm="online" title="نقطة على خط حيث تنقر"><svg viewBox="0 0 24 24"><path d="M4 16L20 8"/><circle cx="12" cy="12" r="2.2"/></svg></button>
       <button data-pm="intersect" title="نقطة تقاطع خطين"><svg viewBox="0 0 24 24"><path d="M5 5L19 19M19 5L5 19"/></svg></button>
       <label data-pm-row="pct"><button data-pm="pct" title="نقطة بنسبة من طول الخط، من الطرف الأقرب">%</button><input data-pv="ptPct" class="expr" value="${this.ptPct}"/></label>
-      <label data-pm-row="mm"><button data-pm="mm" title="نقطة على الخط بمسافة من الطرف الأقرب">mm</button><input data-pv="ptMm" class="expr" value="${this.ptMm}"/></label>
+      <label data-pm-row="mm"><button data-pm="mm" class="pt-mm" title="نقطة على الخط بمسافة من الطرف الأقرب">mm</button><input data-pv="ptMm" class="expr" value="${this.ptMm}"/></label>
       <label data-pm-row="xy" class="pt-xy"><button data-pm="xy" title="نقطة بإزاحة س/ص من نقطة موجودة"><svg viewBox="0 0 24 24"><path d="M6 4V18H20M6 4L3.5 7M6 4L8.5 7M20 18L17 15.5M20 18L17 20.5"/></svg></button><span><input data-pv="ptDx" class="expr" value="${this.ptDx}" title="إزاحة س"/><input data-pv="ptDy" class="expr" value="${this.ptDy}" title="إزاحة ص"/></span></label>
       <label class="pt-raster" title="خطوة تقريب النقطة الحرة (مم)"><svg viewBox="0 0 24 24"><path d="M4 20V8M8 20V12M12 20V8M16 20V12M20 20V8M3 20H21"/></svg><select data-raster>${[0.1, 1, 5, 10].map((v) => `<option value="${v}"${v === this.ptRaster ? " selected" : ""}>${v}</option>`).join("")}</select></label>`;
     wrap.append(box);
@@ -582,6 +582,22 @@ export class App {
       mark();
       this.updatePrompt();
       this.render();
+    });
+    // X / Z list beside every value of the panel (the value stays linked to the measurement)
+    box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) => {
+      const pick = document.createElement("select");
+      pick.className = "pt-ref";
+      pick.title = "اختر X أو Z";
+      pick.innerHTML = `<option value="">XZ</option>`;
+      pick.addEventListener("focus", () => (pick.innerHTML = `<option value="">XZ</option>` + this.refOptions().map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")));
+      pick.addEventListener("mousedown", () => pick.dispatchEvent(new Event("focus")));
+      pick.addEventListener("change", () => {
+        if (!pick.value) return;
+        inp.value = pick.value;
+        pick.value = "";
+        inp.dispatchEvent(new Event("input"));
+      });
+      inp.after(pick);
     });
     box.querySelectorAll<HTMLInputElement>("[data-pv]").forEach((inp) =>
       inp.addEventListener("input", () => {
@@ -610,6 +626,15 @@ export class App {
   }
 
   private pointPanel: HTMLElement | null = null;
+
+  /** X and Z values with their current numbers and names, for pick lists. */
+  private refOptions(): [string, string][] {
+    const sized = withSize(this.model);
+    return [
+      ...sized.measurements.map((m): [string, string] => [`X${m.id}`, `X${m.id} = ${fmt(m.value)}${m.name ? " · " + m.name : ""}`]),
+      ...this.model.variables.map((v): [string, string] => [`Z${v.id}`, `Z${v.id}${this.res.z.has(v.id) ? " = " + fmt(this.res.z.get(v.id) as number) : ""}${v.name ? " · " + v.name : ""}`]),
+    ];
+  }
 
   /** A click on empty space where a point is expected creates a free point there
    * (as in GRAFIS), so lines can be drawn on a blank page. */
@@ -1790,28 +1815,154 @@ export class App {
 
   private renderZ(): void {
     const box = $("#tab-z");
+    // a formula typed into the text (description) field by mistake while the formula is
+    // still 0 is moved to the formula field
+    for (const v of this.model.variables)
+      if (!v.measure && v.expr.trim() === "0" && /[XZ]\d/i.test(v.name) && /^[\sXZxz\d+\-*/().]+$/.test(v.name)) {
+        v.expr = v.name.trim();
+        v.name = "";
+        this.evaluate();
+        autosave(this.model);
+      }
     const rows = this.model.variables
       .map((v, i) => {
         const val = this.res.z.get(v.id);
         const err = this.res.zErrors.get(v.id);
+        const formula = v.measure
+          ? `<div class="measure">${esc(describeMeasure(v.measure, this.model)).replace(/⁦(.*?)⁩/g, '<bdi dir="ltr">$1</bdi>')}</div>`
+          : `<div class="zf"><span class="zf-eq">Z${v.id}=</span><input class="expr" dir="ltr" lang="en" data-i="${i}" data-f="expr" value="${esc(v.expr)}" placeholder="مثل X2/2"/><button type="button" class="zf-as" data-zas="${i}" title="مساعد المعادلة (شرط IF وقائمة X و Z)">ƒx</button></div>`;
         return `<tr>
           <td class="id">Z${v.id}</td>
-          <td><input data-i="${i}" data-f="name" value="${esc(v.name)}" placeholder="الوصف"/>
-              ${
-                v.measure
-                  ? `<div class="measure">${esc(describeMeasure(v.measure, this.model)).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}</div>`
-                  : `<input class="expr" data-i="${i}" data-f="expr" value="${esc(v.expr)}" style="margin-top:3px"/>`
-              }</td>
-          <td class="val${err ? " bad" : ""}" data-zval="${v.id}">${err ? esc(err) : val !== undefined ? fmt(val) : ""}</td>
+          <td class="zf-cell">${formula}</td>
+          <td><input data-i="${i}" data-f="name" value="${esc(v.name)}" placeholder="—" title="الوصف"/></td>
+          <td class="val${err ? " bad" : ""}" data-zval="${v.id}" title="${err ? esc(err) : ""}">${err ? esc(err) : val !== undefined ? fmt(val) : ""}</td>
           <td><button class="danger" data-del="${i}" title="حذف">×</button></td>
         </tr>`;
       })
       .join("");
     box.innerHTML =
-      `<table class="grid"><thead><tr><th>رمز</th><th>الوصف والمعادلة</th><th>القيمة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
-      `<div class="table-actions"><button data-add>إضافة معادلة</button></div>` +
-      `<p class="empty">للقياس من الرسم استخدم أداتي «قياس مسافة» و«قياس طول». القيمة تؤخذ لحظة رسم العناصر المقاسة، مثل جرافس.</p>`;
+      `<table class="grid ztable"><thead><tr><th>Z</th><th>Formula · المعادلة</th><th>Text · الوصف</th><th>Value</th><th></th></tr></thead><tbody>${rows}</tbody></table>` +
+      `<div class="table-actions"><button data-add>إضافة معادلة</button><button data-zas-bar title="مساعد المعادلة للسطر الحالي: شروط IF وقوائم X و Z">ƒx مساعد المعادلات</button></div>` +
+      `<p class="empty">اكتب المعادلة في خانة Formula (مثل X2/2 أو Z1+10)، أو اضغط ƒx للمساعد. Enter يحفظ وينتقل للسطر التالي. للقياس من الرسم استخدم أداتي «قياس مسافة» و«قياس طول».</p>`;
     this.bindTable(box, "variables");
+    box.querySelectorAll<HTMLButtonElement>("[data-zas]").forEach((b) => b.addEventListener("click", () => this.openZAssistant(Number(b.dataset.zas))));
+    box.querySelectorAll<HTMLInputElement>("input[data-f='expr']").forEach((inp) => inp.addEventListener("focus", () => (this.zRow = Number(inp.dataset.i))));
+    box.querySelector("[data-zas-bar]")?.addEventListener("click", () => {
+      const i = this.zRow >= 0 && this.zRow < this.model.variables.length ? this.zRow : this.model.variables.length - 1;
+      if (i >= 0) this.openZAssistant(i);
+      else this.toast("أضف معادلة أولاً");
+    });
+  }
+
+  private zRow = -1;
+
+  /** Z value assistant (as GRAFIS): a formula, or a distinction of cases
+   * (IF / THEN / ELSE IF / ELSE, written as CMDIF), built from lists of X and Z values
+   * and logical operators. */
+  private openZAssistant(i: number): void {
+    const v = this.model.variables[i];
+    if (!v || v.measure) return;
+    document.querySelector(".z-assistant")?.remove();
+    const m = /^\s*CMDIF\s*((?:\[[^\]]*\]\s*\{[^}]*\}\s*)+)(?:\{([^}]*)\})?\s*$/i.exec(v.expr);
+    const cases = m ? [...m[1].matchAll(/\[([^\]]*)\]\s*\{([^}]*)\}/g)].map((x) => [x[1].trim(), x[2].trim()]) : [];
+    const el = document.createElement("section");
+    el.className = "z-assistant";
+    el.dir = "rtl";
+    el.innerHTML = `<div class="za-head"><b>Z value assistant · مساعد Z${v.id}</b><button type="button" data-za="close" title="إغلاق">×</button></div>
+      <div class="za-body">
+        <h5>Calculation instruction · طريقة الحساب</h5>
+        <label class="za-r"><input type="radio" name="za-kind" value="f" ${m ? "" : "checked"}/> Formula · معادلة</label>
+        <div class="za-row" data-k="f"><span dir="ltr">Z${v.id}=</span><input dir="ltr" lang="en" data-zf="formula" value="${m ? "" : esc(v.expr)}"/></div>
+        <label class="za-r"><input type="radio" name="za-kind" value="c" ${m ? "checked" : ""}/> Distinction of cases · حالات (IF)</label>
+        <div class="za-cases" data-k="c">
+          <div class="za-row"><span>IF …</span><input dir="ltr" lang="en" data-zf="if1" value="${esc(cases[0]?.[0] ?? "")}" placeholder="X1>100"/></div>
+          <div class="za-row"><span>THEN …</span><input dir="ltr" lang="en" data-zf="then1" value="${esc(cases[0]?.[1] ?? "")}"/></div>
+          <label class="za-r"><input type="checkbox" data-zf="elseif" ${cases[1] ? "checked" : ""}/> ELSE IF …</label>
+          <div class="za-row"><span>IF …</span><input dir="ltr" lang="en" data-zf="if2" value="${esc(cases[1]?.[0] ?? "")}"/></div>
+          <div class="za-row"><span>THEN …</span><input dir="ltr" lang="en" data-zf="then2" value="${esc(cases[1]?.[1] ?? "")}"/></div>
+          <div class="za-row"><span>ELSE …</span><input dir="ltr" lang="en" data-zf="else" value="${esc(m?.[2]?.trim() ?? "")}"/></div>
+        </div>
+        <h5>Formula element · عناصر المعادلة</h5>
+        <div class="za-els">
+          <div class="za-list"><select data-zf="cat"><option value="X">X value · قيم X</option><option value="Z">Z value · قيم Z</option></select><ul></ul></div>
+          <div class="za-ops"><span>Logical operator</span>${["=", "<", ">", "<>", "<=", ">="].map((o) => `<button type="button" data-op="${o}">${esc(o)}</button>`).join("")}<span>+ − × ÷</span>${["+", "-", "*", "/", "(", ")"].map((o) => `<button type="button" data-op="${o}">${o}</button>`).join("")}</div>
+        </div>
+        <p class="za-msg" role="status"></p>
+        <div class="za-foot"><button type="button" class="primary" data-za="ok">✓ اعتماد</button><button type="button" data-za="close">إلغاء</button></div>
+      </div>`;
+    document.body.append(el);
+    const q = <T extends Element>(sel: string) => el.querySelector(sel) as T;
+    let target: HTMLInputElement = q<HTMLInputElement>(m ? '[data-zf="if1"]' : '[data-zf="formula"]');
+    el.querySelectorAll<HTMLInputElement>("input[data-zf]:not([type=checkbox])").forEach((inp) => inp.addEventListener("focus", () => (target = inp)));
+    const insert = (t: string) => {
+      const a = target.selectionStart ?? target.value.length, b = target.selectionEnd ?? a;
+      target.value = target.value.slice(0, a) + t + target.value.slice(b);
+      target.focus();
+      target.setSelectionRange(a + t.length, a + t.length);
+    };
+    const kind = () => (q<HTMLInputElement>('input[name="za-kind"]:checked').value as "f" | "c");
+    const sync = () => {
+      el.querySelector<HTMLElement>('[data-k="f"]')!.classList.toggle("off", kind() !== "f");
+      el.querySelector<HTMLElement>('[data-k="c"]')!.classList.toggle("off", kind() !== "c");
+      const two = q<HTMLInputElement>('[data-zf="elseif"]').checked;
+      q<HTMLInputElement>('[data-zf="if2"]').disabled = !two;
+      q<HTMLInputElement>('[data-zf="then2"]').disabled = !two;
+    };
+    el.addEventListener("change", sync);
+    sync();
+    const list = () => {
+      const cat = q<HTMLSelectElement>('[data-zf="cat"]').value;
+      const sized = withSize(this.model);
+      const items: [string, string, string][] =
+        cat === "X"
+          ? sized.measurements.map((x) => [`X${x.id}`, x.name, fmt(x.value)])
+          : this.model.variables.filter((z) => z.id !== v.id).map((z) => [`Z${z.id}`, z.name, this.res.z.has(z.id) ? fmt(this.res.z.get(z.id) as number) : ""]);
+      q<HTMLUListElement>("ul").innerHTML = items.length
+        ? items.map(([k, n, val]) => `<li data-ins="${k}"><b dir="ltr">${k}</b><span>${esc(n || "")}</span><i dir="ltr">${val}</i></li>`).join("")
+        : `<li class="none">لا توجد قيم</li>`;
+    };
+    list();
+    q<HTMLSelectElement>('[data-zf="cat"]').addEventListener("change", list);
+    el.addEventListener("mousedown", (e) => {
+      if ((e.target as HTMLElement).closest("[data-ins],[data-op]")) e.preventDefault(); // keep the caret in the field
+    });
+    el.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      const ins = t.closest<HTMLElement>("[data-ins]"), op = t.closest<HTMLElement>("[data-op]"), za = t.closest<HTMLElement>("[data-za]");
+      if (ins) insert(ins.dataset.ins as string);
+      else if (op) insert(op.dataset.op as string);
+      else if (za?.dataset.za === "close") el.remove();
+      else if (za?.dataset.za === "ok") {
+        const val = (k: string) => q<HTMLInputElement>(`[data-zf="${k}"]`).value.trim();
+        let expr = val("formula");
+        if (kind() === "c") {
+          if (!val("if1") || !val("then1") || !val("else")) return void (q<HTMLElement>(".za-msg").textContent = "أكمل IF و THEN و ELSE");
+          expr = `CMDIF[${val("if1")}]{${val("then1")}}` + (q<HTMLInputElement>('[data-zf="elseif"]').checked && val("if2") && val("then2") ? `[${val("if2")}]{${val("then2")}}` : "") + `{${val("else")}}`;
+        }
+        try {
+          new Vars(withSize(this.model), undefined, this.res.z).eval(expr.replace(new RegExp(`Z${v.id}(?!\\d)`, "g"), "0"));
+        } catch (err) {
+          if (!/غير موجود|Z\d+:/.test((err as Error).message)) return void (q<HTMLElement>(".za-msg").textContent = (err as Error).message);
+        }
+        this.snapshot();
+        v.expr = expr;
+        this.changed();
+        el.remove();
+        this.toast(`حُفظت Z${v.id}`);
+      }
+    });
+    // drag by the title bar
+    const head = q<HTMLElement>(".za-head");
+    head.addEventListener("pointerdown", (e) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      const r = el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      head.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => Object.assign(el.style, { left: Math.max(0, ev.clientX - dx) + "px", top: Math.max(0, ev.clientY - dy) + "px", right: "auto" });
+      const up = () => (head.removeEventListener("pointermove", move), head.removeEventListener("pointerup", up));
+      head.addEventListener("pointermove", move);
+      head.addEventListener("pointerup", up);
+    });
+    target.focus();
   }
 
   private bindTable(box: HTMLElement, key: "measurements" | "variables"): void {
@@ -1865,7 +2016,7 @@ export class App {
       else this.model.variables.push({ id, name: "", expr: "0" });
       this.changed();
       // the new row's value field gets the focus (its 0 is selected and replaced by typing)
-      const inputs = box.querySelectorAll<HTMLInputElement>(key === "measurements" ? "input[data-f='value']" : "input[data-f='name']");
+      const inputs = box.querySelectorAll<HTMLInputElement>(key === "measurements" ? "input[data-f='value']" : "input[data-f='expr']");
       inputs[inputs.length - 1]?.focus();
     });
   }

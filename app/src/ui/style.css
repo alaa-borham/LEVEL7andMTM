@@ -619,3 +619,46 @@ body.embedded #tab-steps { padding: 0; }
 .pt-modes .pt-raster { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border); color: var(--muted); }
 .pt-modes .pt-raster svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; }
 .pt-modes .pt-raster select { width: 58px; padding: 1px 2px; font: 12px Consolas, monospace; }
+
+/* 0.9.129 Z values: formula first (as GRAFIS), then text and value */
+.ztable th:nth-child(2) { width: 52%; }
+.ztable .zf { display: flex; align-items: center; gap: 4px; direction: ltr; }
+.ztable .zf-eq { font: 12px Consolas, monospace; color: var(--muted); white-space: nowrap; }
+.ztable .zf input { flex: 1; min-width: 0; font: 13px Consolas, monospace; }
+.ztable .zf-as { width: 30px; height: 26px; padding: 0; font: italic 600 12px Georgia, serif; color: var(--accent); }
+.ztable td.val { font: 13px Consolas, monospace; text-align: right; direction: ltr; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+
+.z-assistant { position: fixed; top: 70px; right: 24px; z-index: 40; width: 470px; max-height: calc(100vh - 90px); display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 44px rgba(0, 0, 0, 0.45); }
+.za-head { display: flex; align-items: center; justify-content: space-between; height: 34px; padding: 0 6px 0 12px; background: var(--bg); border-bottom: 1px solid var(--border); border-radius: 10px 10px 0 0; cursor: move; user-select: none; }
+.za-head b { font-size: 13px; }
+.za-head button { width: 28px; height: 24px; padding: 0; border: none; background: transparent; font-size: 18px; color: var(--muted); }
+.za-body { padding: 8px 12px 12px; overflow: auto; }
+.za-body h5 { margin: 10px 0 6px; font-size: 12px; color: var(--live); }
+.za-r { display: flex; align-items: center; gap: 6px; margin: 6px 0 4px; font-size: 13px; }
+.za-row { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 6px; margin: 3px 0 3px 22px; }
+.za-row span { font: 12px Consolas, monospace; color: var(--muted); direction: ltr; text-align: left; }
+.za-row input { font: 13px Consolas, monospace; }
+.off { opacity: 0.4; pointer-events: none; }
+.za-cases .za-r { margin-inline-start: 22px; }
+.za-els { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
+.za-list select { width: 100%; margin-bottom: 4px; }
+.za-list ul { list-style: none; margin: 0; padding: 2px; height: 170px; overflow: auto; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); }
+.za-list li { display: grid; grid-template-columns: 44px 1fr auto; gap: 6px; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+.za-list li:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.za-list li b { font: 600 12px Consolas, monospace; }
+.za-list li i { font: normal 12px Consolas, monospace; color: var(--muted); }
+.za-list li.none { cursor: default; color: var(--muted); }
+.za-ops { display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start; }
+.za-ops span { width: 100%; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.za-ops button { direction: ltr; unicode-bidi: isolate; width: 36px; height: 26px; padding: 0; font: 600 12px Consolas, monospace; }
+.za-msg { min-height: 16px; margin: 6px 0 0; font-size: 12px; color: var(--danger); }
+.za-foot { display: flex; gap: 6px; justify-content: flex-start; margin-top: 6px; }
+/* 0.9.129: X / Z pick list in the point panel; plain "mm" label */
+.pt-modes { width: 138px; }
+.pt-modes .pt-ref { width: 34px; padding: 1px 0; font: 10px Arial, sans-serif; color: var(--muted); }
+.pt-modes input { width: 50px; }
+.pt-modes .pt-mm { font: 600 12px "Segoe UI", Arial, sans-serif; }
+.pt-modes .pt-xy span { display: grid; grid-template-columns: 50px 34px; gap: 2px; }
+.pt-modes .pt-xy .pt-ref { align-self: center; }
+.table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
