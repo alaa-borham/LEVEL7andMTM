@@ -69,7 +69,7 @@ export function installDesignMode() {
   const icon = id => `<svg aria-hidden="true"><use href="#icon-${id}"/></svg>`, letter = t => `<span class="palette-letter" aria-hidden="true">${t}</span>`;
   const bar = [
     [['save', icon('save'), 'Save', 'حفظ التصميم · Ctrl+S']],
-    [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'F5', 'خطوات البناء · F5']],
+    [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
     [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
     [['undo', icon('undo'), 'Undo', 'تراجع · Ctrl+Z'], ['redo', icon('undo'), 'Redo', 'إعادة · Ctrl+Y']],

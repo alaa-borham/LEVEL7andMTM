@@ -39,19 +39,26 @@ if (embedded && window.parent !== window) {
   // The steps / X / Z / pieces / sizes page is a floating window: hidden until its
   // button is pressed, dragged by its title bar anywhere, resizable, remembered.
   const panel = document.querySelector(".panel") as HTMLElement;
-  const TITLES: Record<string, string> = { steps: "خطوات البناء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج" };
+  const TITLES: Record<string, string> = { steps: "Record · سجل الإنشاء", x: "القياسات X", z: "المعادلات Z", pieces: "القطع", sizes: "المقاسات والتدرج" };
   const head = document.createElement("div");
   head.className = "float-head";
   head.innerHTML = `<b class="float-title"></b><button type="button" class="float-close" title="إغلاق">×</button>`;
   panel.prepend(head);
   let openTab: string | null = null;
-  try {
-    const g = JSON.parse(localStorage.getItem("level7.panel.geometry") || "null");
-    if (g) Object.assign(panel.style, { left: g.left, top: g.top, width: g.width, height: g.height });
-  } catch {}
-  const keep = () => {
+  // each page keeps its own place and size; the Record opens wide by default
+  const DEFAULTS: Record<string, { width: string; height: string }> = { steps: { width: "780px", height: "430px" } };
+  const restore = (tab: string) => {
+    let g: Record<string, string> | null = null;
     try {
-      localStorage.setItem("level7.panel.geometry", JSON.stringify({ left: panel.style.left, top: panel.style.top, width: panel.style.width || panel.offsetWidth + "px", height: panel.style.height || panel.offsetHeight + "px" }));
+      g = JSON.parse(localStorage.getItem("level7.panel.geometry." + tab) || "null");
+    } catch {}
+    const d = DEFAULTS[tab] ?? { width: "430px", height: "62vh" };
+    Object.assign(panel.style, { left: g?.left ?? panel.style.left, top: g?.top ?? panel.style.top, width: g?.width ?? d.width, height: g?.height ?? d.height });
+  };
+  const keep = () => {
+    if (!openTab) return;
+    try {
+      localStorage.setItem("level7.panel.geometry." + openTab, JSON.stringify({ left: panel.style.left, top: panel.style.top, width: panel.style.width || panel.offsetWidth + "px", height: panel.style.height || panel.offsetHeight + "px" }));
     } catch {}
   };
   const togglePanel = (tab: string | null) => {
@@ -59,6 +66,7 @@ if (embedded && window.parent !== window) {
     openTab = tab;
     panel.classList.toggle("open", !!tab);
     if (tab) {
+      restore(tab);
       (document.querySelector(`.tabs [data-tab="${tab}"]`) as HTMLButtonElement | null)?.click();
       (head.firstElementChild as HTMLElement).textContent = TITLES[tab] ?? "";
       const r = panel.getBoundingClientRect();

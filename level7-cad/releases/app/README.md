@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.125
+
+LEVEL7 design mode: the construction steps window is now "Record" (button Record · F5), opened only on demand, laid out like GRAFIS's list of interactive constructions: a table (RS, Name, details), a black preview of the pattern as it stood after the selected step with that step highlighted, and a bar with first / previous / ▶ next / last, edit and delete; arrow keys move through the steps, double-click a row to edit it. It opens wide by default; every window keeps its own place and size.
+
 LEVEL7 and MTM 0.9.124
 
 LEVEL7 design mode: the steps / X / Z / pieces / sizes page is a floating window, hidden until its button in the command bar (F5, Ctrl+X, F11, Ctrl+G, Pieces) is pressed; drag it by its title bar anywhere, resize it from its corner, close it with × or by pressing its button again; position and size are remembered. The drawing uses the full width. Construction steps: cleaner rows with a number badge and edit/delete icons that appear on hover.

@@ -576,3 +576,28 @@ body.embedded .float-head {
 .steps .row-actions button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .steps .row-actions button:hover { border-color: var(--border); color: var(--accent); background: var(--surface); }
 .steps .row-actions button.danger:hover { color: var(--danger); }
+
+/* 0.9.125 Record window (embedded): step table + preview, as GRAFIS's list of constructions */
+body.embedded #tab-steps { padding: 0; }
+.record { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: 100%; }
+.rec-table { overflow: auto; border-inline-end: 1px solid var(--border); outline: none; }
+.rec-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rec-table th { position: sticky; top: 0; z-index: 1; background: var(--bg); color: var(--muted); font-weight: 600; text-align: start; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.rec-table td { padding: 5px 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); cursor: default; white-space: nowrap; }
+.rec-table td.rs { width: 38px; text-align: center; font-family: Consolas, monospace; color: var(--muted); }
+.rec-table td.nm { width: 1%; direction: ltr; text-align: left; }
+.rec-table td.ds { color: var(--muted); overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
+.rec-table tr:hover td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.rec-table tr.selected td { background: color-mix(in srgb, var(--accent) 26%, transparent); color: var(--text); }
+.rec-table tr.error td.nm { color: var(--danger); }
+.rec-preview { position: relative; background: #000; min-height: 0; }
+.rec-preview svg { width: 100%; height: 100%; display: block; }
+.rec-preview .rec-old { fill: none; stroke: #2fa4dd; }
+.rec-preview circle.rec-old { fill: #2fa4dd; stroke: none; }
+.rec-preview .rec-now { fill: none; stroke: #9bd34f; }
+.rec-preview circle.rec-now { fill: #9bd34f; stroke: none; }
+.rec-at { position: absolute; left: 8px; bottom: 6px; direction: ltr; unicode-bidi: isolate; font: 11px Consolas, monospace; color: #8d98a7; }
+.rec-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--border); background: var(--bg); }
+.rec-foot button { min-width: 32px; height: 28px; padding: 0 8px; }
+.rec-foot .rec-play { color: #8fd14f; font-weight: 700; }
+.rec-foot .rec-gap { flex: 1; }

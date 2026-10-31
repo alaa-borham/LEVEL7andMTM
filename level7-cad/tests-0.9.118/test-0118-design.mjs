@@ -32,6 +32,14 @@ try{
  const hb2=await frame.locator('.float-head').boundingBox();assert(Math.abs(hb2.x-hb.x-200)<3&&Math.abs(hb2.y-hb.y-120)<3,JSON.stringify([hb,hb2]));
  await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
  pass('steps / X / Z window: hidden until pressed, dragged anywhere, pressing again closes it');
+ // 0.9.125 Record: table + preview of the pattern up to the selected step
+ await page.locator('[data-l7d-command="tab-steps"]').click();await frame.locator('.record tbody tr').first().waitFor();
+ assert.equal(await frame.locator('.float-title').textContent(),'Record · سجل الإنشاء');
+ await frame.locator('.record tbody tr').nth(1).click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='1'&&document.querySelectorAll('.rec-preview .rec-now').length>0);
+ await frame.locator('[data-rec="next"]').click();await f.waitForFunction(()=>document.querySelector('.record tr.selected')?.dataset.i==='2');
+ assert.equal(await frame.locator('.rec-at').textContent(),'3 / 3');
+ await page.locator('[data-l7d-command="tab-steps"]').click();await f.waitForFunction(()=>!document.querySelector('.panel').classList.contains('open'));
+ pass('Record window: steps table (RS, Name), preview up to the selected step, ▶ next step');
  assert(await page.locator('.l7-design-bar .palette-command').count()>=16);
  await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='x');
  await frame.locator('#canvas').click({position:{x:20,y:20},button:'middle'});await page.keyboard.press('F11');await f.waitForFunction(()=>document.querySelector('.tabs .active')?.dataset.tab==='z');

@@ -1174,6 +1174,7 @@ export class App {
 
   private renderSteps(): void {
     const box = $("#tab-steps");
+    if (document.body.classList.contains("embedded")) return this.renderRecord(box);
     if (!this.model.steps.length) {
       box.innerHTML = `<div class="empty">لا توجد خطوات بعد.<br>ابدأ بأداة «نقطة حرة» أو «خط بزاوية وطول»، أو افتح «مثال» من الشريط العلوي.<br>كل خطوة تبقى مربوطة بالقياسات والمعادلات.</div>`;
       return;
@@ -1203,6 +1204,92 @@ export class App {
         this.render();
       }),
     );
+  }
+
+  /** Record (embedded mode): table of construction steps with a preview of the pattern
+   * up to the selected step, like GRAFIS's list of interactive constructions. */
+  private renderRecord(box: HTMLElement): void {
+    const NAMES: Record<string, string> = {
+      point: "Point", pointOn: "Point on line", intersect: "Intersection", pointMove: "Point moved", line: "Line",
+      lineAngle: "Line with direction", parallel: "Parallel", setLength: "Lengthen", trim: "Trim / extend",
+      mirror: "Mirror", curve: "Curve", corner: "Corner",
+    };
+    const steps = this.model.steps;
+    const sel = this.selectedStep;
+    const rows = steps
+      .map((s, i) => {
+        const err = this.res.stepErrors.get(i);
+        const name = s.op === "corner" ? `Corner (${s.kind})` : NAMES[s.op] ?? s.op;
+        return `<tr data-i="${i}" class="${i === sel ? "selected" : ""}${err ? " error" : ""}" title="${err ? esc(err) : "دابل كليك للتعديل"}"><td class="rs">${i + 1}</td><td class="nm">${name}</td><td class="ds">${describe(s, this.model).replace(/\u2066(.*?)\u2069/g, '<bdi dir="ltr">$1</bdi>')}</td></tr>`;
+      })
+      .join("");
+    box.innerHTML = `<div class="record">
+      <div class="rec-table" tabindex="0">${steps.length ? `<table><thead><tr><th>RS</th><th>Name</th><th>التفاصيل</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="empty">لا توجد خطوات بعد.</div>`}</div>
+      <div class="rec-preview"><svg></svg><span class="rec-at"></span></div>
+      <div class="rec-foot">
+        <button data-rec="first" title="أول خطوة">⏮</button><button data-rec="prev" title="الخطوة السابقة">◀</button><button data-rec="next" class="rec-play" title="الخطوة التالية">▶</button><button data-rec="last" title="آخر خطوة">⏭</button>
+        <span class="rec-gap"></span>
+        <button data-rec="edit" title="تعديل قيم الخطوة">تعديل</button><button data-rec="del" class="danger" title="حذف الخطوة">حذف</button>
+      </div></div>`;
+    this.drawRecordPreview(box);
+    const go = (i: number) => {
+      if (!steps.length) return;
+      this.selectedStep = Math.max(0, Math.min(steps.length - 1, i));
+      this.renderSteps();
+      this.render();
+      (box.querySelector("tr.selected") as HTMLElement | null)?.scrollIntoView({ block: "nearest" });
+      (box.querySelector(".rec-table") as HTMLElement).focus();
+    };
+    box.querySelectorAll<HTMLElement>("tbody tr").forEach((tr) => {
+      tr.addEventListener("click", () => go(Number(tr.dataset.i)));
+      tr.addEventListener("dblclick", () => {
+        const i = Number(tr.dataset.i);
+        if (stepFields(steps[i]).length) this.editStep(i);
+      });
+    });
+    box.querySelector(".rec-table")?.addEventListener("keydown", (e) => {
+      const k = (e as KeyboardEvent).key;
+      if (k === "ArrowDown" || k === "ArrowUp") {
+        e.preventDefault();
+        go((sel < 0 ? -1 : sel) + (k === "ArrowDown" ? 1 : -1));
+      }
+    });
+    box.querySelectorAll<HTMLButtonElement>("[data-rec]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const a = b.dataset.rec;
+        if (a === "first") go(0);
+        else if (a === "last") go(steps.length - 1);
+        else if (a === "next") go(sel + 1);
+        else if (a === "prev") go(sel - 1);
+        else if (a === "edit" && sel >= 0 && stepFields(steps[sel]).length) this.editStep(sel);
+        else if (a === "del" && sel >= 0) this.deleteStep(sel);
+      }),
+    );
+    const editable = sel >= 0 && !!steps[sel] && stepFields(steps[sel]).length > 0;
+    (box.querySelector('[data-rec="edit"]') as HTMLButtonElement).disabled = !editable;
+    (box.querySelector('[data-rec="del"]') as HTMLButtonElement).disabled = sel < 0;
+  }
+
+  /** The pattern as it stood after the selected step; that step's objects highlighted. */
+  private drawRecordPreview(box: HTMLElement): void {
+    const svg = box.querySelector(".rec-preview svg") as SVGSVGElement;
+    const all = [...this.res.objects.values()];
+    if (!all.length) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const o of all) for (const [x, y] of o.pts) (x0 = Math.min(x0, x)), (y0 = Math.min(y0, y)), (x1 = Math.max(x1, x)), (y1 = Math.max(y1, y));
+    const pad = Math.max(x1 - x0, y1 - y0, 1) * 0.06;
+    svg.setAttribute("viewBox", `${x0 - pad} ${-(y1 + pad)} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`);
+    const upto = this.selectedStep >= 0 ? this.selectedStep : this.model.steps.length - 1;
+    const res = evaluateModel({ ...this.model, steps: this.model.steps.slice(0, upto + 1), pieces: [] });
+    const w = (Math.max(x1 - x0, y1 - y0, 1) / 300).toFixed(3);
+    const out: string[] = [];
+    for (const o of res.objects.values()) {
+      const now = o.step === upto;
+      if (o.kind === "point") out.push(`<circle cx="${o.pts[0][0]}" cy="${-o.pts[0][1]}" r="${(Number(w) * 2.4).toFixed(3)}" class="${now ? "rec-now" : "rec-old"}"/>`);
+      else out.push(`<polyline points="${o.pts.map(([x, y]) => `${x},${-y}`).join(" ")}" class="${now ? "rec-now" : "rec-old"}" stroke-width="${now ? Number(w) * 2.2 : w}"/>`);
+    }
+    svg.innerHTML = out.join("");
+    (box.querySelector(".rec-at") as HTMLElement).textContent = `${upto + 1} / ${this.model.steps.length}`;
   }
 
   private editStep(i: number): void {
