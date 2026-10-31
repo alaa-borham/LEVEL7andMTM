@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.152
+
+LEVEL7 design: Shift held snaps to the nearest line end / point (within 60 px) and a click joins it, as GRAFIS. A click where the near mark sits on a line makes the point ON that line (linked), not a loose point beside it. Points that are only line ends are not drawn as separate dots. With a tool open, a click near a dimension is the tool's pick (the dimension is not dragged). Z window: formula and description columns look different.
+
 LEVEL7 and MTM 0.9.151
 
 LEVEL7 design: the normal mouse arrow on the drawing (no cross); the near mark (pale yellow dot, as GRAFIS) shows from 30 px, on the nearest line / curve / point, and a click there picks that object.

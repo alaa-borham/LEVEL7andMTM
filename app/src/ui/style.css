@@ -973,3 +973,9 @@ body.embedded #tab-sizes .size-table { flex: 1 1 auto; min-height: 140px; overfl
 /* 0.9.151: the normal mouse arrow on the drawing (as GRAFIS), not a cross */
 body.embedded #canvas { cursor: default; }
 body.embedded #canvas.panning { cursor: grabbing; }
+/* 0.9.152 Z window: the formula column and the description column look different */
+.ztable .zf input { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: #ffd866; font-weight: 600; }
+.ztable textarea.zdesc { background: transparent; border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); color: var(--muted); font-style: italic; text-align: right; }
+.ztable textarea.zdesc:focus { border-style: solid; color: var(--text); font-style: normal; }
+.ztable th:nth-child(2) { color: #ffd866; } .ztable th:nth-child(3) { color: var(--muted); font-style: italic; }
+body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th:nth-child(2) { color: #7a5c00; }

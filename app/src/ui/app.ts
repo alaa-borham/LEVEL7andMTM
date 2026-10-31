@@ -50,6 +50,8 @@ const grow = (t: HTMLElement): void => {
 /** Drawing colours the user can change (View → colours). */
 /** How far (screen pixels) from a line / curve / point its near mark appears (= PICK_PX). */
 const NEAR_PX = PICK_PX;
+/** With Shift held (as GRAFIS): the pointer snaps to the nearest line end or point within this distance. */
+const SHIFT_SNAP_PX = 60;
 const COLOR_KEYS: [string, string][] = [["--line", "الخطوط المستقيمة"], ["--curve", "المنحنيات"], ["--point", "النقاط"], ["--near", "علامة الاقتراب من خط"], ["--canvas", "خلفية الرسم"]];
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
@@ -97,6 +99,9 @@ export class App {
   private nameHover: number | null = null;
   /** As GRAFIS: the line / curve / point under the pointer and the nearest point on it. */
   private near: { id: number; at: Pt } | null = null;
+  /** Shift held: snap to line ends / points. */
+  private shift = false;
+  private lastScreen: Pt = [0, 0];
   showGrid = false;
 
   private tool: Tool | null = null;
@@ -825,8 +830,12 @@ export class App {
         parts.push(`<text x="${mid[0] + 4}" y="${mid[1] - 4}">${esc(o.name)}</text>`);
       }
     }
+    // a point that is just the end of a line is the line's end: no separate dot (as GRAFIS)
+    const ends = new Set<string>();
+    for (const o of this.res.objects.values()) if (o.kind === "line" && o.pts.length) for (const q of [o.pts[0], o.pts[o.pts.length - 1]]) ends.add(`${q[0].toFixed(3)},${q[1].toFixed(3)}`);
     for (const o of this.res.objects.values()) {
       if (o.kind !== "point" || !this.vis.points) continue;
+      if (!highlight.has(o.id) && ends.has(`${o.pts[0][0].toFixed(3)},${o.pts[0][1].toFixed(3)}`)) continue;
       const [x, y] = this.toScreen(o.pts[0]);
       const c = highlight.has(o.id) ? "var(--select)" : "var(--point)";
       parts.push(`<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`);
@@ -1275,6 +1284,16 @@ export class App {
   /** The object nearest to the pointer within NEAR_PX screen pixels and the closest point on it
    * (points win when they are as close as a line, so line ends stay easy to reach). */
   private nearest(sx: number, sy: number): { id: number; at: Pt } | null {
+    if (this.shift) {
+      // Shift: only points and line ends, from farther away; the dot sits exactly on the end
+      let b: { id: number; at: Pt; d: number } | null = null;
+      for (const o of this.res.objects.values())
+        for (const q of o.kind === "point" ? [o.pts[0]] : [o.pts[0], o.pts[o.pts.length - 1]]) {
+          const d = dist(this.toScreen(q), [sx, sy]);
+          if (d <= SHIFT_SNAP_PX && (!b || d < b.d)) b = { id: o.id, at: q, d };
+        }
+      return b && { id: b.id, at: b.at };
+    }
     const lim = NEAR_PX / this.scale;
     let best: { id: number; at: Pt; d: number } | null = null;
     for (const o of this.res.objects.values()) {
@@ -1283,7 +1302,6 @@ export class App {
       const d = o.kind === "point" ? c.d - 4 / this.scale : c.d;
       if (d <= lim && (!best || d < best.d)) best = { id: o.id, at: c.pt, d };
     }
-    void sx, void sy;
     return best && { id: best.id, at: best.at };
   }
 
@@ -1359,7 +1377,7 @@ export class App {
         const cands: PointRef[] = o.kind === "point" ? [{ obj: o.id }] : kind === "point" ? [{ obj: o.id, end: "start" }, { obj: o.id, end: "end" }] : [];
         for (const ref of cands) {
           const d = near(this.pointOf(ref));
-          if (d <= (kind === "point" ? SNAP_PX : PICK_PX) && (!best || d < best.d)) best = { d, ref };
+          if (d <= (kind === "point" ? (this.shift ? SHIFT_SNAP_PX : SNAP_PX) : PICK_PX) && (!best || d < best.d)) best = { d, ref };
         }
       }
       if (best) return { kind: "point", ref: best.ref, at: w };
@@ -2555,7 +2573,8 @@ export class App {
         }
         const sx = e.clientX - r0.left, sy = e.clientY - r0.top;
         // drag a dimension closer to / farther from what it measures
-        const di = !this.tool || (!this.picks.length && !this.extra.length && !this.form) ? this.dimAt(sx, sy) : null;
+        // with a tool open, a click is the tool's pick (a dimension under the pointer is not dragged)
+        const di = !this.tool ? this.dimAt(sx, sy) : null;
         if (di !== null) {
           this.snapshot();
           this.dragDim = di;
@@ -2576,14 +2595,29 @@ export class App {
       const kind = this.currentPickKind();
       if (!kind) return;
       const r = svg.getBoundingClientRect();
+      this.shift = e.shiftKey;
       const h = this.hit(kind, e.clientX - r.left, e.clientY - r.top);
+      // Shift + click: join the nearest line end / point directly (as GRAFIS)
+      if (kind === "point" && e.shiftKey && h?.kind === "point") return void this.onPick(h);
       if (kind === "point" && this.ptMode !== "free") {
         const made = this.modePoint(this.toWorld(e.clientX - r.left, e.clientY - r.top), e.clientX - r.left, e.clientY - r.top);
         if (made) this.onPick(made);
         return;
       }
       if (h) this.onPick(h);
-      else if (kind === "point" && this.tool && (!this.collecting || this.tool.multi?.kind === "point")) this.onPick(this.freePointAt(this.toWorld(e.clientX - r.left, e.clientY - r.top)));
+      else if (kind === "point" && this.tool && (!this.collecting || this.tool.multi?.kind === "point")) {
+        // the near mark sits on a line: the point is made ON that line where the mark is (as GRAFIS),
+        // linked to it, not a loose point beside it
+        const sx = e.clientX - r.left, sy = e.clientY - r.top, nr = this.nearest(sx, sy), no = nr && this.res.objects.get(nr.id);
+        if (nr && no?.kind === "line") {
+          const keep = this.ptMode;
+          this.ptMode = "online";
+          const made = this.modePoint(nr.at, sx, sy);
+          this.ptMode = keep;
+          if (made) return void this.onPick(made);
+        }
+        this.onPick(this.freePointAt(this.toWorld(sx, sy)));
+      }
       else if (kind !== "canvas") this.toast(kind === "line" ? "انقر على خط" : "انقر على نقطة أو طرف خط");
     });
     window.addEventListener("mouseup", (e) => {
@@ -2600,10 +2634,23 @@ export class App {
       this.pan = null;
       svg.classList.remove("panning");
     });
+    const shiftKey = (e: KeyboardEvent) => {
+      if (e.key !== "Shift" || this.shift === (e.type === "keydown")) return;
+      this.shift = e.type === "keydown";
+      const [sx, sy] = this.lastScreen;
+      this.near = this.nearest(sx, sy);
+      const kind0 = this.currentPickKind();
+      this.hover = kind0 === "point" ? this.hit("point", sx, sy) : this.hover;
+      this.render();
+    };
+    window.addEventListener("keydown", shiftKey);
+    window.addEventListener("keyup", shiftKey);
     svg.addEventListener("mousemove", (e) => {
       const r = svg.getBoundingClientRect();
       const sx = e.clientX - r.left;
       const sy = e.clientY - r.top;
+      this.shift = e.shiftKey;
+      this.lastScreen = [sx, sy];
       if (this.pan) {
         this.cx = this.pan.cx - (e.clientX - this.pan.x) / this.scale;
         this.cy = this.pan.cy + (e.clientY - this.pan.y) / this.scale;
