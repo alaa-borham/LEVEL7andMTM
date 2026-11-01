@@ -208,3 +208,53 @@ Report: `level7-cad/REPORT-0.9.113.md`. Source: `level7-cad/source-0.9.113/`. Di
 - حد X في N38 أصبح ±10000. الملفات: `native-n38-ui.js` و`native-n38-tables.js` و`native-n38-parametric-engine.js`.
 - `native-line10-lengths.mjs`: الدالة `line10UnusableX` لعرض قيم X غير الصالحة رمادية مع السبب.
 - المطلوب على Windows: فتح «تصميم LEVEL7 جديد»، ورسم نقطتين وخط، ثم الحفظ وإعادة الفتح، ثم تصدير AAMA/PLT وفتحهما في برنامج التعشيق.
+
+## 9. Problems already solved: causes and fixes (do not investigate them again)
+
+> **للمستخدم:** هذا القسم يلخّص لـ Codex كل مشكلة واجهتها وحللتها: السبب والحل وأين يجده، حتى لا يضيّع وقتاً في إعادة البحث فيها.
+
+Current version: **0.9.154** (`level7-cad/releases/app/`, auto-update manifest `level7-cad/releases/latest.json`). Every fix below is in that tree, with a report `level7-cad/REPORT-0.9.<n>.md` and a diff `level7-cad/0.9.<n-1>-to-0.9.<n>.diff`.
+
+### 9.1 Running the program and the tests
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Electron refuses to start on Linux as root | the app enables the sandbox | run as a normal user (we use `su qa -c …`) under `xvfb-run -a`; do not disable the sandbox |
+| `npm install electron` installs no binary | the post-install download is blocked | `npm install --no-save electron@44.9.0` then `node node_modules/electron/install.js` |
+| 0.9.111 UI tests fail on another machine | they hard-code `C:/Users/…` and `electron.exe` | `tests-0.9.112/portable-ui.mjs` makes a portable copy of each test; the original test is not changed |
+| 36 kernel tests fail with `ENOENT` | their input `.mdl` files exist only on the owner's machine (list in 5.1) | not a code bug: copy the files into `work/` (and `C:/Users/Borham/Documents/Codex/G48QA/`) before running, then report pass/fail |
+| Tests pass alone but fail together | Electron keeps `localStorage` in the user-data folder, shared by every test run (not under `LOCALAPPDATA` on Linux): an autosave, a measurement library or colours left by one test appear in the next | tests clear what they create (`level7.mlib`, `level7.colors`) and dismiss the "restore unsaved design?" question; do the same in new tests |
+| A click right after choosing a tool, or two fast clicks, is ignored | two clicks within the double-click time count as a double-click (`detail >= 2`), which edits instead of picking | wait ~300–600 ms between clicks in tests (real users are slower) |
+
+### 9.2 Reading GRAFIS `.mdl` files
+
+| Symptom | Cause | Fix (file) |
+|---|---|---|
+| Parts of a file from a newer GRAFIS ("alaa new.mdl") show empty | that file is format **VB**; only **VA** was read | VB cached geometry is read **for display** after a full structure check; VB is read-only (the write format is not verified) — 0.9.115, `src/native-mdl.js`, test `test-0115-vb-preview` |
+| The old Python reader `grafis_mdl` draws some VB objects wrong | its VB parsing is wrong for some records | trust the app's reader: it matches every object's stored bounds |
+| Opening ALAA2026 takes ~29 s, switching parts ~73 s | every tool re-validated the whole 3.3 MB file and replayed each part from step 1 | each part is analysed once per document and size, and tools get copies — 0.9.116, `src/native-mdl.js`, `src/part-history-engine.mjs` (open 2.1 s, 6 parts 3.8 s) |
+| X1 = 1500 never saved in a New-N38 file; the X list hides it | the N38 template rejected X > 1000 mm | limit ±10000 mm; unusable X values show greyed with the reason — 0.9.118, `native-n38-*.js`, `native-line10-lengths.mjs` |
+| Part 7 off by up to 2.5 mm; part 65 stops at step 25 | see Fix A and Fix B in section 2 | ALAA2026: 0 of 1299 objects differ by more than 0.2 mm |
+
+### 9.3 Windows packaging (section 5.2 item 3 is no longer needed)
+
+- **Exe icon:** no `rcedit` needed. `level7-cad/build-windows.sh` sets the LEVEL7 icon and version strings with `resedit` (pure JavaScript, runs on Linux) through `level7-cad/tools/set-exe-icon.mjs`. Verified: all 7 images of `assets/icon.ico` are in the exe.
+- **Installed copies keep the old exe** (updates replace app files only), so at start the program points existing desktop / Start-menu shortcuts at `assets/icon.ico` (`fixShortcutIcons` in `desktop/main.cjs`, Windows only).
+- **Design files:** extension `.level7` (Windows reads only the last extension, so `.level7.json` would have meant every `.json`). At start, on a packaged Windows build, `desktop/main.cjs` registers `.level7` for the current user (`HKCU\Software\Classes`, `reg add`), single instance: a second launch hands the file to the open window. Old `.level7.json` files still open from the program.
+
+### 9.4 Please verify on Windows (cannot be tested on Linux)
+
+1. A `.level7` file shows the LEVEL7 icon and opens in the program on a double-click, also while the program is open.
+2. The desktop shortcut shows the LEVEL7 icon after the update and a restart.
+3. The program opens straight into LEVEL7 design; the "GRAFIS" button opens an MDL and the MDL workspace.
+4. An AAMA file from "Marker" opens in the owner's marker software; an ISO / PLT file from "ISO/PLT" is accepted by the cutter (on paper first).
+5. Send any failure with the file and a screenshot.
+
+### 9.5 Test commands
+
+```
+su qa -c "cd level7-cad/tests-0.9.118 && L7_SRC=<app dir> L7_MDL=<ALAA2026.mdl> timeout 250 xvfb-run -a node test-0148-start.mjs"
+cd app && npx vitest run
+```
+
+All 27 program test files (162 checks) and 69 engine tests pass on 0.9.154.
