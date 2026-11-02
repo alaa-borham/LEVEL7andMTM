@@ -2853,7 +2853,9 @@ export class App {
           const behind = (this.dragHandle.end === "start") !== this.dragHandle.flip; // handle lies behind the travel direction
           const v: Pt = behind ? [at[0] - this.mouse[0], at[1] - this.mouse[1]] : [this.mouse[0] - at[0], this.mouse[1] - at[1]];
           let deg = (Math.atan2(v[1], v[0]) * 180) / Math.PI;
-          const q = this.angleStep > 0 ? this.angleStep : 1;
+          // the handle moves freely in every direction (1°), whatever the angle step of the line tools;
+          // Shift snaps it to 15°
+          const q = this.shift ? 15 : 1;
           deg = Math.round(deg / q) * q;
           // the distance of the handle from the end sets the strength (70 px = 100 %)
           const [ex, ey] = this.toScreen(at), [mx, my] = this.toScreen(this.mouse);
