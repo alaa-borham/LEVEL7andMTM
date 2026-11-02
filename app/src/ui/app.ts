@@ -1178,6 +1178,47 @@ export class App {
     this.dragPoint = { step: ci, mode: "offset", base: this.pointOf(ref) };
   }
 
+  private curveGrab: { ci: number; x: number; y: number; at: Pt } | null = null;
+
+  /** The curve under the screen point (the selected curve first), or -1. */
+  private curveAtScreen(sx: number, sy: number): number {
+    const at = this.toWorld(sx, sy), tol = 7 / this.scale;
+    const near = (j: number) => {
+      const t = this.model.steps[j];
+      if (t?.op !== "curve") return false;
+      const o = this.res.objects.get(t.id);
+      return !!o && o.pts.length > 1 && closestOnPolyline(o.pts, at).d <= tol;
+    };
+    if (near(this.selectedStep)) return this.selectedStep;
+    for (let j = this.model.steps.length - 1; j >= 0; j--) if (near(j)) return j;
+    return -1;
+  }
+
+  /** Add a free point at `at` to the curve at step ci, in its place along the curve, and drag it. */
+  private insertCurvePoint(ci: number, at: Pt): void {
+    const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
+    const o = this.res.objects.get(curve.id);
+    if (!o) return;
+    const sAt = closestOnPolyline(o.pts, at).s;
+    let k = 1;
+    for (let j = 1; j < curve.through.length - 1; j++) {
+      try {
+        if (closestOnPolyline(o.pts, this.pointOf(curve.through[j])).s < sAt) k = j + 1;
+      } catch {
+        /* a point that does not resolve keeps its place */
+      }
+    }
+    this.snapshot();
+    const id = newId(this.model, "point");
+    const r = (v: number) => String(Math.round(v * 10) / 10);
+    this.model.steps.splice(ci, 0, { op: "point", id, x: r(at[0]), y: r(at[1]) });
+    curve.through.splice(k, 0, { obj: id });
+    this.selectedStep = ci + 1;
+    this.evaluate();
+    this.dragPoint = { step: ci, mode: "xy", base: [0, 0] };
+    this.toast("نقطة جديدة على المنحنى: اسحبها لضبط الشكل");
+  }
+
   private handleAt(sx: number, sy: number) {
     return this.curveHandles().find((h) => Math.hypot(h.hs[0] - sx, h.hs[1] - sy) <= 9) ?? null;
   }
@@ -2265,6 +2306,11 @@ export class App {
   private rightConfirm(): void {
     if (this.form || (this.collecting && this.extra.length)) this.confirmStep();
     else if (this.tool && !this.picks.length) this.cancelTool();
+    else if (!this.tool && this.selectedStep >= 0) {
+      // right click leaves the editing of the selected element (curve handles etc.)
+      this.selectedStep = -1;
+      this.render();
+    }
   }
 
   /** Embedded mode: the ✓ of the step card (Enter). */
@@ -2613,6 +2659,15 @@ export class App {
           e.preventDefault();
           return;
         }
+        // pressing on the curve itself (not on a point): dragging adds a point there and moves it (as GRAFIS)
+        if (!this.tool && !this.form) {
+          const ci = this.curveAtScreen(sx, sy);
+          if (ci >= 0) {
+            this.curveGrab = { ci, x: sx, y: sy, at: this.toWorld(sx, sy) };
+            e.preventDefault();
+            return;
+          }
+        }
       }
       if (this.form?.live?.submit) {
         this.form.live.submit();
@@ -2648,6 +2703,12 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
+      if (this.curveGrab) {
+        // a click on the curve without dragging selects it (shows its handles)
+        this.selectedStep = this.curveGrab.ci;
+        this.curveGrab = null;
+        this.render();
+      }
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         this.dragHandle = null;
         this.dragPoint = null;
@@ -2684,6 +2745,11 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.curveGrab && Math.hypot(sx - this.curveGrab.x, sy - this.curveGrab.y) > 3) {
+        const g = this.curveGrab;
+        this.curveGrab = null;
+        this.insertCurvePoint(g.ci, g.at);
+      }
       if (this.dragDim !== null) {
         const st = this.model.steps[this.dragDim] as Extract<Step, { op: "dim" }>;
         const off = this.dimOffsetAt(st, this.mouse);
