@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.156
+
+LEVEL7 design: a curve is reshaped by grabbing the curve itself: dragging it adds a point there and moves it (also on a curve that has only its two ends); a click on a curve selects it; a right click (without dragging) leaves the curve editing.
+
 LEVEL7 and MTM 0.9.155
 
 LEVEL7 design: the step window of a line also edits its start (and end) point made for it, e.g. how far down the line starts on the line it was drawn from; a point a curve passes through is dragged directly, without selecting the curve first (the curve under the pointer shows its points); Record has "back to here", which removes every later step (one Ctrl+Z brings them back).

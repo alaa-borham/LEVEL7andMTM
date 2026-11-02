@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.155",
- "notes": "نزول الخط في نافذة التعديل، تحريك نقطة المنحنى، الرجوع إلى خطوة",
+ "version": "0.9.156",
+ "notes": "سحب المنحنى من أي مكان يضيف نقطة، رايت كليك يخرج من تحرير المنحنى",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b99acab3d44d111624d36d45c42eec0592402c54b13ad3f5aa942ef4e6fb6c4d",
-   "size": 138521
+   "sha256": "17480c1cece023a9c3f28f48c4a37261b8a1152e64e42f81d366bada2d9c09b8",
+   "size": 138791
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-B2yj-s0e.js",
-   "sha256": "6c4235f9bd32f8acdb166bd54b48501f8d40c5af4d29bd6a141a765142807eb3",
-   "size": 256338
-  },
-  {
    "path": "assets/l7design/assets/index-DnoADqBb.css",
    "sha256": "71a32a09fb199e4e7674c8dc6bb56cc8f2d2816a6e0f1814a2ca663c03121f1f",
    "size": 37878
   },
   {
+   "path": "assets/l7design/assets/index-cwoUlw49.js",
+   "sha256": "214b61c3a66c8120f114bb91475f29a0c26d79dcd6eaf1fdaaa8334c99b3ed9b",
+   "size": 257719
+  },
+  {
    "path": "assets/l7design/index.html",
-   "sha256": "d1c9fcece24dd28d867a8fd0c0eef609e6fe831731728281691ae55532df4218",
+   "sha256": "c8ef128f90d56264134d79bde3d89995fb0340c6db385915bced722b27a85492",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "27435805f8927d9eab0b477539b2e4d6e677e74aa6dd7870bde7893cfba211c0",
+   "sha256": "51aee520d29b712e4192b80170002326d47397de0a6f595e190542964753c1ee",
    "size": 301
   },
   {
