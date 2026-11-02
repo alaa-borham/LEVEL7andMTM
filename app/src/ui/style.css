@@ -539,6 +539,7 @@ body.embedded .panel .tabs{display:none}
 
 /* live drawing preview */
 #canvas text.live-label { fill: var(--live); font-weight: 700; font-size: 13px; }
+#canvas text.formula-label { direction: ltr; unicode-bidi: isolate; fill: var(--text); font-size: 12.5px; font-weight: 600; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; pointer-events: none; }
 body.dark { --live: #8fd14f; }
 
 /* X / Z picker beside formula fields */

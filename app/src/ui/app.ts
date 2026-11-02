@@ -874,6 +874,7 @@ export class App {
     if (this.showDup) parts.push(this.duplicatesSvg());
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
+    parts.push(this.formulaLabelsSvg());
     // no letters on the drawing: the name of the element under the pointer only
     const under = this.nameHover;
     if (under && !this.showNames) {
@@ -1176,6 +1177,68 @@ export class App {
     this.selectedStep = ci + 1;
     this.evaluate();
     this.dragPoint = { step: ci, mode: "offset", base: this.pointOf(ref) };
+  }
+
+  /** "Z9 الكتف=225" for a value field: the formula, the name of the single X / Z it is, its value. */
+  private formulaText(expr: string, unit = ""): string {
+    const e = expr.trim();
+    if (!e) return "";
+    let v: number;
+    try {
+      v = new Vars(withSize(this.model), undefined, this.res.z).eval(e);
+    } catch {
+      return `${e}=?`;
+    }
+    if (/^-?\d+(\.\d+)?$/.test(e)) return `${fmt(v)}${unit}`;
+    const one = /^([XZ])0*(\d+)$/i.exec(e);
+    const nm = one ? (one[1].toUpperCase() === "X" ? this.model.measurements : this.model.variables).find((m) => m.id === Number(one[2]))?.name : "";
+    return `${e}${nm ? " \u2067" + nm + "\u2069" : ""}=${fmt(v)}${unit}`; // the name isolated: Arabic does not reorder the numbers
+  }
+
+  /** When a line or curve is selected: the formulas it is built on, written where they act (as GRAFIS):
+   * at each end the formula of the point it starts / ends on, at the end of a line by angle its length,
+   * at its start its angle, in the middle of a parallel its distance. */
+  private formulaLabelsSvg(): string {
+    const s = this.model.steps[this.selectedStep];
+    if (!s || this.tool || (this.form && !this.form.title?.startsWith("تعديل"))) return "";
+    const ids = createdIds(s), o = ids.length ? this.res.objects.get(ids[0]) : undefined;
+    if (!o || o.kind !== "line" || o.pts.length < 2) return "";
+    const out: string[] = [];
+    const n = o.pts.length;
+    const put = (at: Pt, toward: Pt, text: string, row = 0) => {
+      if (!text) return;
+      const a = this.toScreen(at), b = this.toScreen(toward);
+      let dx = a[0] - b[0], dy = a[1] - b[1];
+      const L = Math.hypot(dx, dy) || 1;
+      (dx /= L), (dy /= L);
+      const x = a[0] + dx * 14, y = a[1] + dy * 14 + 4 + row * 15;
+      out.push(`<text class="formula-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${dx < -0.3 ? "end" : dx > 0.3 ? "start" : "middle"}" direction="ltr">\u2066${esc(text)}\u2069</text>`);
+    };
+    const pointText = (r?: PointRef): string => {
+      if (!r || r.end !== undefined) return "";
+      const t = this.model.steps.find((q) => "id" in q && q.id === r.obj);
+      if (!t) return "";
+      if (t.op === "pointOn") return this.formulaText(t.dist, t.unit === "%" ? "%" : "");
+      if (t.op === "pointOffset") return [this.formulaText(t.dx), this.formulaText(t.dy)].filter(Boolean).join(" · ");
+      return "";
+    };
+    const start = o.pts[0], end = o.pts[n - 1], s1 = o.pts[1], e1 = o.pts[n - 2];
+    if (s.op === "lineAngle") {
+      put(start, s1, pointText(s.start));
+      put(start, s1, `∠ ${this.formulaText(s.angle, "°")}`, pointText(s.start) ? 1 : 0);
+      put(end, e1, this.formulaText(s.length));
+    } else if (s.op === "line") {
+      put(start, s1, pointText(s.p1));
+      put(end, e1, pointText(s.p2));
+    } else if (s.op === "curve") {
+      put(start, s1, pointText(s.through[0]));
+      put(end, e1, pointText(s.through[s.through.length - 1]));
+    } else if (s.op === "parallel") {
+      const m = o.pts[Math.floor(n / 2)];
+      const a = this.toScreen(m);
+      out.push(`<text class="formula-label" x="${a[0] + 6}" y="${a[1] - 8}" direction="ltr">\u2066${esc(this.formulaText(s.dist))}\u2069</text>`);
+    }
+    return out.join("");
   }
 
   private curveGrab: { ci: number; x: number; y: number; at: Pt } | null = null;
@@ -2674,7 +2737,20 @@ export class App {
         return;
       }
       const kind = this.currentPickKind();
-      if (!kind) return;
+      if (!kind) {
+        if (!this.tool && !this.form) {
+          // no tool: a click on a line selects it and shows the formulas it is built on (as GRAFIS)
+          const rr = svg.getBoundingClientRect(), nr = this.nearest(e.clientX - rr.left, e.clientY - rr.top);
+          let i = -1;
+          if (nr) this.model.steps.forEach((st, k) => createdIds(st).includes(nr.id) && (i = k));
+          if (i !== this.selectedStep) {
+            this.selectedStep = i;
+            this.renderSteps();
+            this.render();
+          }
+        }
+        return;
+      }
       const r = svg.getBoundingClientRect();
       this.shift = e.shiftKey;
       const h = this.hit(kind, e.clientX - r.left, e.clientY - r.top);
