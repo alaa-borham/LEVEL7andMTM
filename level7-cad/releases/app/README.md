@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.157
+
+LEVEL7 design: a click on a line or curve selects it and writes on the drawing the formulas it is built on (as GRAFIS): at its start the formula of the point it starts on (e.g. "Z17 name=65") and the angle of a line by angle, at its end its length or the formula of its end point, in the middle of a parallel its distance; also while the step is edited; a click on empty space clears it.
+
 LEVEL7 and MTM 0.9.156
 
 LEVEL7 design: a curve is reshaped by grabbing the curve itself: dragging it adds a point there and moves it (also on a curve that has only its two ends); a click on a curve selects it; a right click (without dragging) leaves the curve editing.
