@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.155
+
+LEVEL7 design: the step window of a line also edits its start (and end) point made for it, e.g. how far down the line starts on the line it was drawn from; a point a curve passes through is dragged directly, without selecting the curve first (the curve under the pointer shows its points); Record has "back to here", which removes every later step (one Ctrl+Z brings them back).
+
 LEVEL7 and MTM 0.9.154
 
 LEVEL7 design: Space = zoom mode (as GRAFIS): left click zooms in, right click zooms out, at the click (the point under the pointer stays in place); Space again or Esc leaves it; not while typing in a field.

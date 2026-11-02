@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.154",
- "notes": "المسطرة (Space) لوضع الزووم",
+ "version": "0.9.155",
+ "notes": "نزول الخط في نافذة التعديل، تحريك نقطة المنحنى، الرجوع إلى خطوة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "cde8e8129c8210ceffbe71ff58a84e02e5ccf662559ada9d30314754049e93f4",
-   "size": 138117
+   "sha256": "b99acab3d44d111624d36d45c42eec0592402c54b13ad3f5aa942ef4e6fb6c4d",
+   "size": 138521
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-D2aM1VFM.js",
-   "sha256": "c0b1dbef7ac00fcac0b272531c9fcd8451fad51672a265621053959b61ca5115",
-   "size": 254471
+   "path": "assets/l7design/assets/index-B2yj-s0e.js",
+   "sha256": "6c4235f9bd32f8acdb166bd54b48501f8d40c5af4d29bd6a141a765142807eb3",
+   "size": 256338
   },
   {
    "path": "assets/l7design/assets/index-DnoADqBb.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "0bcda6528624ccdab7385df18e29a0abeb29495d6cdbd069cc9dbcc5699e5c42",
+   "sha256": "d1c9fcece24dd28d867a8fd0c0eef609e6fe831731728281691ae55532df4218",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "d39a07e2558c6ebc5bd5018515b7183bbf4a4bc1832d19b79216c9ca40a617a7",
+   "sha256": "27435805f8927d9eab0b477539b2e4d6e677e74aa6dd7870bde7893cfba211c0",
    "size": 301
   },
   {

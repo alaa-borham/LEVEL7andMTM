@@ -863,6 +863,9 @@ export class App {
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.near && !this.pan) parts.push(this.nearSvg(this.near));
+    // the curve under the pointer shows the points it passes through (drag one to reshape it, as GRAFIS)
+    const hv = this.near && !this.tool ? this.model.steps.findIndex((t) => t.op === "curve" && t.id === this.near!.id) : -1;
+    if (hv >= 0 && hv !== this.selectedStep) for (const p of this.curvePoints(hv)) parts.push(`<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`);
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.vis.dims ? this.dimsSvg() : "");
     parts.push(this.vis.marks ? this.marksSvg() : "");
@@ -1116,8 +1119,8 @@ export class App {
   /** Every point the selected curve passes through can be dragged in any direction:
    * a free point moves itself; a point tied to a line (on a line, intersection, line end …)
    * gets an offset (dx, dy) from where it is tied, so it still follows its line. */
-  private curvePoints(): { k: number; ref: PointRef; s: Pt }[] {
-    const s = this.model.steps[this.selectedStep];
+  private curvePoints(idx = this.selectedStep): { k: number; ref: PointRef; s: Pt }[] {
+    const s = this.model.steps[idx];
     if (!s || s.op !== "curve" || this.form) return [];
     const n = s.through.length;
     return s.through.flatMap((ref, k) => {
@@ -2597,9 +2600,16 @@ export class App {
           e.preventDefault();
           return;
         }
-        const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 7 && Math.abs(p.s[1] - sy) <= 7);
+        // a point a curve passes through is dragged straight away (as GRAFIS), also when the curve is
+        // not selected: the selected curve first, then any curve
+        let cpStep = this.selectedStep;
+        let cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9);
+        if (!cp && !this.tool)
+          for (let j = this.model.steps.length - 1; j >= 0 && !cp; j--)
+            if (this.model.steps[j].op === "curve") (cp = this.curvePoints(j).find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9)), (cpStep = j);
         if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
-          this.grabCurvePoint(this.selectedStep, cp.k);
+          this.selectedStep = cpStep;
+          this.grabCurvePoint(cpStep, cp.k);
           e.preventDefault();
           return;
         }
@@ -3004,7 +3014,7 @@ export class App {
       <div class="rec-foot">
         <button data-rec="first" title="أول خطوة">⏮</button><button data-rec="prev" title="الخطوة السابقة">◀</button><button data-rec="next" class="rec-play" title="الخطوة التالية">▶</button><button data-rec="last" title="آخر خطوة">⏭</button>
         <span class="rec-gap"></span>
-        <button data-rec="edit" title="تعديل قيم الخطوة">تعديل</button><button data-rec="del" class="danger" title="حذف الخطوة">حذف</button>
+        <button data-rec="edit" title="تعديل قيم الخطوة">تعديل</button><button data-rec="del" class="danger" title="حذف الخطوة">حذف</button><button data-rec="back" class="danger" title="الرجوع إلى هذه الخطوة: حذف كل الخطوات بعدها (يمكن التراجع Ctrl+Z)">⤺ الرجوع إلى هنا</button>
       </div></div>`;
     this.drawRecordPreview(box);
     const go = (i: number) => {
@@ -3038,11 +3048,13 @@ export class App {
         else if (a === "prev") go(sel - 1);
         else if (a === "edit" && sel >= 0 && stepFields(steps[sel]).length) this.editStep(sel);
         else if (a === "del" && sel >= 0) this.deleteStep(sel);
+        else if (a === "back" && sel >= 0) this.backTo(sel);
       }),
     );
     const editable = sel >= 0 && !!steps[sel] && stepFields(steps[sel]).length > 0;
     (box.querySelector('[data-rec="edit"]') as HTMLButtonElement).disabled = !editable;
     (box.querySelector('[data-rec="del"]') as HTMLButtonElement).disabled = sel < 0;
+    (box.querySelector('[data-rec="back"]') as HTMLButtonElement).disabled = sel < 0 || sel >= steps.length - 1;
   }
 
   /** The pattern as it stood after the selected step; that step's objects highlighted. */
@@ -3072,12 +3084,28 @@ export class App {
     this.cancelTool();
     this.selectedStep = i;
     this.render();
+    // a line's start (and end) point made for it, a point on a line or a free point, is edited here
+    // too: e.g. how far down the line starts on the line it was drawn from
+    const pointStep = (r?: PointRef) => (r && r.end === undefined ? this.model.steps.findIndex((t, k) => k < i && (t.op === "pointOn" || t.op === "point") && t.id === r.obj) : -1);
+    const ends: ["s" | "e", string, number][] = [];
+    const st0 = s as { op: string; start?: PointRef; p1?: PointRef; p2?: PointRef };
+    for (const [tag, label, r] of [["s", "البداية", st0.op === "lineAngle" ? st0.start : st0.op === "line" ? st0.p1 : undefined], ["e", "النهاية", st0.op === "line" ? st0.p2 : undefined]] as ["s" | "e", string, PointRef | undefined][]) {
+      const j = pointStep(r);
+      if (j >= 0) ends.push([tag, label + (this.model.steps[j].op === "pointOn" ? " على الخط" : ""), j]);
+    }
     this.openForm({
       title: `تعديل الخطوة ${i + 1}`,
-      fields: stepFields(s),
+      fields: [...stepFields(s), ...ends.flatMap(([tag, label, j]) => stepFields(this.model.steps[j]).map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${label}: ${f.label}` })))],
       onOk: (v) => {
         this.snapshot();
-        applyFields(this.model.steps[i], v);
+        const own: Record<string, string> = {}, of: Record<string, Record<string, string>> = {};
+        for (const [k, val] of Object.entries(v)) {
+          const m = /^(s|e):(.+)$/.exec(k);
+          if (m) (of[m[1]] ??= {})[m[2]] = val;
+          else own[k] = val;
+        }
+        applyFields(this.model.steps[i], own);
+        for (const [tag, , j] of ends) if (of[tag]) applyFields(this.model.steps[j], of[tag]);
         this.changed();
       },
     });
@@ -3576,6 +3604,18 @@ export class App {
     this.selectedStep = -1;
     this.changed();
     this.toast(`حُذف ${ids.size} عنصر${dependents ? ` و${dependents} خطوة تابعة` : ""}`);
+  }
+
+  /** Go back to step i: every later step is removed (one undo brings them all back). */
+  backTo(i: number): void {
+    const later = this.model.steps.length - 1 - i;
+    if (later <= 0) return;
+    if (!confirm(`الرجوع إلى الخطوة ${i + 1}: حذف ${later} خطوة بعدها؟ (Ctrl+Z يعيدها)`)) return;
+    this.snapshot();
+    for (const st of this.model.steps.splice(i + 1)) for (const id of createdIds(st)) delete this.model.names[id];
+    this.selectedStep = i;
+    this.changed();
+    this.toast(`رجوع إلى الخطوة ${i + 1}: حُذفت ${later} خطوة`);
   }
 
   private deleteStep(i: number): void {
