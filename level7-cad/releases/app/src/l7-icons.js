@@ -56,6 +56,8 @@ const I = {
   dimH: '<path class="g" d="M4 5v15M20 5v15"/><path class="o" d="M4 12h16M4 12l3-2.5M4 12l3 2.5M20 12l-3-2.5M20 12l-3 2.5"/>',
   dimV: '<path class="g" d="M5 4h15M5 20h15"/><path class="o" d="M12 4v16M12 4l-2.5 3M12 4l2.5 3M12 20l-2.5-3M12 20l2.5-3"/>',
   dimLength: '<path class="k" d="M3 20C8 9 16 8 21 9"/><path class="o" d="M3 14C7 5 15 3 21 4"/>',
+  // 0.9.165 length in one click: the curve, its length mark and a pointer click
+  dimLengthQuick: '<path class="k" d="M3 20C8 9 16 8 21 9"/><path class="o" d="M3 14C7 5 15 3 21 4"/><path class="b" d="M14 13l2 8 1.6-3.2L21 21l1-1-3.3-3.4L22 15z"/>',
   dimSum: '<path class="o" d="M18 5H7l6.5 7L7 19h11"/>',
   dimAngle: '<path class="k" d="M4 20h17M4 20L17 5"/><path class="o" d="M13 20a9 9 0 0 0-2.6-6.4"/>',
   measureDist: '<path class="of" d="M2.5 15.5l13-13 6 6-13 13z"/><path class="o" d="M2.5 15.5l13-13 6 6-13 13zM6.5 11.5l2 2M9.5 8.5l1.5 1.5M12.5 5.5l2 2"/>',

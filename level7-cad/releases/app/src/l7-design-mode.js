@@ -17,7 +17,7 @@ const GLYPH = {
   point: 'point', pointOn: 'pointFraction', intersect: 'pointCluster', pointMove: 'vector',
   line: 'line', lineAngle: 'angle', parallel: 'parallel', parallelMany: 'offsetEnds', setLength: 'lengthTo', trim: 'cutEnd',
   cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
-  dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimAngle: 'threeAngle',
+  dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimLengthQuick: 'length', dimAngle: 'threeAngle',
   stitchLock: 'stitchLock', stitchDouble: 'stitchDouble', stitchZigzag: 'stitchZigzag', stitchDeco: 'stitchDeco', stitchGather: 'stitchGather',
   grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
   textCreate: 'textCreate', delText: 'delFrame', delTextFrame: 'delFrame', delSymbolsFrame: 'delFrame', delStitchesFrame: 'delFrame', delNotchesFrame: 'delFrame',
@@ -45,6 +45,7 @@ const HINT = {
   dimAligned: 'انقر نقطتين، ثم حرّك الماوس لوضع خط البعد وانقر. القيمة تتحدث مع الباترون.',
   dimH: 'انقر نقطتين، ثم حرّك الماوس لأعلى أو أسفل لوضع البعد الأفقي وانقر.',
   dimV: 'انقر نقطتين، ثم حرّك الماوس يميناً أو يساراً لوضع البعد الرأسي وانقر.',
+  dimLengthQuick: 'انقر الخط أو المنحنى مرة واحدة: يُكتب طوله فوراً في الجهة التي نقرتها، ويتغير مع الباترون. انقر التالي، وكليك يمين للإنهاء. اسحب البعد لتقريبه أو إبعاده.',
   dimLength: 'انقر الخط أو المنحنى، ثم حرّك الماوس لوضع بعد الطول وانقر.',
   dimAngle: 'انقر نقطة على الضلع الأول، ثم رأس الزاوية، ثم نقطة على الضلع الثاني.',
   dimSum: 'انقر الخطوط والمنحنيات واحداً واحداً، ثم Enter أو كليك يمين؛ يظهر مجموع أطوالها Σ. اسحب أي بُعد لتقريبه أو إبعاده، ودابل كليك عليه لإضافة نص أو قلب اتجاه القيمة.',
@@ -249,6 +250,8 @@ export function installDesignMode() {
   // right click anywhere else closes an open menu
   document.addEventListener('contextmenu', e => {
     if (openCat !== null && !e.target.closest?.('[data-l7d-cat]')) { e.preventDefault(); showCat(null); }
+    // 0.9.165: a right click on the program around the drawing also closes the design's open window (Visibility …)
+    else if (!host.hidden && !e.target.closest?.('[data-l7d-cat]')) send({ type: 'l7:close-top' });
   }, true);
   // right click on a group icon opens its menu to choose another tool
   toolsBox.addEventListener('contextmenu', e => {

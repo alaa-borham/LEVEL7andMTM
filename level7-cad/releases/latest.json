@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.164",
- "notes": "نقاط الكرف المفعّل نقاط صغيرة؛ المربع على النقطة تحت الماوس فقط",
+ "version": "0.9.165",
+ "notes": "قياس طول بنقرة واحدة؛ رايت كليك في أي مكان يغلق النافذة المفتوحة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "9f4700ebe1eb8ba1bf8dd200a3c2f908d52d0cce2b1ad9c2ce5893149f3f4aaa",
-   "size": 141724
+   "sha256": "387a14f3647e0dc018de7cc7c6f8e1ea3bb722567411a6002341387007548c23",
+   "size": 142053
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 40449
   },
   {
-   "path": "assets/l7design/assets/index-D9IDJFFJ.js",
-   "sha256": "eebcf400e6387608998548e844ee64fd9b31c4d250aa0c299ba82b85228a26d7",
-   "size": 284632
+   "path": "assets/l7design/assets/index-DCxRTVK9.js",
+   "sha256": "466429a3a1ac5bfc936106a22111641584bd8dea2ee84d7d177c9078bd925792",
+   "size": 285605
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "7c9a13bc4e1c377322a4a6061c5a469d0d6de31f4b8dcaaf2c19955be4c32852",
+   "sha256": "a923fdd95710a932c97e35d2cab0c17e438a0603deb24b61bb3bc68e6a63d244",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "9d41b0d24cb41a0346676d4c283c9b85fa59dba0b3b43f3be2341ac0daaa5a0b",
+   "sha256": "106eaa9ce3f339fab0257dc72524fc575c59f1e1a65cfad7dbab061259ddc5c8",
    "size": 301
   },
   {
@@ -370,13 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "4697df8802812a404b414fa8559e06e4c9fef6c9ed0fb8a0f0df6aa46367b8dc",
-   "size": 45542
+   "sha256": "33d0848a5d22904757236a03cc49863cfdf703163c4003a1bcefe3b4439ffd21",
+   "size": 46085
   },
   {
    "path": "src/l7-icons.js",
-   "sha256": "de1039e42465b5ab7abe77707aac11aefa00f6134882ec5827e7a6d946881c38",
-   "size": 8114
+   "sha256": "6f003c5406f6d0d271bd88199e9a587d0c71ffbfdb363bcbac0a1a3917918350",
+   "size": 8364
   },
   {
    "path": "src/line-transform-ui.js",

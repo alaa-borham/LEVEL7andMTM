@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.165
+
+LEVEL7 design: Dimensions → length in one click: each click on a line or curve writes its length at once on the clicked side (the tool stays for the next one, right click ends); a right click anywhere (on the drawing or the program around it) closes the open window such as Visibility, without the ×.
+
 LEVEL7 and MTM 0.9.164
 
 LEVEL7 design: the points of the active curve show as small dots; the square shows only on the point under the pointer and while it is dragged.
