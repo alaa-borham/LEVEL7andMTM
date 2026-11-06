@@ -1016,3 +1016,10 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 .curve-bar.vert span:not(.bar-grip) { display: none; }
 .curve-bar.vert .bar-grip { text-align: center; }
 .curve-bar.vert select { width: 104px; }
+/* 0.9.169 test run: an error is clicked to show where it is */
+.check-win .ck-hint { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.check-win li.ck-go { cursor: pointer; border-radius: 4px; padding: 1px 4px; }
+.check-win li.ck-go:hover { background: color-mix(in srgb, #e53935 12%, transparent); }
+.check-win li.ck-go.on { background: color-mix(in srgb, #e53935 22%, transparent); }
+#canvas circle.err-flash { stroke: #e53935; stroke-width: 3; animation: err-flash 0.6s ease-in-out 4 alternate; }
+@keyframes err-flash { from { opacity: 1; } to { opacity: 0.25; } }

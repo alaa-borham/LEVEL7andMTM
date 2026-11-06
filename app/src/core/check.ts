@@ -6,6 +6,10 @@ export interface CheckRow {
   part: string; // "002 basic thobe"
   size: string;
   errors: string[]; // empty = built without errors
+  /** For each error, where it is (to show it on the drawing): a step index, a Z id or a piece id. */
+  refs: ({ step: number } | { z: number } | { piece: number })[];
+  k: number; // part index
+  sizeIndex: number; // -1 = base
 }
 
 export interface CheckResult {
@@ -27,14 +31,16 @@ export function checkParts(model: Model, o: { all: boolean; grade: boolean }): C
     const label = `${String(p.no).padStart(3, "0")} ${p.name ?? ""}`.trim();
     for (const i of sizes) {
       const r = evaluateModel(withSize({ ...model, steps, names, pieces, activePart: model.parts?.length ? k : model.activePart }, i));
+      // a Z is reported where it is used: a Z measured from another part's drawing is not an error in
+      // a part that does not use it
+      const zs = [...r.zErrors].filter(([id]) => usesZ(steps, pieces, id));
       const errors = [
         ...[...r.stepErrors].map(([si, msg]) => `خطوة ${si + 1}: ${msg}`),
-        // a Z is reported where it is used: a Z measured from another part's drawing is not an error in
-        // a part that does not use it
-        ...[...r.zErrors].filter(([id]) => usesZ(steps, pieces, id)).map(([id, msg]) => `Z${id}: ${msg}`),
+        ...zs.map(([id, msg]) => `Z${id}: ${msg}`),
         ...[...r.pieceErrors].map(([id, msg]) => `قطعة ${pieces.find((pc) => pc.id === id)?.name ?? id}: ${msg}`),
       ];
-      rows.push({ part: label, size: sizeName(model, i), errors });
+      const refs = [...[...r.stepErrors.keys()].map((step) => ({ step })), ...zs.map(([z]) => ({ z })), ...[...r.pieceErrors.keys()].map((piece) => ({ piece }))];
+      rows.push({ part: label, size: sizeName(model, i), errors, refs, k, sizeIndex: i });
     }
   }
   return { rows, parts: parts.length, sizes: sizes.length, failed: rows.filter((r) => r.errors.length).length };

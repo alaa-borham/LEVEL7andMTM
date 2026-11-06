@@ -186,6 +186,11 @@ if (embedded && window.parent !== window) {
   let zTop = 30;
   const toggleMain = makeWindow(panel, "main"), toggleZ = makeWindow(zwin, "z"), toggleParts = makeWindow(pwin, "parts");
   const togglePanel = (tab: string | null) => (tab === "z" ? toggleZ(tab) : tab === "partlist" ? toggleParts(tab) : toggleMain(tab));
+  // the test run window shows a Z error in the Z table (opened, not toggled closed)
+  app.showPanel = (tab) => {
+    const w = tab === "z" ? zwin : tab === "partlist" ? pwin : panel;
+    if (!w.classList.contains("open")) togglePanel(tab);
+  };
 
   const run = (action: string) => {
     if (["save", "dxf", "aama", "plt", "undo", "redo", "fit", "demo"].includes(action)) click(action);

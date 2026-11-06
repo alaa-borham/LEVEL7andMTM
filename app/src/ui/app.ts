@@ -1321,6 +1321,10 @@ export class App {
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     parts.push(this.formulaLabelsSvg());
+    if (this.flash) {
+      const [fx, fy] = this.toScreen(this.flash);
+      parts.push(`<circle class="err-flash" cx="${fx}" cy="${fy}" r="26" fill="none"/>`);
+    }
     parts.push(this.inheritSvg());
     parts.push(this.seamLabelsSvg());
     this.renderCurveBar();
@@ -2541,11 +2545,64 @@ export class App {
     el.className = "z-assistant marker-win check-win";
     el.dir = "rtl";
     const rows = r.rows.filter((x) => x.errors.length);
-    el.innerHTML = `<div class="za-head"><b>${title}: ${r.failed} من ${r.rows.length} فيها أخطاء</b><button data-ck="close">×</button></div><div class="za-body"><ul class="mk-list">${rows
-      .map((x) => `<li><b>${esc(x.part)}</b> · <span dir="ltr">${esc(x.size)}</span><ul>${x.errors.slice(0, 8).map((e) => `<li>${esc(e)}</li>`).join("")}${x.errors.length > 8 ? `<li>… و${x.errors.length - 8} غيرها</li>` : ""}</ul></li>`)
+    el.innerHTML = `<div class="za-head"><b>${title}: ${r.failed} من ${r.rows.length} فيها أخطاء</b><button data-ck="close">×</button></div><div class="za-body"><p class="ck-hint">انقر الخطأ لترى مكانه على الرسم</p><ul class="mk-list">${rows
+      .map((x, ri) => `<li><b>${esc(x.part)}</b> · <span dir="ltr">${esc(x.size)}</span><ul>${x.errors.slice(0, 8).map((e, ei) => `<li class="ck-go" data-r="${ri}" data-e="${ei}" title="إظهار مكانه على الرسم">${esc(e)}</li>`).join("")}${x.errors.length > 8 ? `<li>… و${x.errors.length - 8} غيرها</li>` : ""}</ul></li>`)
       .join("")}</ul></div>`;
     document.body.append(el);
-    el.addEventListener("click", (e) => (e.target as HTMLElement).closest('[data-ck="close"]') && el.remove());
+    el.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-ck="close"]')) return el.remove();
+      const go = t.closest<HTMLElement>(".ck-go");
+      if (!go) return;
+      el.querySelectorAll(".ck-go.on").forEach((x) => x.classList.remove("on"));
+      go.classList.add("on");
+      const row = rows[Number(go.dataset.r)];
+      this.gotoError(row.k, row.sizeIndex, row.refs[Number(go.dataset.e)]);
+    });
+  }
+
+  /** Opened by the program around the engine: the Z table (set from main). */
+  showPanel?: (tab: string) => void;
+  private flash: Pt | null = null;
+  private flashTimer = 0;
+
+  /** Show where an error of the test run is: its part and size, the step on the drawing (or what it is
+   * built on, when it could not be drawn), the piece, or the Z table. */
+  gotoError(k: number, size: number, ref: { step: number } | { z: number } | { piece: number } | undefined): void {
+    if (this.model.parts?.length && k !== (this.model.activePart ?? 0)) this.switchPart(k);
+    if ((this.model.activeSize ?? -1) !== size) this.setSize(size);
+    if (!ref) return;
+    if ("z" in ref) {
+      this.showPanel?.("z");
+      return this.toast(`Z${ref.z}: في جدول Z`);
+    }
+    let pts: Pt[] = [];
+    if ("piece" in ref) {
+      const pc = this.model.pieces?.find((p) => p.id === ref.piece);
+      const g = this.res.pieces.get(ref.piece);
+      pts = g ? g.sew : (pc?.edges ?? []).flatMap((id) => this.res.objects.get(id)?.pts ?? []);
+    } else {
+      const st = this.model.steps[ref.step];
+      if (!st) return;
+      this.selectedStep = ref.step;
+      const made = createdIds(st).filter((id) => this.res.objects.has(id) && !this.res.stepErrors.has(ref.step));
+      const ids = made.length ? made : usedIds(st).filter((id) => this.res.objects.has(id));
+      pts = ids.flatMap((id) => this.res.objects.get(id)!.pts);
+      this.renderSteps();
+    }
+    if (!pts.length) return this.toast("لا يوجد على الرسم ما يُظهر مكان هذا الخطأ");
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const r = this.svg.getBoundingClientRect();
+    this.cx = (x0 + x1) / 2;
+    this.cy = (y0 + y1) / 2;
+    // the place fills about half the drawing (not closer than the current zoom for a small place)
+    const fit = Math.min((r.width * 0.5) / Math.max(x1 - x0, 1), (r.height * 0.5) / Math.max(y1 - y0, 1));
+    this.scale = Math.min(200, Math.max(Math.min(this.scale, fit), fit));
+    this.flash = [this.cx, this.cy];
+    clearTimeout(this.flashTimer);
+    this.flashTimer = window.setTimeout(() => ((this.flash = null), this.render()), 2500);
+    this.render();
   }
 
   /** Switch a size on / off (-1 = base). Not part of the drawing history. */
