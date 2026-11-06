@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.172
+
+LEVEL7 design: dimension bar: unit (mm / cm / inch) and ×1 / ×2 / ×4 as buttons in sight (the inch was hidden in a list); the tool bars (curve, dimension, seam allowance, inherit) follow the drawing background: dark with light writing on a dark drawing, light on a light one.
+
 LEVEL7 and MTM 0.9.171
 
 The bottom bar shows the installed version ("الإصدار 0.9.171 · التحديثات · …").
