@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.166
+
+LEVEL7 design: sharp / round / chamfer corner of two lines that already cross before their ends (often with a curve): the corner is that crossing and both are cut back to it, where it used to fail ("the corner is behind the start of a line"); test run / grade reports a Z only in the parts that use it (a Z measured from part 001's drawing is no longer an error in other parts).
+
 LEVEL7 and MTM 0.9.165
 
 LEVEL7 design: Dimensions → length in one click: each click on a line or curve writes its length at once on the clicked side (the tool stays for the next one, right click ends); a right click anywhere (on the drawing or the program around it) closes the open window such as Visibility, without the ×.
