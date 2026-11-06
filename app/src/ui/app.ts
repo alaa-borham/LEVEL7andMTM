@@ -119,6 +119,22 @@ function setupBar(bar: HTMLElement): void {
   });
 }
 
+/** Relative luminance of a #rrggbb colour (0 black … 1 white). */
+function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) return 0.5;
+  const ch = (h: string) => {
+    const v = parseInt(h, 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(m[1]) + 0.7152 * ch(m[2]) + 0.0722 * ch(m[3]);
+}
+/** Contrast ratio of two colours (1 … 21). */
+function contrast(a: string, b: string): number {
+  const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+}
+
 /** "Show all parts" (as GRAFIS): where each part is drawn, side by side in rows, in part order;
  * a translation per part (null = empty part). */
 function layoutParts(res: EvalResult[]): (Pt | null)[] {
@@ -4418,6 +4434,16 @@ export class App {
   private setColor(k: string, v: string): void {
     const c = this.colors();
     c[k] = v;
+    if (k === "--canvas") {
+      // a background that hides the lines: those colours turn to readable ones (as on a dark / light sheet)
+      const dark = luminance(v) < 0.35;
+      const auto: Record<string, string> = dark ? { "--line": "#e6e8ec", "--curve": "#a9c4dc", "--point": "#ff6b6b" } : { "--line": "#1f2430", "--curve": "#5b6270", "--point": "#d32f2f" };
+      const changed: string[] = [];
+      for (const key of ["--line", "--curve", "--point"]) {
+        if (contrast(this.colorOf(key), v) < 3) (c[key] = auto[key]), changed.push(COLOR_KEYS.find(([q]) => q === key)![1]);
+      }
+      if (changed.length) this.toast(`الخلفية ${dark ? "داكنة" : "فاتحة"}: تغيّر لون ${changed.join(" و")} ليظهر عليها`);
+    }
     try {
       localStorage.setItem("level7.colors", JSON.stringify(c));
     } catch {}
@@ -4428,6 +4454,14 @@ export class App {
     const c = this.colors(), st = document.body.style; // on body: the theme sets its colours there
     for (const [k] of COLOR_KEYS) if (k !== "--canvas") c[k] ? st.setProperty(k, c[k]) : st.removeProperty(k);
     this.svg.style.background = c["--canvas"] ?? "";
+    // labels, halos and handles on the drawing follow the background's lightness
+    const bg = c["--canvas"], sv = this.svg.style;
+    if (bg) {
+      const dark = luminance(bg) < 0.35;
+      sv.setProperty("--bg", bg);
+      sv.setProperty("--text", dark ? "#e8eaed" : "#1f2430");
+      sv.setProperty("--muted", dark ? "#9aa3ad" : "#6b7280");
+    } else for (const k of ["--bg", "--text", "--muted"]) sv.removeProperty(k);
   }
 
   openVisibility(): void {
@@ -4450,7 +4484,10 @@ export class App {
     });
     el.addEventListener("input", (e) => {
       const t = e.target as HTMLInputElement;
-      if (t.dataset.ck) this.setColor(t.dataset.ck, t.value);
+      if (!t.dataset.ck) return;
+      this.setColor(t.dataset.ck, t.value);
+      // the background may have turned the line colours readable: show them
+      if (t.dataset.ck === "--canvas") el.querySelectorAll<HTMLInputElement>("[data-ck]").forEach((i) => i !== t && (i.value = this.colorOf(i.dataset.ck as string)));
     });
     el.addEventListener("click", (e) => {
       if (!(e.target as HTMLElement).closest('[data-v="reset-colors"]')) return;
