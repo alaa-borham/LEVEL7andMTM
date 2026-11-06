@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.176
+
+LEVEL7 design: double-click on a curve shows its bar and handles together with its values window, which minimizes to its title (remembered) and follows handle drags; Ctrl+Z / Ctrl+Y / Ctrl+S and the other letter shortcuts work with any keyboard language (Arabic too); the dimension bar keeps its unit (mm / cm / inch) and ×1 / ×2 / ×4 buttons when it stands vertical; the values window is above the tool bars; the strip icon's tip names the tool it shows; seam allowance and notch in a part with no piece start «piece from outline» and come back after it; grain line as GRAFIS: start point, direction in 90° steps (Shift: any angle) and length, one arrowhead; no teeth on the seam allowance where a curve meets a line.
+
 LEVEL7 and MTM 0.9.175
 
 LEVEL7 design: a drag on a curve no longer adds a point by itself; points are added only with ➕ in the curve bar (then a click on the curve adds one there, and it can be dragged at once; right click ends).

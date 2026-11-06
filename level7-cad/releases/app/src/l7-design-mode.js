@@ -72,7 +72,8 @@ const HINT = {
 const KIND = name => /\.xlsx$/i.test(name) ? 'xlsx' : /\.csv$/i.test(name) ? 'csv' : /library(\.level7lib)?\.json$/i.test(name) ? 'project' : /\.level7$|\.level7\.json$|\.json$/i.test(name) ? 'design' : /\.plt$/i.test(name) ? 'hpgl' : /\.rul$/i.test(name) ? 'rul' : /\.dxf$/i.test(name) ? 'dxf' : /\.iso$/i.test(name) ? 'iso' : null;
 /** Same shortcuts as the program's toolbox (and the engine frame, which forwards them). */
 function shortcut(e, typing) {
-  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  // 0.9.176: the key's place (KeyZ → z), so the shortcuts work with any keyboard language
+  const k = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && !e.altKey && e.code === 'Digit6') return e.shiftKey ? 'testAll' : 'gradeAll';
   if (!typing && !ctrl && !e.altKey && e.code === 'Space') return 'zoomMode'; // as GRAFIS: zoom mode
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
@@ -218,13 +219,15 @@ export function installDesignMode() {
     return list;
   };
   const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return iconOf(it); };
+  // 0.9.176: the strip icon's tip names the tool it shows (and what it does), then how to reach the others
+  const stripTitle = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; const hint = it?.tool && HINT[it.tool]; return `${it?.name || c.name}${hint ? '\n' + hint : ''}\n— ${c.name} · كليك: هذه الأداة، كليك يمين: باقي الأدوات`; };
   const renderTools = () => {
     toolsBox.replaceChildren();
     cats = categories();
     for (const c of cats) {
       const wrap = document.createElement('div'); wrap.className = 'l7-cat';
       const head = document.createElement('button'); head.type = 'button'; head.className = 'l7-design-cat'; head.dataset.l7dCat = c.name;
-      head.setAttribute('aria-expanded', 'false'); head.setAttribute('aria-haspopup', 'menu'); head.title = c.name + ' · كليك: آخر أداة، كليك يمين: باقي الأدوات'; head.setAttribute('aria-label', c.name);
+      head.setAttribute('aria-expanded', 'false'); head.setAttribute('aria-haspopup', 'menu'); head.title = stripTitle(c); head.setAttribute('aria-label', c.name);
       head.innerHTML = stripIcon(c);
       const panel = document.createElement('div'); panel.className = 'l7-design-flyout'; panel.hidden = true; panel.dataset.l7dCatPanel = c.name; panel.setAttribute('role', 'menu');
       panel.innerHTML = `<header>${c.name}</header>`;
@@ -269,7 +272,7 @@ export function installDesignMode() {
     if (t && last[t.group] !== t.key) {
       last[t.group] = t.key; try { localStorage.setItem('level7.design.lastTools', JSON.stringify(last)); } catch {}
       const c = cats.find(x => x.name === t.group), h = c && toolsBox.querySelector(`[data-l7d-cat="${CSS.escape(c.name)}"]`);
-      if (h) { h.innerHTML = stripIcon(c); decorate(h); }
+      if (h) { h.innerHTML = stripIcon(c); h.title = stripTitle(c); decorate(h); }
     }
     guide.hidden = !t;
     if (t && guide.dataset.tool !== t.key) {

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.175",
- "notes": "لا تُضاف نقاط للكرف إلا بزر ➕ إضافة نقطة",
+ "version": "0.9.176",
+ "notes": "النافذتان معاً مع تصغير؛ Ctrl+Z بكل اللغات؛ أزرار الوحدة دائماً؛ الحواشي والنوتش يبدآن القطعة؛ خط النسيج مثل GRAFIS؛ بلا أسنان في الحاشية",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "6307a89b6845b738b9342487672c0aca7d72de5b87b39d3b7f02715a4100c5a0",
-   "size": 145045
+   "sha256": "1548af2103e8976de134bfdbce7d89e53694f538f21c17d6cb6492f4d581b8be",
+   "size": 145795
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-3S2H8kOS.js",
-   "sha256": "67b4bae45cdfed7cfd5cc19fca48772f247a519b75d7f17524141e36750f9581",
-   "size": 296371
+   "path": "assets/l7design/assets/index-DciUbDS8.js",
+   "sha256": "b25f70a3b8f044633554dd6446351b70d2cebafa44db256dc9f3d70ae0f13798",
+   "size": 299328
   },
   {
-   "path": "assets/l7design/assets/index-G6hYEKYP.css",
-   "sha256": "ffbab9f5f580f96e4c99510ffe8e33e0a5b037aa0b7b2b601461cec235f6e437",
-   "size": 43058
+   "path": "assets/l7design/assets/index-LqUVFNxK.css",
+   "sha256": "95d804a68d94684db86126aeb85001ed0aba19d61b9c5b73bf0e18a943a8820c",
+   "size": 43412
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "5cbaf3660b52c359101a675c51c5b2f3109772a3b364f8ba678b93cbb266171e",
+   "sha256": "1ba6114c8af52012b68753fbff7bd6f3651af4563a5bbf48d158712489cc389c",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "1f863ef25ac30104decbdcbcde789c196f1841d8608cecf7912340bf8fe5bfe0",
+   "sha256": "0861b44104d640b86568eecf24708cece4a358cae7bf575c2fa4807153f19f01",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "33d0848a5d22904757236a03cc49863cfdf703163c4003a1bcefe3b4439ffd21",
-   "size": 46085
+   "sha256": "c9c3c41eb8954ec26dfd98223767fa76c42c464fc1a2c1aabdac6656c0a42d68",
+   "size": 46600
   },
   {
    "path": "src/l7-icons.js",
@@ -430,8 +430,8 @@
   },
   {
    "path": "src/native-app.js",
-   "sha256": "013d6cf15636f64ce52867f0fb0e51c23545fac974dce6535e334fcb041bfd27",
-   "size": 139588
+   "sha256": "fb001d896d452f66baeafc27d1d3ba163e1f946a10b6be2ace9ec98ad7a67fc2",
+   "size": 139794
   },
   {
    "path": "src/native-bartack10-template.mjs",

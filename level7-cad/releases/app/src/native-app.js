@@ -76,6 +76,8 @@ let partFilter = '';
 let overview = false, hiddenParts = new Set();
 const parameterChecks = new WeakMap();
 let parameterContext = null, parameterAnnouncement = null;
+// 0.9.176: a letter key by its place (KeyZ → z), so Ctrl+Z / Ctrl+Y work with any keyboard language
+const keyOf = event => /^Key[A-Z]$/.test(event.code || '') ? event.code.slice(3).toLowerCase() : String(event.key || '').toLowerCase();
 let localUpdateState = null, localUpdateBusy = false, shownVersion = '';
 let construction = null;
 let ownedParts = null;
@@ -1153,8 +1155,8 @@ document.addEventListener('keydown', event => {
   else if (event.ctrlKey && event.key.toLowerCase() === 't' && style) { event.preventDefault(); partProperties?.open(); }
   else if (!editing && event.ctrlKey && event.key.toLowerCase() === 'x' && style) { event.preventDefault(); showXValues(); }
   else if (event.key === 'F11' && style) { event.preventDefault(); showZValues(); }
-  else if (!editing && event.ctrlKey && (event.key.toLowerCase() === 'y' || (event.shiftKey && event.key.toLowerCase() === 'z'))) { event.preventDefault(); redo(); }
-  else if (!editing && event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); undo(); }
+  else if (!editing && event.ctrlKey && (keyOf(event) === 'y' || (event.shiftKey && keyOf(event) === 'z'))) { event.preventDefault(); redo(); }
+  else if (!editing && event.ctrlKey && keyOf(event) === 'z') { event.preventDefault(); undo(); }
   else if (!editing && event.ctrlKey && event.shiftKey && event.code === 'Digit1') { event.preventDefault(); replay(); }
   else if (!editing && (event.key === 'F6' || event.key === 'Home')) { event.preventDefault(); fit(); }
   else if (!editing && event.key === 'F5' && !document.querySelector('dialog[open]')) { event.preventDefault(); setOverview(true); }
