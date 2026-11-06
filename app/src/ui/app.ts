@@ -59,6 +59,66 @@ const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00
 
 type Hover = Pick | null;
 
+/** The tool bars over the drawing (curve, seam allowance, inherit): a grip to move them anywhere and a
+ * button to stand them up (vertical) or lay them down; where and how is remembered. */
+const BAR_CHROME = `<span class="bar-grip" title="اسحب لتحريك الشريط · دابل كليك يعيده إلى مكانه">⠿</span><button class="bar-turn" title="أفقي / رأسي">⇅</button>`;
+const barPrefs = (): { x?: number; y?: number; vert?: boolean } => {
+  try {
+    return JSON.parse(localStorage.getItem("level7.barPos") || "{}");
+  } catch {
+    return {};
+  }
+};
+const saveBarPrefs = (v: { x?: number; y?: number; vert?: boolean }) => {
+  try {
+    localStorage.setItem("level7.barPos", JSON.stringify(v));
+  } catch {}
+};
+function placeBar(bar: HTMLElement): void {
+  const p = barPrefs();
+  bar.classList.toggle("vert", !!p.vert);
+  const wrap = bar.parentElement;
+  if (p.x === undefined || p.y === undefined || !wrap) {
+    bar.style.left = bar.style.top = bar.style.transform = "";
+    return;
+  }
+  // kept inside the drawing area
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  bar.style.transform = "none";
+  bar.style.left = `${Math.max(0, Math.min(p.x, W - 60))}px`;
+  bar.style.top = `${Math.max(0, Math.min(p.y, H - 40))}px`;
+}
+function setupBar(bar: HTMLElement): void {
+  queueMicrotask(() => placeBar(bar));
+  bar.addEventListener("mousedown", (e) => {
+    const grip = (e.target as HTMLElement).closest(".bar-grip");
+    if (!grip || e.button !== 0) return;
+    e.preventDefault();
+    const r = bar.getBoundingClientRect(), wr = (bar.parentElement as HTMLElement).getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev: MouseEvent) => {
+      saveBarPrefs({ ...barPrefs(), x: ev.clientX - wr.left - dx, y: ev.clientY - wr.top - dy });
+      document.querySelectorAll<HTMLElement>(".curve-bar").forEach(placeBar);
+    };
+    const up = () => (window.removeEventListener("mousemove", move), window.removeEventListener("mouseup", up));
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  });
+  bar.addEventListener("dblclick", (e) => {
+    if (!(e.target as HTMLElement).closest(".bar-grip")) return;
+    const p = barPrefs();
+    delete p.x;
+    delete p.y;
+    saveBarPrefs(p);
+    document.querySelectorAll<HTMLElement>(".curve-bar").forEach(placeBar);
+  });
+  bar.addEventListener("click", (e) => {
+    if (!(e.target as HTMLElement).closest(".bar-turn")) return;
+    saveBarPrefs({ ...barPrefs(), vert: !barPrefs().vert });
+    document.querySelectorAll<HTMLElement>(".curve-bar").forEach(placeBar);
+  });
+}
+
 /** "Show all parts" (as GRAFIS): where each part is drawn, side by side in rows, in part order;
  * a translation per part (null = empty part). */
 function layoutParts(res: EvalResult[]): (Pt | null)[] {
@@ -745,6 +805,7 @@ export class App {
     if (!bar) {
       bar = document.createElement("div");
       bar.className = "curve-bar seam-bar";
+      setupBar(bar);
       (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
       bar.addEventListener("mousedown", (e) => e.stopPropagation());
       bar.addEventListener("click", (e) => {
@@ -775,7 +836,7 @@ export class App {
     const m = this.seamTool?.mode, v = this.seamVals;
     const box = (mode: string, icon: string, tip: string, inputs: string) => `<label data-sm="${mode}" class="sm${m === mode ? " on" : ""}" title="${tip}">${icon}${inputs}</label>`;
     const inp = (k: keyof typeof v) => `<input data-sv="${k}" class="expr" dir="ltr" value="${esc(v[k])}"/>`;
-    bar.innerHTML = `<b>حواشي الخياطة</b>` +
+    bar.innerHTML = BAR_CHROME + `<b>حواشي الخياطة</b>` +
       box("std", SEAM_ICON.std, "مسافة قياسية · Assign standard distance", inp("std")) +
       box("v0", SEAM_ICON.dist, "مسافة · Assign distance", inp("v0")) + box("v1", SEAM_ICON.dist, "مسافة · Assign distance", inp("v1")) + box("v2", SEAM_ICON.dist, "مسافة · Assign distance", inp("v2")) +
       box("unpar", SEAM_ICON.unpar, "غير متوازية: القيمة الأولى عند الطرف الأقرب للنقرة · Assign unparallel", inp("ua") + inp("ub")) +
@@ -909,6 +970,7 @@ export class App {
     if (!bar) {
       bar = document.createElement("div");
       bar.className = "curve-bar inherit-bar";
+      setupBar(bar);
       (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
       bar.addEventListener("mousedown", (e) => e.stopPropagation());
       bar.addEventListener("click", (e) => {
@@ -917,7 +979,7 @@ export class App {
         else if (a === "end") this.endInheritPick();
       });
     }
-    bar.innerHTML = `<b>وراثة عناصر</b><span>مرّر على خط من بارت سابق ثم انقره: يُنقل إلى البارت النشط ويبقى تابعاً لبارته · كليك يمين للإنهاء</span><button data-ihb="list" title="الاختيار من قائمة">☰ القائمة</button><button data-ihb="end">إنهاء</button>`;
+    bar.innerHTML = BAR_CHROME + `<b>وراثة عناصر</b><span>مرّر على خط من بارت سابق ثم انقره: يُنقل إلى البارت النشط ويبقى تابعاً لبارته · كليك يمين للإنهاء</span><button data-ihb="list" title="الاختيار من قائمة">☰ القائمة</button><button data-ihb="end">إنهاء</button>`;
   }
 
   private inheritAt(sx: number, sy: number): { k: number; id: number } | null {
@@ -1670,6 +1732,7 @@ export class App {
     if (!bar) {
       bar = document.createElement("div");
       bar.className = "curve-bar obj-bar";
+      setupBar(bar);
       (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
       bar.addEventListener("mousedown", (e) => e.stopPropagation());
       bar.addEventListener("click", (e) => {
@@ -1696,7 +1759,7 @@ export class App {
       `<input type="color" data-color="1" value="${sty.color ?? "#2fa4dd"}" title="لون الخط"/><button data-nocolor="1" title="اللون الافتراضي"${sty.color ? "" : " disabled"}>↺</button>`;
     if (!c) {
       this.curveMode = null;
-      bar.innerHTML = `<b>${esc(this.model.names[first] ?? "خط")}</b>${styleCtl}<span>رايت كليك للخروج</span>`;
+      bar.innerHTML = BAR_CHROME + `<b>${esc(this.model.names[first] ?? "خط")}</b>${styleCtl}<span>رايت كليك للخروج</span>`;
       return;
     }
     const b = (m: string, icon: string, tip: string) => `<button data-cm="${m}" class="${this.curveMode === m ? "on" : ""}" title="${tip}">${icon}</button>`;
@@ -1706,7 +1769,7 @@ export class App {
       del: "انقر نقطة داخل المنحنى لحذفها منه",
       rel: "انقر الخط الذي تُقاس منه زاوية طرف المنحنى (مثلاً 90° عمودي عليه)",
     };
-    bar.innerHTML = `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
+    bar.innerHTML = BAR_CHROME + `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
       b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
       b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") +
       `<button data-cedit="1" title="كتابة قيم المنحنى: الاتجاهات والشدة">✎</button>` + styleCtl +
