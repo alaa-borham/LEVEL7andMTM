@@ -31,7 +31,7 @@ try{
  // 3) the curve: its end on line 4 shows "100"
  const mid=await f.evaluate(()=>{const o=window.level7.res.objects.get(7);return window.level7.toScreen(o.pts[Math.floor(o.pts.length/2)]);});
  await page.mouse.move(box.x+mid[0],box.y+mid[1]);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+mid[0],box.y+mid[1]);l=await labels();
- assert(await f.evaluate(()=>window.level7.selectedStep)===6&&l.includes('100'),JSON.stringify(l));pass(`a double-click on the curve shows the formula of its end: ${l.join(' | ')}`);
+ assert(await f.evaluate(()=>window.level7.selectedStep)===6&&l.some(t=>/^\S+ ▸ 100$/.test(t)),JSON.stringify(l));pass(`a double-click on the curve shows the formula of its end: ${l.join(' | ')}`);
  // 4) while the step window is open (double-click edit) the formulas stay on the drawing
  await f.evaluate(()=>window.level7.editStep(3));l=await labels();assert(l.includes('Z9 الكتف=225'),JSON.stringify(l));pass('the formulas also show while the step is being edited');
 }catch(e){failed=1;console.error(e);}

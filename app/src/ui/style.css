@@ -1044,3 +1044,8 @@ body.canvas-dark .curve-bar svg { color: var(--bar-fg); }
 #tool-box .form-min { min-width: 28px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; line-height: 1; }
 #tool-box.mini > :not(h4) { display: none !important; }
 #tool-box.mini h4 { margin: 0; }
+#canvas .ghost-piece { opacity: .7; } /* the pieces of the other parts shown: seam allowances stay in sight */
+.chip input.nlen { width: 4.5em; margin: 0 2px; padding: 0 3px; }
+/* 0.9.181: background picture moved / resized by hand */
+#canvas .img-frame { fill: none; stroke: #2fa4dd; stroke-width: 1.5; stroke-dasharray: 6 4; }
+#canvas .img-handle { fill: #fff; stroke: #2fa4dd; stroke-width: 1.5; cursor: nwse-resize; }

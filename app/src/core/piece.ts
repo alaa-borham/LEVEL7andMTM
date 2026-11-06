@@ -1,7 +1,7 @@
 // Pattern pieces: a closed outline made of construction objects (lines and
 // curves) picked in order, with seam allowance per edge, notches and grain line.
 
-import { closestOnPolyline, crossings, dedupe, dist, offsetPolyline, polyLen, subPolyline, type Pt } from "./geometry";
+import { closestOnPolyline, crossings, dedupe, dist, offsetPolyline, pointAlong, polyLen, subPolyline, type Pt } from "./geometry";
 import type { PointRef } from "./model";
 
 export interface Piece {
@@ -17,6 +17,10 @@ export interface Piece {
   notches: PointRef[];
   /** Notch shape per notch (same order): slit (default), T, V or castle (box). */
   notchTypes?: NotchType[];
+  /** Notch length per notch (mm or a formula with X / Z); empty = the standard length. */
+  notchLen?: string[];
+  /** Cut line corners (as GRAFIS): key "a,b" = the two edge ids (smaller first) meeting there. */
+  cutCorners?: Record<string, { kind: "round" | "chamfer"; size: string }>;
   grain: string; // grain line angle in degrees (90 = vertical)
 }
 
@@ -40,6 +44,8 @@ export interface PieceGeo {
   notches: Notch[];
   grain: [Pt, Pt];
   centre: Pt;
+  /** Corners of the cut line between two edges: where they are and their key (see Piece.cutCorners). */
+  cutCornerAt?: { pt: Pt; key: string }[];
   error?: string;
 }
 
@@ -120,13 +126,20 @@ export function outline(edges: Pt[][], order?: number[]): { sew: Pt[]; parts: Pt
 }
 
 /** Cutting line: every edge moved outward by its allowance, corners mitred. */
-export function cutLine(parts: Pt[][], allowance: (number | [number, number])[]): { pts: Pt[]; edges: Pt[][] } {
+/** Corner treatment of the cut line at the end of a part (as GRAFIS): rounded (radius) or cut off (distance from the corner). */
+export interface CutCorner {
+  kind: "round" | "chamfer";
+  size: number;
+}
+
+export function cutLine(parts: Pt[][], allowance: (number | [number, number])[], treat: (CutCorner | undefined)[] = []): { pts: Pt[]; edges: Pt[][]; corners: (Pt | null)[] } {
   const n = parts.length;
   const pair = (a: number | [number, number]): [number, number] => (typeof a === "number" ? [a, a] : a);
   // counter-clockwise outline: outward = right of travel = negative offset
   const off = parts.map((p, i) => {
     const [a0, a1] = pair(allowance[i]);
-    return a0 === a1 ? (a0 > 0 ? offsetPolyline(p, -a0) : [...p]) : offsetVarying(p, -a0, -a1);
+    const o = a0 === a1 ? (a0 > 0 ? offsetPolyline(p, -a0) : [...p]) : offsetVarying(p, -a0, -a1);
+    return foldFree(p, o, Math.min(a0, a1));
   });
   const maxA = Math.max(...allowance.flatMap(pair), 1);
   const startAt = off.map(() => 0);
@@ -149,15 +162,76 @@ export function cutLine(parts: Pt[][], allowance: (number | [number, number])[])
     }
     corner.push(null); // too sharp or parallel: bevel (straight join of the two ends)
   }
-  const out: Pt[] = [];
-  const edges: Pt[][] = [];
+  const edges: Pt[][] = off.map((p, i) => subPolyline(p, startAt[i], endAt[i]));
+  // rounded / cut-off corners: both edges are shortened and the gap is closed by an arc or a straight cut
   for (let i = 0; i < n; i++) {
-    const seg = subPolyline(off[i], startAt[i], endAt[i]);
-    edges.push(seg);
-    out.push(...(out.length && dist(out[out.length - 1], seg[0]) < 1e-6 ? seg.slice(1) : seg));
+    const t = treat[i], c = corner[i], j = (i + 1) % n;
+    if (!t || !c || !(t.size > 0) || n < 2) continue;
+    const A = edges[i], B = edges[j], La = polyLen(A), Lb = polyLen(B);
+    if (La < 1e-6 || Lb < 1e-6) continue;
+    const dA = unit2(A[A.length - 1], pointAlong(A, Math.min(1, La / 2), true)); // from the corner back along A
+    const dB = unit2(B[0], pointAlong(B, Math.min(1, Lb / 2))); // from the corner on along B
+    const cos = Math.max(-1, Math.min(1, dA[0] * dB[0] + dA[1] * dB[1]));
+    const half = Math.acos(cos) / 2; // half the inside angle of the corner
+    let k = t.kind === "round" ? t.size / Math.tan(half || 1e-9) : t.size; // tangent length / cut distance
+    k = Math.min(k, 0.45 * La, 0.45 * Lb);
+    if (!(k > 1e-3)) continue;
+    const a = pointAlong(A, k, true), b = pointAlong(B, k);
+    const arc: Pt[] = [];
+    if (t.kind === "round")
+      for (let q = 1; q < 12; q++) {
+        const u = q / 12, w = 1 - u; // quadratic Bezier a → corner → b: tangent to both edges
+        arc.push([w * w * a[0] + 2 * w * u * c[0] + u * u * b[0], w * w * a[1] + 2 * w * u * c[1] + u * u * b[1]]);
+      }
+    edges[i] = [...subPolyline(A, 0, La - k), ...arc];
+    edges[j] = subPolyline(B, k, Lb);
   }
+  const out: Pt[] = [];
+  for (const seg of edges) out.push(...(out.length && dist(out[out.length - 1], seg[0]) < 1e-6 ? seg.slice(1) : seg));
   if (dist(out[0], out[out.length - 1]) < 1e-6) out.pop();
-  return { pts: out, edges };
+  return { pts: out, edges, corners: corner };
+}
+
+function unit2(from: Pt, to: Pt): Pt {
+  const L = dist(from, to) || 1;
+  return [(to[0] - from[0]) / L, (to[1] - from[1]) / L];
+}
+
+/**
+ * Where the sewing line bends tighter than the allowance (a small hook at a
+ * corner), its offset folds back on itself: those points lie nearer the sewing
+ * line than the allowance. They are dropped so the cut line stays clean.
+ */
+export function foldFree(src: Pt[], off: Pt[], a: number): Pt[] {
+  if (a <= 0 || off.length < 3) return off;
+  const keep = off.filter((q) => closestOnPolyline(src, q).d >= a * 0.97);
+  return unloop(keep.length >= 2 ? keep : off);
+}
+
+/** Cuts out small loops (the line crossing itself a little further on). */
+function unloop(p: Pt[]): Pt[] {
+  const out = [...p];
+  for (let i = 0; i + 3 < out.length; i++) {
+    let reach = 0;
+    for (let j = i + 2; j + 1 < out.length; j++) {
+      reach += dist(out[j - 1], out[j]);
+      if (reach > 200) break;
+      const x = segCross(out[i], out[i + 1], out[j], out[j + 1]);
+      if (x) {
+        out.splice(i + 1, j - i, x);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+function segCross(a: Pt, b: Pt, c: Pt, d: Pt): Pt | null {
+  const den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+  if (Math.abs(den) < 1e-12) return null;
+  const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den;
+  const u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+  return t > 1e-9 && t < 1 - 1e-9 && u > 1e-9 && u < 1 - 1e-9 ? [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])] : null;
 }
 
 /** Offset that changes evenly along the line from d0 at its start to d1 at its end. */
@@ -197,6 +271,12 @@ export interface PieceInput {
   /** Unparallel: the allowance at the end of each edge (as the edge object runs); undefined = parallel. */
   allowanceEnd?: (number | undefined)[];
   notchPoints: Pt[];
+  /** Length of each notch (undefined = standard: the allowance, at most 6 mm). */
+  notchDepth?: (number | undefined)[];
+  /** Direction into the piece along an inner line ending at the notch (null = square to the edge). */
+  notchDir?: (Pt | null)[];
+  /** Evaluated cut line corners, keyed as Piece.cutCorners. */
+  cutCorners?: Record<string, CutCorner>;
   grainAngle: number;
 }
 
@@ -211,15 +291,30 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     const same = closestOnPolyline(e, p[0]).s <= closestOnPolyline(e, p[p.length - 1]).s;
     return same ? [a, b] : [b, a];
   });
-  const cl = allowance.some(([a, b]) => a > 0 || b > 0) ? cutLine(parts, allowance) : { pts: [...sew], edges: parts };
+  const ids = inp.piece.edges, n = order.length;
+  const keyAt = (i: number) => {
+    const a = ids[order[i]], b = ids[order[(i + 1) % n]];
+    return a < b ? `${a},${b}` : `${b},${a}`;
+  };
+  const treat = order.map((_, i) => inp.cutCorners?.[keyAt(i)]);
+  const cl = cutLine(parts, allowance, treat);
   const cut = cl.pts;
   const notches = inp.notchPoints.map((x, idx) => {
-    const { pt, n } = outwardAt(sew, x);
+    const { pt, n: square } = outwardAt(sew, x);
     const k = nearestPart(parts, pt);
     const [a0, a1] = allowance[k];
     const a = a0 === a1 ? a0 : a0 + ((a1 - a0) * closestOnPolyline(parts[k], pt).s) / (polyLen(parts[k]) || 1);
-    const depth = a > 0 ? Math.min(a, 6) : 6;
-    const at: Pt = [pt[0] + n[0] * a, pt[1] + n[1] * a];
+    const set = inp.notchDepth?.[idx];
+    const depth = set !== undefined && set > 0 ? set : a > 0 ? Math.min(a, 6) : 6;
+    // along an inner line that ends here (its extension out to the cut line), else square to the edge
+    const d = inp.notchDir?.[idx];
+    const n: Pt = d && -(d[0] * square[0] + d[1] * square[1]) > 0.25 ? [-d[0], -d[1]] : square;
+    let at: Pt = [pt[0] + n[0] * a, pt[1] + n[1] * a];
+    if (a > 0 && n !== square) {
+      const ray: Pt[] = [pt, [pt[0] + n[0] * (a * 6 + 10), pt[1] + n[1] * (a * 6 + 10)]];
+      const hits = crossings(ray, [...cut, cut[0]], false);
+      if (hits.length) at = hits.reduce((p, q) => (q.s < p.s ? q : p)).pt;
+    }
     const to: Pt = [at[0] - n[0] * depth, at[1] - n[1] * depth];
     const type: NotchType = inp.piece.notchTypes?.[idx] ?? "slit";
     const t: Pt = [-n[1], n[0]], w = 2;
@@ -232,15 +327,16 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     return { at, to, type, shape };
   });
   const centre = centroid(sew);
-  const ys = sew.map((p) => p[1]);
-  const xs = sew.map((p) => p[0]);
   const ang = (inp.grainAngle * Math.PI) / 180;
-  const half = 0.3 * Math.max(Math.max(...ys) - Math.min(...ys), Math.max(...xs) - Math.min(...xs));
+  // the grain line stays inside the piece: 70% of its size along the grain direction
+  const along = sew.map((p) => (p[0] - centre[0]) * Math.cos(ang) + (p[1] - centre[1]) * Math.sin(ang));
+  const half = 0.35 * (Math.max(...along) - Math.min(...along));
   const g: [Pt, Pt] = [
     [centre[0] - Math.cos(ang) * half, centre[1] - Math.sin(ang) * half],
     [centre[0] + Math.cos(ang) * half, centre[1] + Math.sin(ang) * half],
   ];
-  return { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre };
+  const cutCornerAt = cl.corners.flatMap((pt, i) => (pt ? [{ pt, key: keyAt(i) }] : []));
+  return { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre, cutCornerAt };
 }
 
 function nearestPart(parts: Pt[][], x: Pt): number {

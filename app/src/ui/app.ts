@@ -7,7 +7,7 @@ import { parseMarker, toIsoCut, toMarkerPlt, type Marker } from "../core/iso";
 import { checkParts } from "../core/check";
 import { applyEntry, libraryFile, mergeLibrary, tableOf, type MEntry } from "../core/mlib";
 import { addCustomer, parseCsv, parseOrders, type Unit } from "../core/mtm";
-import { closestOnPolyline, crossings, directionAt, dist, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
+import { closestOnPolyline, crossings, directionAt, dist, insidePoly, lineIntersection, offsetPolyline, pointAlong, polyLen, type Pt } from "../core/geometry";
 import {
   createdIds,
   nearerEnd,
@@ -278,7 +278,7 @@ export class App {
     // other parts: with "show all parts" laid out side by side (as GRAFIS); otherwise the parts whose eye
     // is on, faded behind the active one in place
     const parts = this.model.parts ?? [], act = this.model.activePart ?? 0;
-    const evalPart = (k: number) => evaluateModel(withSize({ ...this.model, steps: parts[k].steps, names: parts[k].names, nextId: parts[k].nextId, pieces: [], activePart: k }));
+    const evalPart = (k: number) => evaluateModel(withSize({ ...this.model, steps: parts[k].steps, names: parts[k].names, nextId: parts[k].nextId, pieces: parts[k].pieces ?? [], activePart: k }));
     if (this.allParts && parts.length > 1) {
       const res = parts.map((_, k) => (k === act ? this.res : evalPart(k)));
       const lay = layoutParts(res);
@@ -342,6 +342,24 @@ export class App {
     }
   })();
   private partHover: number | null = null;
+  /** Round / chamfer tool on a corner of a piece's cut line (outer line). */
+  private cutCornerPick: { piece: number; key: string; pt: Pt; pick: Pick } | null = null;
+
+  /** The corner of a cut line under the pointer (within 24 px). With a drawing line also under the
+   * pointer, only when the pointer is in the seam allowance (outside the sewing line). */
+  private cutCornerNear(sx: number, sy: number, lineHit: boolean): { piece: number; key: string; pt: Pt } | null {
+    const w = this.toWorld(sx, sy);
+    let best: { piece: number; key: string; pt: Pt; d: number } | null = null;
+    for (const pc of this.model.pieces ?? []) {
+      const g = this.res.pieces.get(pc.id);
+      if (!g?.cutCornerAt || (lineHit && insidePoly(w, g.sew))) continue;
+      for (const c of g.cutCornerAt) {
+        const d = dist(c.pt, w) * this.scale;
+        if (d <= 24 && (!best || d < best.d)) best = { piece: pc.id, key: c.key, pt: c.pt, d };
+      }
+    }
+    return best && { piece: best.piece, key: best.key, pt: best.pt };
+  }
 
   /** With all parts shown: the other part whose line is under the pointer. */
   private partAt(sx: number, sy: number): number | null {
@@ -1256,6 +1274,16 @@ export class App {
 
   /** Zoom mode (Space, as GRAFIS): left click zooms in, right click zooms out, at the click. */
   private zoomMode = false;
+  /** F5: refresh the screen — everything worked out again and drawn afresh (the work stays as it is). */
+  refreshView(): void {
+    this.hover = null;
+    this.near = null;
+    this.partHover = null;
+    this.evaluate();
+    this.renderPanels();
+    this.render();
+  }
+
   toggleZoomMode(on = !this.zoomMode): void {
     this.zoomMode = on;
     this.svg.classList.toggle("zoom-mode", on);
@@ -1287,6 +1315,15 @@ export class App {
       const [ox, oy] = gi2.off, hv = this.partHover === gi2.k;
       for (const o of g.objects.values())
         if (o.kind === "line") parts.push(`<polyline class="${gi2.all ? (hv ? "allpart hover" : "allpart") : "ghost"}" points="${o.pts.map((p) => this.toScreen([p[0] + ox, p[1] + oy]).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+      // the pieces of the other part too: cut line, sewing line and notches (seam allowances stay in sight)
+      if (this.showPieces) {
+        const sp = (pts: Pt[]) => pts.map((p) => this.toScreen([p[0] + ox, p[1] + oy]).map((v) => v.toFixed(1)).join(",")).join(" ");
+        for (const pg of g.pieces.values()) {
+          parts.push(`<polygon class="ghost-piece" points="${sp(pg.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="1.6"/>`);
+          parts.push(`<polygon class="ghost-piece" points="${sp(pg.sew)}" fill="none" stroke="var(--piece)" stroke-width="1" stroke-dasharray="6 4"/>`);
+          for (const n of pg.notches) for (const sh of n.shape) parts.push(`<polyline class="ghost-piece" points="${sp(sh)}" fill="none" stroke="var(--piece)" stroke-width="1.8"/>`);
+        }
+      }
     });
     if (this.showNest) parts.push(this.nestSvg());
     if (this.showPieces) parts.push(this.piecesSvg());
@@ -1334,6 +1371,7 @@ export class App {
     }
     parts.push(this.inheritSvg());
     parts.push(this.seamLabelsSvg());
+    parts.push(this.imgEditSvg());
     this.renderCurveBar();
     this.renderDimBar();
     // no letters on the drawing: the name of the element under the pointer only
@@ -1785,8 +1823,12 @@ export class App {
       if (!r || r.end !== undefined) return "";
       const t = this.model.steps.find((q) => "id" in q && q.id === r.obj);
       if (!t) return "";
-      if (t.op === "pointOn") return this.formulaText(t.dist, t.unit === "%" ? "%" : "");
-      if (t.op === "pointOffset") return [this.formulaText(t.dx), this.formulaText(t.dy)].filter(Boolean).join(" · ");
+      // 0.9.181: say what the number is — the distance along which line (and from which end), or the offset in x / y
+      if (t.op === "pointOn") {
+        const v = this.formulaText(t.dist, t.unit === "%" ? "%" : "");
+        return v && `${this.model.names[t.on] ?? ""} ${t.from === "end" ? "◂" : "▸"} ${v}`.trim();
+      }
+      if (t.op === "pointOffset") return [t.dx.trim() && `Δx ${this.formulaText(t.dx)}`, t.dy.trim() && `Δy ${this.formulaText(t.dy)}`].filter(Boolean).join(" · ");
       return "";
     };
     const start = o.pts[0], end = o.pts[n - 1], s1 = o.pts[1], e1 = o.pts[n - 2];
@@ -2201,20 +2243,24 @@ export class App {
   private piecesSvg(): string {
     const out: string[] = [];
     const pts = (p: Pt[]) => p.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ");
+    const grains: Pt[] = [];
+    for (const s of this.model.steps) if (s.op === "mark" && s.kind === "grain" && s.a) try { grains.push(this.pointOf(s.a)); } catch { /* point gone */ }
     for (const pc of this.model.pieces ?? []) {
       const g = this.res.pieces.get(pc.id);
       if (!g) continue;
       out.push(`<polygon points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="2"/>`);
       out.push(`<polygon points="${pts(g.sew)}" fill="none" stroke="var(--piece)" stroke-width="1.2" stroke-dasharray="6 4"/>`);
       for (const n of g.notches) for (const sh of n.shape) out.push(`<polyline points="${pts(sh)}" fill="none" stroke="var(--piece)" stroke-width="2.2"/>`);
+      const c = this.toScreen(g.centre);
+      out.push(`<text class="piece-label" x="${c[0] + 8}" y="${c[1]}">${esc(pc.name)} (${pc.quantity})</text>`);
+      // a grain line drawn with the grain tool inside the piece replaces the automatic one
+      if (grains.some((p) => insidePoly(p, g.sew))) continue;
       const [a, b] = g.grain.map((q) => this.toScreen(q));
       const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
       const head = (p: Pt, dir: number) =>
         `<polyline points="${[dir + 2.6, dir - 2.6].map((t) => [p[0] + 10 * Math.cos(t), p[1] + 10 * Math.sin(t)].join(",")).join(` ${p.join(",")} `)}" fill="none" stroke="var(--piece)" stroke-width="1.4"/>`;
       out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="var(--piece)" stroke-width="1.4"/>`);
       out.push(head(b, ang), head(a, ang + Math.PI));
-      const c = this.toScreen(g.centre);
-      out.push(`<text class="piece-label" x="${c[0] + 8}" y="${c[1]}">${esc(pc.name)} (${pc.quantity})</text>`);
     }
     return out.join("");
   }
@@ -2403,6 +2449,9 @@ export class App {
   }
 
   cancelTool(): void {
+    this.imgEdit = null;
+    this.imgDrag = null;
+    this.cutCornerPick = null;
     this.afterPiece = null;
     this.endInheritPick();
     this.endSeamTool();
@@ -3228,7 +3277,8 @@ export class App {
           return nearerEnd(o, near) === "end" ? [o.pts[n - 2], o.pts[n - 1]] : [o.pts[1], o.pts[0]];
         };
         const [qa, ea] = seg(a, pa.at), [qb, eb] = seg(b, pb.at);
-        const X = lineIntersection(qa, ea, qb, eb);
+        // a corner of the cut line (outer line): sized from that corner
+        const X = this.cutCornerPick?.pick === pk[0] ? this.cutCornerPick.pt : lineIntersection(qa, ea, qb, eb);
         if (!X) return undefined;
         const va: Pt = [qa[0] - X[0], qa[1] - X[1]], vb: Pt = [qb[0] - X[0], qb[1] - X[1]];
         const theta = Math.acos(Math.max(-1, Math.min(1, (va[0] * vb[0] + va[1] * vb[1]) / (Math.hypot(...va) * Math.hypot(...vb) || 1))));
@@ -3350,6 +3400,22 @@ export class App {
 
   private commit(values: Record<string, string>): void {
     const t = this.tool as Tool;
+    if ((t.key === "cornerRound" || t.key === "cornerChamfer") && this.cutCornerPick && this.picks[0] === this.cutCornerPick.pick) {
+      const cc = this.cutCornerPick, pc = this.model.pieces?.find((p) => p.id === cc.piece);
+      this.cutCornerPick = null;
+      if (pc) {
+        this.snapshot();
+        const size = (values.size ?? "").trim();
+        pc.cutCorners ??= {};
+        if (!size || size === "0") delete pc.cutCorners[cc.key];
+        else pc.cutCorners[cc.key] = { kind: t.key === "cornerRound" ? "round" : "chamfer", size };
+        this.changed();
+        this.toast(size && size !== "0" ? (t.key === "cornerRound" ? "استدارت زاوية خط القص" : "قُطعت زاوية خط القص") : "عادت زاوية خط القص حادة");
+      }
+      this.restartTool();
+      this.render();
+      return;
+    }
     if (t.key === "convertNotch") {
       // the notch nearest the click takes the chosen shape
       const at = this.picks[0]?.at;
@@ -3404,7 +3470,13 @@ export class App {
         this.undoStack.pop();
         this.toast("لا توجد قطعة لإضافة النوتش إليها");
       } else {
-        pc.notches.push(pick.ref);
+        const k = pc.notches.push(pick.ref) - 1;
+        pc.notchTypes ??= [];
+        while (pc.notchTypes.length < k) pc.notchTypes.push("slit");
+        pc.notchTypes[k] = (values.type as NotchType) || "slit";
+        pc.notchLen ??= [];
+        while (pc.notchLen.length < k) pc.notchLen.push("");
+        pc.notchLen[k] = (values.len ?? "").trim();
         this.changed();
         this.toast(`أُضيف نوتش إلى «${pc.name}»`);
       }
@@ -3685,6 +3757,13 @@ export class App {
         e.preventDefault();
         return;
       }
+      if (e.button === 0 && this.imgEdit !== null) {
+        // a picture moved / resized by hand: every press counts (also a quick second one)
+        const rr = svg.getBoundingClientRect();
+        this.imgEditDown(e.clientX - rr.left, e.clientY - rr.top);
+        e.preventDefault();
+        return;
+      }
       if (e.button !== 0 || e.detail >= 2) return; // the second click of a double-click edits (below)
       if (this.calibrating !== null) {
         const rr = svg.getBoundingClientRect();
@@ -3774,6 +3853,18 @@ export class App {
         if (made) this.onPick(made);
         return;
       }
+      // 0.9.181: round / cut off a corner of the cut line (outer line) too: a click near that corner, in the seam allowance
+      if (kind === "line" && (this.tool?.key === "cornerRound" || this.tool?.key === "cornerChamfer") && !this.picks.length) {
+        const cc = this.cutCornerNear(e.clientX - r.left, e.clientY - r.top, !!h);
+        if (cc) {
+          const [a, b] = cc.key.split(",").map(Number);
+          const first: Pick = { kind: "line", obj: a, at: cc.pt };
+          this.cutCornerPick = { piece: cc.piece, key: cc.key, pt: cc.pt, pick: first };
+          this.onPick(first);
+          this.onPick({ kind: "line", obj: b, at: cc.pt });
+          return;
+        }
+      }
       if (h) this.onPick(h);
       else if (kind === "point" && this.tool && (!this.collecting || this.tool.multi?.kind === "point")) {
         // the near mark sits on a line: the point is made ON that line where the mark is (as GRAFIS),
@@ -3793,6 +3884,12 @@ export class App {
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
       // a click on a dimension (no drag) makes it active: its bar of options shows
+      if (this.imgDrag) {
+        const rr = svg.getBoundingClientRect();
+        this.imgEditMove(this.toWorld(e.clientX - rr.left, e.clientY - rr.top)); // where the button is let go
+        this.imgDrag = null;
+        this.changed();
+      }
       if (this.dragDim !== null && !this.dimMoved) this.selectedStep = this.dragDim;
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         const refresh = (this.dragHandle || this.dragPoint !== null) && this.form?.editOf === this.selectedStep;
@@ -3833,6 +3930,7 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.imgDrag) return void this.imgEditMove(this.mouse);
       if (this.seamTool) {
         const h = this.seamEdgeAt(sx, sy);
         if (JSON.stringify(h) !== JSON.stringify(this.seamHover)) {
@@ -4375,6 +4473,7 @@ export class App {
         const keepIdx = pc.notches.map((r, k) => (inside(anchor(r)) ? -1 : k)).filter((k) => k >= 0);
         notches += pc.notches.length - keepIdx.length;
         if (pc.notchTypes) pc.notchTypes = keepIdx.map((k) => pc.notchTypes?.[k] ?? "slit");
+        if (pc.notchLen) pc.notchLen = keepIdx.map((k) => pc.notchLen?.[k] ?? "");
         pc.notches = keepIdx.map((k) => pc.notches[k]);
       }
       if (!notches) {
@@ -4438,10 +4537,81 @@ export class App {
     return (this.model.images ?? [])
       .filter((im) => im.visible && /^data:image\/(png|jpeg|gif|webp);base64,/.test(im.data))
       .map((im) => {
+        // fixed as the background of the whole screen (all parts, not moved by zoom or pan)
+        if (im.screen) return `<image href="${im.data}" x="0" y="0" width="100%" height="100%" opacity="${im.opacity}" preserveAspectRatio="xMidYMid slice"/>`;
         const [x, y] = this.toScreen([im.x, im.y + im.h]), [x2, y2] = this.toScreen([im.x + im.w, im.y]);
         return `<image href="${im.data}" x="${x}" y="${y}" width="${Math.max(1, x2 - x)}" height="${Math.max(1, y2 - y)}" opacity="${im.opacity}" preserveAspectRatio="none"/>`;
       })
       .join("");
+  }
+
+  /** Picture being moved / resized by hand (index in model.images), and the drag going on. */
+  private imgEdit: number | null = null;
+  private imgDrag: { mode: "move" | "nw" | "ne" | "sw" | "se"; from: Pt; orig: { x: number; y: number; w: number; h: number } } | null = null;
+
+  private imgCorners(im: { x: number; y: number; w: number; h: number }): Record<"nw" | "ne" | "sw" | "se", Pt> {
+    return { nw: [im.x, im.y + im.h], ne: [im.x + im.w, im.y + im.h], sw: [im.x, im.y], se: [im.x + im.w, im.y] };
+  }
+
+  /** The frame and corner handles of the picture being edited by hand. */
+  private imgEditSvg(): string {
+    const im = this.imgEdit !== null ? this.model.images?.[this.imgEdit] : undefined;
+    if (!im || im.screen) return "";
+    const c = this.imgCorners(im), [x, y] = this.toScreen(c.nw), [x2, y2] = this.toScreen(c.se);
+    const hs = Object.values(c).map((p) => {
+      const [hx, hy] = this.toScreen(p);
+      return `<rect class="img-handle" x="${(hx - 6).toFixed(1)}" y="${(hy - 6).toFixed(1)}" width="12" height="12"/>`;
+    });
+    return `<g class="img-edit"><rect class="img-frame" x="${x}" y="${y}" width="${Math.max(1, x2 - x)}" height="${Math.max(1, y2 - y)}"/>${hs.join("")}</g>`;
+  }
+
+  /** Mouse down while a picture is edited by hand: grab a corner (resize) or the picture (move);
+   * a press outside it ends the editing. */
+  private imgEditDown(sx: number, sy: number): void {
+    const im = this.imgEdit !== null ? this.model.images?.[this.imgEdit] : undefined;
+    if (!im) return void (this.imgEdit = null);
+    const w = this.toWorld(sx, sy), c = this.imgCorners(im);
+    for (const k of ["nw", "ne", "sw", "se"] as const) {
+      const [hx, hy] = this.toScreen(c[k]);
+      if (Math.hypot(hx - sx, hy - sy) <= 10) {
+        this.snapshot();
+        this.imgDrag = { mode: k, from: w, orig: { x: im.x, y: im.y, w: im.w, h: im.h } };
+        return;
+      }
+    }
+    if (w[0] >= im.x && w[0] <= im.x + im.w && w[1] >= im.y && w[1] <= im.y + im.h) {
+      this.snapshot();
+      this.imgDrag = { mode: "move", from: w, orig: { x: im.x, y: im.y, w: im.w, h: im.h } };
+      return;
+    }
+    this.imgEdit = null;
+    this.toast("انتهى تعديل الصورة");
+    this.render();
+  }
+
+  private imgEditMove(at: Pt): void {
+    const im = this.imgEdit !== null ? this.model.images?.[this.imgEdit] : undefined, d = this.imgDrag;
+    if (!im || !d) return;
+    const o = d.orig;
+    if (d.mode === "move") {
+      im.x = o.x + at[0] - d.from[0];
+      im.y = o.y + at[1] - d.from[1];
+    } else {
+      // the opposite corner stays; the picture keeps its proportions (Shift: free)
+      const opp = this.imgCorners(o)[({ nw: "se", ne: "sw", sw: "ne", se: "nw" } as const)[d.mode]];
+      const dx = at[0] - opp[0], dy = at[1] - opp[1];
+      let w = Math.max(1, Math.abs(dx)), h = Math.max(1, Math.abs(dy));
+      if (!this.shift) {
+        const ratio = o.h / (o.w || 1);
+        w = Math.max(w, h / ratio);
+        h = w * ratio;
+      }
+      im.w = w;
+      im.h = h;
+      im.x = dx < 0 ? opp[0] - w : opp[0];
+      im.y = dy < 0 ? opp[1] - h : opp[1];
+    }
+    this.render();
   }
 
   /** Pictures window (F9 shows / hides them): add a picture, place it in mm, set its width,
@@ -4454,7 +4624,8 @@ export class App {
     el.dir = "rtl";
     const rows = list.map((im, k) => `<div class="img-row" data-k="${k}"><label class="za-r"><input type="checkbox" data-ik="visible" ${im.visible ? "checked" : ""}/> <b>${esc(im.name)}</b></label>
       <div class="img-f"><span>X مم</span><input data-ik="x" value="${im.x}"/><span>Y مم</span><input data-ik="y" value="${im.y}"/><span>العرض مم</span><input data-ik="w" value="${Math.round(im.w * 10) / 10}"/></div>
-      <div class="img-f"><span>الشفافية</span><input type="range" min="0.1" max="1" step="0.05" data-ik="opacity" value="${im.opacity}"/><button data-ia="cal" title="انقر نقطتين معروفتين على الصورة ثم اكتب المسافة الحقيقية">📏 معايرة بنقطتين</button><button data-ia="del" class="danger">حذف</button></div></div>`).join("");
+      <div class="img-f"><span>الشفافية</span><input type="range" min="0.1" max="1" step="0.05" data-ik="opacity" value="${im.opacity}"/><button data-ia="cal" title="انقر نقطتين معروفتين على الصورة ثم اكتب المسافة الحقيقية">📏 معايرة بنقطتين</button><button data-ia="del" class="danger">حذف</button></div>
+      <div class="img-f"><button data-ia="hand" ${im.screen ? "disabled" : ""} title="اسحب الصورة لتحريكها، واسحب أحد أركانها لتغيير حجمها (Shift: بدون حفظ النسبة)">✥ تحريك وتحجيم باليد</button><label class="za-r"><input type="checkbox" data-ik="screen" ${im.screen ? "checked" : ""}/> 📌 تثبيت: خلفية كاملة للشاشة</label></div></div>`).join("");
     el.innerHTML = `<div class="za-head"><b>Pixel images · صور الخلفية (F9)</b><button data-ia="close">×</button></div><div class="za-body">${rows || '<p class="empty">لا توجد صور. أضف صورة باترون لتتبعها بالرسم.</p>'}
       <div class="za-foot"><button class="primary" data-ia="add">＋ إضافة صورة</button><button data-ia="close">إغلاق</button></div></div>`;
     document.body.append(el);
@@ -4463,7 +4634,12 @@ export class App {
       if (!im || !f) return;
       this.snapshot();
       if (f === "visible") im.visible = t.checked;
-      else {
+      else if (f === "screen") {
+        im.screen = t.checked || undefined;
+        if (im.screen && this.imgEdit === k) this.imgEdit = null;
+        this.changed();
+        return void this.openImages();
+      } else {
         const v = Number(normalizeFormula(t.value));
         if (!Number.isFinite(v)) return;
         if (f === "w" && v > 0) (im.h = (im.h * v) / im.w), (im.w = v);
@@ -4478,7 +4654,15 @@ export class App {
     el.addEventListener("click", (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>("[data-ia]"), a = b?.dataset.ia, k = Number(b?.closest<HTMLElement>(".img-row")?.dataset.k);
       if (a === "close") el.remove();
-      else if (a === "del" && list[k]) {
+      else if (a === "hand" && list[k]) {
+        el.remove();
+        this.imgEdit = k;
+        list[k].visible = true;
+        if (!this.vis.images) this.setVis("images", true);
+        this.toast("اسحب الصورة لتحريكها أو ركنها لتغيير الحجم؛ انقر خارجها للإنهاء");
+        this.render();
+      } else if (a === "del" && list[k]) {
+        if (this.imgEdit !== null) this.imgEdit = null;
         this.snapshot();
         list.splice(k, 1);
         this.changed();
@@ -4904,7 +5088,7 @@ export class App {
             </tbody></table>
             <div class="notches">النوتشات: ${
               pc.notches.length
-                ? pc.notches.map((r, k) => `<span class="chip">${nm(r.obj)}${r.end ? (r.end === "start" ? " (بداية)" : " (نهاية)") : ""}<button data-ndel="${k}" title="حذف">×</button></span>`).join(" ")
+                ? pc.notches.map((r, k) => `<span class="chip">${nm(r.obj)}${r.end ? (r.end === "start" ? " (بداية)" : " (نهاية)") : ""} <input class="expr nlen" data-nlen="${k}" value="${esc(pc.notchLen?.[k] ?? "")}" placeholder="6" title="طول النوتش (رقم أو X/Z)"/><button data-ndel="${k}" title="حذف">×</button></span>`).join(" ")
                 : "لا يوجد. أضفها بأداة «نوتش»"
             }</div>
           </section>`;
@@ -4960,11 +5144,22 @@ export class App {
         this.model.pieces = pieces.filter((p) => p !== pc);
         this.changed();
       });
+      card.querySelectorAll<HTMLInputElement>("[data-nlen]").forEach((inp) =>
+        inp.addEventListener("change", () => {
+          this.snapshot();
+          const k = Number(inp.dataset.nlen);
+          pc.notchLen ??= [];
+          while (pc.notchLen.length < pc.notches.length) pc.notchLen.push("");
+          pc.notchLen[k] = inp.value.trim();
+          this.changed();
+        }),
+      );
       card.querySelectorAll<HTMLElement>("[data-ndel]").forEach((b) =>
         b.addEventListener("click", () => {
           this.snapshot();
           pc.notches.splice(Number(b.dataset.ndel), 1);
           pc.notchTypes?.splice(Number(b.dataset.ndel), 1);
+          pc.notchLen?.splice(Number(b.dataset.ndel), 1);
           this.changed();
         }),
       );

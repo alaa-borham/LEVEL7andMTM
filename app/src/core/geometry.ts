@@ -220,3 +220,13 @@ export function offsetPolyline(p0: Pt[], d: number): Pt[] {
     return [q[0] - t[1] * d, q[1] + t[0] * d] as Pt;
   });
 }
+
+/** True when pt lies inside the closed polygon poly. */
+export function insidePoly(pt: Pt, poly: Pt[]): boolean {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > pt[1] !== yj > pt[1] && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}

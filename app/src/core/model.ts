@@ -114,7 +114,7 @@ export interface Model {
   /** How a line looks on the drawing (as GRAFIS line types and colours), per "part no:object id". */
   lineStyles?: Record<string, { dash?: LineDash; color?: string }>;
   /** Background pictures to trace over (pixel images): placed in mm, bottom-left at x, y. */
-  images?: { id: number; name: string; data: string; x: number; y: number; w: number; h: number; opacity: number; visible: boolean }[];
+  images?: { id: number; name: string; data: string; x: number; y: number; w: number; h: number; opacity: number; visible: boolean; screen?: boolean }[]; // screen: fixed as the whole-screen background
   /** Product info (as GRAFIS): texts, and images as data URLs (logo, sketches, fabric). */
   product?: Record<string, string>;
 }
@@ -590,6 +590,28 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
   });
   vars.finish();
 
+  /** A notch where an inner line meets the edge runs on along that line (as GRAFIS): the unit
+   * direction from the notch point into the line, or null when no inner line ends there. */
+  const notchLineDir = (r: PointRef, edges: number[]): Pt | null => {
+    const at = refPoint(r);
+    if (!at) return null;
+    const into = (o: { pts: Pt[] }, end: boolean): Pt | null => {
+      const n = o.pts.length, a = end ? o.pts[n - 1] : o.pts[0];
+      // a point a little way into the line (curves: past the first tiny segments)
+      let b = a;
+      for (let i = 1; i < n && dist(a, b) < 2; i++) b = end ? o.pts[n - 1 - i] : o.pts[i];
+      const L = dist(a, b);
+      return L > 1e-6 ? [(b[0] - a[0]) / L, (b[1] - a[1]) / L] : null;
+    };
+    const own = objects.get(r.obj);
+    if (own?.kind === "line" && r.end && !edges.includes(r.obj)) return into(own, r.end === "end");
+    for (const o of objects.values()) {
+      if (o.kind !== "line" || edges.includes(o.id) || o.pts.length < 2) continue;
+      if (dist(o.pts[0], at) < 0.01) return into(o, false);
+      if (dist(o.pts[o.pts.length - 1], at) < 0.01) return into(o, true);
+    }
+    return null;
+  };
   const pieces = new Map<number, PieceGeo>();
   const pieceErrors = new Map<number, string>();
   for (const pc of model.pieces ?? []) {
@@ -606,6 +628,9 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
             if (!p) throw new Error(`نقطة النوتش ${model.names[r.obj] ?? r.obj} غير موجودة`);
             return p;
           }),
+          notchDepth: pc.notches.map((_, k) => (pc.notchLen?.[k]?.trim() ? vars.eval(pc.notchLen[k]) : undefined)),
+          notchDir: pc.notches.map((r) => notchLineDir(r, pc.edges)),
+          cutCorners: Object.fromEntries(Object.entries(pc.cutCorners ?? {}).map(([k, c]) => [k, { kind: c.kind, size: vars.eval(c.size || "0") }])),
           grainAngle: vars.eval(pc.grain || "90"),
         }),
       );

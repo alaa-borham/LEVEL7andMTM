@@ -533,7 +533,7 @@ export const TOOLS: Tool[] = [
     name: "زاوية حادة",
     group: "الزوايا",
     picks: [
-      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية (أو انقر زاوية خط القص الخارجي)" },
       { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
     ],
     build: (c) => cornerStep(c, "sharp", "0"),
@@ -543,7 +543,7 @@ export const TOOLS: Tool[] = [
     name: "زاوية مستديرة",
     group: "الزوايا",
     picks: [
-      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية (أو انقر زاوية خط القص الخارجي)" },
       { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
     ],
     fields: () => [{ key: "size", label: "نصف القطر", value: "10" }],
@@ -554,7 +554,7 @@ export const TOOLS: Tool[] = [
     name: "قطع الزاوية",
     group: "الزوايا",
     picks: [
-      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية" },
+      { kind: "line", prompt: "انقر الخط الأول قرب الزاوية (أو انقر زاوية خط القص الخارجي)" },
       { kind: "line", prompt: "انقر الخط الثاني قرب الزاوية" },
     ],
     fields: () => [{ key: "size", label: "المسافة من الزاوية", value: "10" }],
@@ -589,6 +589,11 @@ export const TOOLS: Tool[] = [
     name: "نوتش",
     group: "القطع",
     picks: [{ kind: "point", prompt: "انقر نقطة على حدود القطعة (نقطة أو طرف خط)" }],
+    // 0.9.181: the length (mm, or X / Z) and the shape; where an inner line ends the notch runs on along it
+    fields: () => [
+      { key: "len", label: "طول النوتش (رقم أو X/Z)", value: "6" },
+      { key: "type", label: "شكل النوتش", value: "slit", options: [["slit", "شق I"], ["t", "شق T"], ["v", "شق V"], ["castle", "مربع (Castle)"]] },
+    ],
     addNotch: true,
   },
   {

@@ -23,7 +23,7 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   if (e.key === "F9") return "imgtoggle";
   if (e.altKey && !ctrl && e.key.toLowerCase() === "o") return "visibility";
   if (e.key === "F6") return "fit";
-  if (e.key === "F5") return "tab-steps";
+  if (e.key === "F5") return "refresh";
   if (e.key === "F11") return "tab-z";
   if (!typing && !ctrl && !e.altKey && (e.key === "+" || e.key === "=")) return "zoomIn";
   if (!typing && !ctrl && !e.altKey && e.key === "-") return "zoomOut";
@@ -207,6 +207,7 @@ if (embedded && window.parent !== window) {
     else if (action === "arrange") app.openArrange();
     else if (action === "marker") app.exportMarker();
     else if (action === "gradeview") app.cycleGradeView();
+    else if (action === "refresh") app.refreshView();
     else if (action === "zoomMode") app.toggleZoomMode();
     else if (action === "aamaAll") app.exportAllSizes("aama");
     else if (action === "pltAll") app.exportAllSizes("plt");
