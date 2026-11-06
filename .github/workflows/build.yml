@@ -49,9 +49,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash level7-cad/build-windows.sh 0.9.166 dist-level7
+      - run: bash level7-cad/build-windows.sh 0.9.167 dist-level7
       - uses: actions/upload-artifact@v4
         with:
-          name: LEVEL7-and-MTM-0.9.166-windows
-          path: dist-level7/LEVEL7-and-MTM-0.9.166-win32-x64.zip
+          name: LEVEL7-and-MTM-0.9.167-windows
+          path: dist-level7/LEVEL7-and-MTM-0.9.167-win32-x64.zip
           retention-days: 30

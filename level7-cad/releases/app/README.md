@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.167
+
+LEVEL7 design: the tool bars (curve, seam allowance, inherit) are moved anywhere on the drawing by their grip and turned vertical / horizontal with ⇅ (remembered; double-click on the grip puts them back); with no tool open, the dimension under the pointer glows itself (not the drawing line beside it), the cursor shows it can be moved, and a press drags it.
+
 LEVEL7 and MTM 0.9.166
 
 LEVEL7 design: sharp / round / chamfer corner of two lines that already cross before their ends (often with a curve): the corner is that crossing and both are cut back to it, where it used to fail ("the corner is behind the start of a line"); test run / grade reports a Z only in the parts that use it (a Z measured from part 001's drawing is no longer an error in other parts).
