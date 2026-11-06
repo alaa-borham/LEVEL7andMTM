@@ -4,7 +4,9 @@ import { TOOLS } from "./ui/tools";
 
 /** Command-bar shortcuts, as in the program's own toolbox. */
 function shortcut(e: KeyboardEvent, typing: boolean): string | null {
-  const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+  // the letter of the key as on a Latin keyboard (KeyZ → z), so Ctrl+Z, Ctrl+S … work with any keyboard
+  // language (Arabic, French …); keys without a code letter fall back to the typed character
+  const k = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   // GRAFIS: Ctrl+6 grade all parts, Ctrl+Shift+6 test run all parts
   if (ctrl && !e.altKey && e.code === "Digit6") return e.shiftKey ? "testAll" : "gradeAll";
   // Space (not while typing): zoom mode, as GRAFIS

@@ -65,7 +65,9 @@ export type Step =
   | { op: "mirror"; axis?: number; axisPts?: [PointRef, PointRef]; axisAt?: PointRef; axisAngle?: string; items: { src: number; dst?: number }[] }
   /** Marks (annotation only): stitch lines along a line / curve on one side at a distance,
    * a grain line between two points, or a symbol (button, drill hole, cross) at a point. */
-  | { op: "mark"; kind: "lock" | "double" | "zigzag" | "deco" | "gather" | "grain" | "button" | "drill" | "cross"; obj?: number; side?: 1 | -1; a?: PointRef; b?: PointRef; size: string }
+  | { op: "mark"; kind: "lock" | "double" | "zigzag" | "deco" | "gather" | "grain" | "button" | "drill" | "cross"; obj?: number; side?: 1 | -1; a?: PointRef; b?: PointRef; size: string;
+      /** Grain line (as GRAFIS): from a, in this direction (°), size = its length; without b. */
+      angle?: string }
   /** Fixed geometry (imported, e.g. from a GRAFIS part): a point or a line / curve. */
   | { op: "fixed"; id: number; kind: "point" | "line"; pts: [number, number][] }
   /** A text on the drawing at a point; {X1} / {Z3} in it show the current values. */
@@ -399,6 +401,7 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           if (s.obj !== undefined) needLine(s.obj);
           for (const r of [s.a, s.b]) if (r) pointOf(r);
           vars.eval(s.size || "0");
+          if (s.angle !== undefined) vars.eval(s.angle);
           break;
         }
         case "inherit": {

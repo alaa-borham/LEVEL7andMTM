@@ -1,7 +1,7 @@
 // Pattern pieces: a closed outline made of construction objects (lines and
 // curves) picked in order, with seam allowance per edge, notches and grain line.
 
-import { closestOnPolyline, crossings, dist, offsetPolyline, polyLen, subPolyline, type Pt } from "./geometry";
+import { closestOnPolyline, crossings, dedupe, dist, offsetPolyline, polyLen, subPolyline, type Pt } from "./geometry";
 import type { PointRef } from "./model";
 
 export interface Piece {
@@ -161,7 +161,8 @@ export function cutLine(parts: Pt[][], allowance: (number | [number, number])[])
 }
 
 /** Offset that changes evenly along the line from d0 at its start to d1 at its end. */
-function offsetVarying(p: Pt[], d0: number, d1: number): Pt[] {
+function offsetVarying(p0: Pt[], d0: number, d1: number): Pt[] {
+  const p = dedupe(p0);
   const L = polyLen(p) || 1;
   let acc = 0;
   return p.map((q, i) => {

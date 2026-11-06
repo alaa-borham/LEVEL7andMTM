@@ -24,5 +24,6 @@ try{
  // minimized state is remembered for the next window
  await tb.locator('.form-min').click();await tb.locator('[data-cancel]').click().catch(()=>{});
  await f.evaluate(()=>window.level7.editStep(2));assert(await f.evaluate(()=>document.querySelector('#tool-box').classList.contains('mini')));pass('the next values window opens minimized (remembered)');
+ await f.evaluate(()=>localStorage.removeItem('level7.formMini')); // other tests expect the full window
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

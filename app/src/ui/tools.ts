@@ -282,11 +282,13 @@ export const TOOLS: Tool[] = [
     key: "grainLine",
     name: "خط النسيج (Grain line)",
     group: "العلامات",
-    picks: [
-      { kind: "point", prompt: "انقر بداية خط النسيج" },
-      { kind: "point", prompt: "انقر نهايته" },
+    // as GRAFIS: the start point, then its direction (90° steps, Shift: any angle) and length
+    picks: [{ kind: "point", prompt: "انقر بداية خط النسيج (نقطة، أو على خط بالنسبة/المسافة من اللوحة)" }],
+    fields: () => [
+      { key: "angle", label: "الاتجاه ° (‎-90 = لأسفل)", value: "-90" },
+      { key: "length", label: "الطول مم", value: "200" },
     ],
-    build: (c) => ({ op: "mark", kind: "grain", a: point(c, 0).ref, b: point(c, 1).ref, size: "0" }),
+    build: (c, v) => ({ op: "mark", kind: "grain", a: point(c, 0).ref, angle: v.angle, size: v.length }),
   },
   {
     key: "symButton",
@@ -736,7 +738,9 @@ export function stepFields(s: Step): Field[] {
         { key: "angle", label: "الزاوية °", value: s.angle },
       ];
     case "mark":
-      return s.kind === "grain" ? [] : [{ key: "size", label: s.obj !== undefined ? "البعد عن الحافة مم" : "الحجم مم", value: s.size }];
+      if (s.kind === "grain")
+        return s.b ? [] : [{ key: "angle", label: "الاتجاه °", value: s.angle ?? "-90" }, { key: "size", label: "الطول مم", value: s.size }];
+      return [{ key: "size", label: s.obj !== undefined ? "البعد عن الحافة مم" : "الحجم مم", value: s.size }];
     case "mirror":
       return s.axisAt ? [{ key: "axisAngle", label: "اتجاه المحور °", value: s.axisAngle ?? "90" }] : [];
     case "scale":

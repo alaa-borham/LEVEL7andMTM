@@ -203,6 +203,7 @@ input.bad {
   border-radius: 8px;
   box-shadow: 0 6px 24px rgba(20, 30, 50, 0.12);
   padding: 12px;
+  z-index: 40; /* above the tool bars (curve, dimension …) that can sit under it */
 }
 .tool-box h4 {
   margin: 0 0 8px;
@@ -1013,7 +1014,7 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 .curve-bar .bar-grip:active { cursor: grabbing; }
 .curve-bar .bar-turn { min-width: 26px !important; font-size: 13px; }
 .curve-bar.vert { flex-direction: column; align-items: center; width: auto; max-width: none; max-height: calc(100% - 16px); overflow-y: auto; }
-.curve-bar.vert span:not(.bar-grip) { display: none; }
+.curve-bar.vert span:not(.bar-grip):not(.seg) { display: none; } /* the hint text only: unit / ×2 groups stay */
 .curve-bar.vert .bar-grip { text-align: center; }
 .curve-bar.vert select { width: 104px; }
 /* 0.9.169 test run: an error is clicked to show where it is */

@@ -61,7 +61,7 @@ export function describe(s: Step, m: Model): string {
     case "mark": {
       const k = { lock: "غرزة مستقيمة", double: "غرزة مزدوجة", zigzag: "غرزة زجزاج", deco: "غرز زخرفية", gather: "كشكشة", grain: "خط النسيج (البوصلة)", button: "زر", drill: "ثقب", cross: "علامة +" }[s.kind];
       if (s.obj !== undefined) return `${k} على ${n(s.obj)} بمسافة ${e(s.size)}`;
-      if (s.kind === "grain") return `${k} من ${pr(s.a as PointRef)} إلى ${pr(s.b as PointRef)}`;
+      if (s.kind === "grain") return s.b ? `${k} من ${pr(s.a as PointRef)} إلى ${pr(s.b as PointRef)}` : `${k} من ${pr(s.a as PointRef)} باتجاه ${s.angle ?? ""}° وطول ${s.size}`;
       return `${k} عند ${pr(s.a as PointRef)} بحجم ${e(s.size)}`;
     }
     case "inherit":

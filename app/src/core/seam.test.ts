@@ -43,3 +43,13 @@ describe("seam allowance (as GRAFIS)", () => {
     expect(maxXAt(g.cut, 200)).toBeCloseTo(130);
   });
 });
+
+describe("seam allowance without teeth", () => {
+  it("a near-zero first segment pointing sideways does not throw the offset out", async () => {
+    const { offsetPolyline } = await import("./geometry");
+    // the junction point lies 0.001 mm beside the start of a straight edge: a tiny sideways segment
+    const p: [number, number][] = [[0, 0.001], [0.0005, 0], [50, 0], [100, 0]];
+    const o = offsetPolyline(p, -10);
+    for (const q of o) expect(Math.abs(q[1] + 10)).toBeLessThan(0.05);
+  });
+});

@@ -198,7 +198,21 @@ export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null,
 }
 
 /** Polyline moved sideways by d (positive = left of the direction of travel). */
-export function offsetPolyline(p: Pt[], d: number): Pt[] {
+/** The polyline without points that (almost) repeat the one before: a near-zero segment has no real
+ * direction, and its normal would throw an offset point far out (a tooth on the seam allowance). The two
+ * ends stay where they are. */
+export function dedupe(p: Pt[], eps = 0.01): Pt[] {
+  if (p.length < 3) return p;
+  const n = p.length, out: Pt[] = [p[0]];
+  for (let i = 1; i < n - 1; i++) if (dist(out[out.length - 1], p[i]) >= eps) out.push(p[i]);
+  // the last point stays; a point just before it that nearly repeats it gives way
+  if (out.length > 1 && dist(out[out.length - 1], p[n - 1]) < eps) out[out.length - 1] = p[n - 1];
+  else out.push(p[n - 1]);
+  return out;
+}
+
+export function offsetPolyline(p0: Pt[], d: number): Pt[] {
+  const p = dedupe(p0);
   return p.map((q, i) => {
     const a = p[Math.max(0, i - 1)];
     const b = p[Math.min(p.length - 1, i + 1)];

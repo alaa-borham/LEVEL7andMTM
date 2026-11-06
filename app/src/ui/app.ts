@@ -804,7 +804,7 @@ export class App {
   })();
 
   startSeamTool(): void {
-    if (!this.model.pieces?.length) return this.toast("لا توجد قطع بعد: اعمل قطعة من الحدود أولاً");
+    if (!this.model.pieces?.length) return this.needPiece("seam");
     this.cancelTool();
     this.seamTool = { mode: "std" };
     this.renderSeamBar();
@@ -1535,6 +1535,20 @@ export class App {
     }
     if (!s.a) return "";
     const A = this.pointOf(s.a), [ax, ay] = this.toScreen(A);
+    if (s.kind === "grain" && !s.b && s.angle !== undefined) {
+      // as GRAFIS: from the start point in its direction, one open arrowhead at the end
+      let deg = 0, len = 0;
+      try {
+        const v = new Vars(withSize(this.model), undefined, this.res.z);
+        deg = v.eval(s.angle);
+        len = v.eval(s.size || "0");
+      } catch {
+        return "";
+      }
+      const B: Pt = [A[0] + Math.cos((deg * Math.PI) / 180) * len, A[1] + Math.sin((deg * Math.PI) / 180) * len];
+      const [bx, by] = this.toScreen(B), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+      return `<g class="${cls} grain"><path d="M${ax} ${ay} L${bx} ${by}" fill="none"/><path d="M${bx} ${by} L${(bx - 16 * ux + 6 * uy).toFixed(1)} ${(by - 16 * uy - 6 * ux).toFixed(1)} L${(bx - 16 * ux - 6 * uy).toFixed(1)} ${(by - 16 * uy + 6 * ux).toFixed(1)} Z" fill="none"/></g>`;
+    }
     if (s.kind === "grain") {
       if (!s.b) return "";
       const [bx, by] = this.toScreen(this.pointOf(s.b)), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
@@ -2335,6 +2349,8 @@ export class App {
       else this.openInherit(t.key === "inheritPart");
       return;
     }
+    // a notch goes on a piece: without one, the piece is made first (then the notch tool comes back)
+    if (t.key === "notch" && !this.model.pieces?.length) return this.needPiece("notch");
     this.cancelTool();
     this.tool = t;
     this.selectedStep = -1;
@@ -2346,7 +2362,21 @@ export class App {
     this.svg.focus();
   }
 
+  /** The tool to come back to once the piece is made («قطعة من الحدود»), when it was chosen with no piece. */
+  private afterPiece: "seam" | "notch" | null = null;
+
+  /** Seam allowance and notches belong to a piece (its outline): with none in this part yet, the piece
+   * tool starts and the chosen tool comes back when the piece is made. */
+  private needPiece(next: "seam" | "notch"): void {
+    const piece = TOOLS.find((x) => x.key === "piece");
+    if (!piece) return;
+    this.selectTool(piece);
+    this.afterPiece = next;
+    this.toast(`${next === "seam" ? "حواشي الخياطة" : "النوتش"} تكون على قطعة، وهذا البارت لا قطعة فيه بعد: انقر حدود القطعة بالترتيب حولها ثم Enter، وبعدها ${next === "seam" ? "تُفتح الحواشي" : "تعود أداة النوتش"}`);
+  }
+
   cancelTool(): void {
+    this.afterPiece = null;
     this.endInheritPick();
     this.endSeamTool();
     this.curveMode = null;
@@ -3083,6 +3113,25 @@ export class App {
           },
         };
       }
+      case "grainLine": {
+        // as GRAFIS: the direction follows the mouse in 90° steps (Shift: any angle), the length its distance
+        const from = ptOf(0);
+        if (!from) return undefined;
+        return {
+          from,
+          values: (at) => {
+            const dx = at[0] - from[0], dy = at[1] - from[1];
+            let ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+            const q = this.shift ? 1 : 90;
+            ang = Math.round(ang / q) * q;
+            if (ang <= -180) ang += 360;
+            const len = Math.hypot(dx, dy);
+            const v: Record<string, string> = { angle: String(ang) };
+            if (len > 0) v.length = r1(len);
+            return v;
+          },
+        };
+      }
       case "pointOn": {
         const o = lineObj(0);
         if (!o) return undefined;
@@ -3309,6 +3358,12 @@ export class App {
       this.changed();
       const err = this.res.pieceErrors.get(id);
       this.toast(err ? `أُنشئت القطعة لكن فيها خطأ: ${err}` : "أُنشئت القطعة. عدّل حواشي كل حد من صفحة «القطع»");
+      const next = this.afterPiece;
+      this.afterPiece = null;
+      if (next && !err) {
+        // back to the tool chosen before (seam allowance / notch)
+        queueMicrotask(() => (next === "seam" ? this.startSeamTool() : this.selectTool(TOOLS.find((x) => x.key === "notch")!)));
+      }
     } else if (t.addNotch) {
       const pick = this.picks[0];
       const at = pick.kind === "point" ? this.pointOf(pick.ref) : pick.at;
@@ -3881,13 +3936,15 @@ export class App {
   private bindKeys(): void {
     window.addEventListener("keydown", (e) => {
       const typing = (e.target as HTMLElement).matches("input, select, textarea");
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) {
+      // the key's place on the keyboard (KeyZ → z): the shortcuts work with any keyboard language
+      const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === "z" && !typing) {
         e.preventDefault();
         this.undo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y" && !typing) {
+      } else if ((e.ctrlKey || e.metaKey) && key === "y" && !typing) {
         e.preventDefault();
         this.redo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      } else if ((e.ctrlKey || e.metaKey) && key === "s") {
         e.preventDefault();
         this.save();
       } else if (typing) {
@@ -3897,7 +3954,7 @@ export class App {
         this.cancelTool();
       } else if (e.key === "Enter" && this.collecting) {
         this.finishPicks();
-      } else if (e.key.toLowerCase() === "f") {
+      } else if (key === "f") {
         this.fit();
       } else {
         const t = TOOLS.find((x) => x.shortcut === e.key);
@@ -4275,7 +4332,7 @@ export class App {
       this.model.steps.forEach((st, i) => {
         if (what === "texts" && st.op === "text" && inside(anchor(st.at))) gone.add(i);
         if (st.op !== "mark") return;
-        if (what === "symbols" && st.obj === undefined && inside(anchor(st.a)) && (st.kind !== "grain" || inside(anchor(st.b)))) gone.add(i);
+        if (what === "symbols" && st.obj === undefined && inside(anchor(st.a)) && (st.kind !== "grain" || !st.b || inside(anchor(st.b)))) gone.add(i);
         if (what === "stitches" && st.obj !== undefined) {
           const o = this.res.objects.get(st.obj);
           if (o && o.pts.every((p) => inside(p))) gone.add(i);

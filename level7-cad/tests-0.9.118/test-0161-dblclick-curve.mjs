@@ -10,15 +10,16 @@ try{
  page.on('dialog',d=>d.dismiss());await page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
  // a curve (0,0) → (200,200) and a point on a line lying 6 mm beside the curve's middle
- await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();delete m.parts;delete m.activePart;delete m.lineStyles;m.pieces=[];
+ await f.evaluate(()=>{localStorage.removeItem('level7.formMini');window.level7.formMini=false;const a=window.level7,m=a.model;a.snapshot();delete m.parts;delete m.activePart;delete m.lineStyles;m.pieces=[];
    m.steps=[{op:'point',id:1,x:'0',y:'0'},{op:'point',id:2,x:'200',y:'200'},{op:'curve',id:3,through:[{obj:1},{obj:2}],startAngle:'0',endAngle:'90'},
    {op:'point',id:4,x:'0',y:'150'},{op:'lineAngle',id:5,start:{obj:4},angle:'0',length:'300'}];m.nextId=6;a.selectedStep=-1;a.changed();a.fit();
    const o=a.res.objects.get(3),mid=o.pts[Math.floor(o.pts.length/2)];m.steps.push({op:'pointOn',id:6,on:5,dist:String(Math.round(mid[0]+6)),unit:'mm',from:'start'});m.nextId=7;a.changed();});
  const box=await page.locator('#l7-design-frame').boundingBox();
  const [cx,cy]=await f.evaluate(()=>{const a=window.level7,o=a.res.objects.get(3),L=a.res.objects.get(5).pts[0][1];let b=o.pts[0];for(const p of o.pts)if(Math.abs(p[1]-L-25)<Math.abs(b[1]-L-25))b=p;return a.toScreen(b);});
  await page.mouse.move(box.x+cx,box.y+cy);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+cx,box.y+cy);await page.waitForTimeout(200);
- let r=await f.evaluate(()=>({sel:window.level7.selectedStep,form:!!window.level7.form,handles:window.level7.curveHandles().length,bar:!!document.querySelector('.curve-bar.obj-bar [data-cedit]')}));
- assert(r.sel===2&&!r.form&&r.handles===2&&r.bar,JSON.stringify(r));pass('double-click on the curve (a point lies close beside it): the curve\'s handles and bar show, no window');
+ let r=await f.evaluate(()=>({sel:window.level7.selectedStep,form:window.level7.form?.editOf,handles:window.level7.curveHandles().length,bar:!!document.querySelector('.curve-bar.obj-bar [data-cedit]')}));
+ assert(r.sel===2&&r.form===2&&r.handles===2&&r.bar,JSON.stringify(r));pass('double-click on the curve (a point lies close beside it): the curve\'s handles, bar and values window show together (0.9.176)');
+ await fr.locator('#tool-box [data-cancel]').click();
  await fr.locator('.curve-bar [data-cedit]').click();await fr.locator('#tool-box input[data-key="startAngle"]').waitFor();pass('✎ in the curve bar opens its values (directions, strength)');
  await fr.locator('#tool-box [data-cancel]').click();
  // inherited curve in a new part
