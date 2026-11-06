@@ -1,7 +1,7 @@
 // Saving, opening, autosave, DXF export and import from GRAFIS (JSON made by
 // `python -m grafis_mdl extract`).
 
-import type { GObj, Measurement, Model, Variable } from "../core/model";
+import { createdIds, type GObj, type Measurement, type Model, type Variable } from "../core/model";
 
 const AUTOSAVE_KEY = "level7.cad.model";
 
@@ -83,6 +83,30 @@ function checkModel(m: Model): Model {
   }
   m.names ??= {};
   m.variables ??= [];
+  // a damaged or hand-edited file is set straight instead of failing later: missing lists, the active part
+  // out of range, and a next-id counter below an id already used (it would give two elements one id)
+  const nextOk = (steps: Model["steps"], next: number) => {
+    let max = 0;
+    for (const st of steps) for (const id of createdIds(st)) max = Math.max(max, id);
+    return Math.max(Number.isFinite(next) ? next : 1, max + 1);
+  };
+  m.pieces = Array.isArray(m.pieces) ? m.pieces : [];
+  if (m.parts !== undefined && !Array.isArray(m.parts)) delete m.parts;
+  if (m.parts?.length) {
+    for (const p of m.parts) {
+      p.steps = Array.isArray(p.steps) ? p.steps : [];
+      p.names ??= {};
+      p.pieces = Array.isArray(p.pieces) ? p.pieces : [];
+      p.nextId = nextOk(p.steps, p.nextId);
+    }
+    const k = m.activePart ?? 0;
+    if (!(Number.isInteger(k) && k >= 0 && k < m.parts.length)) {
+      const p = m.parts[0];
+      Object.assign(m, { activePart: 0, steps: p.steps, names: p.names, nextId: p.nextId, pieces: p.pieces });
+    }
+  } else if (m.parts) delete m.parts;
+  m.nextId = nextOk(m.steps, m.nextId);
+  if (m.sizes !== undefined && !Array.isArray(m.sizes)) delete m.sizes;
   return m;
 }
 

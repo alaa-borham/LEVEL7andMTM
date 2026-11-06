@@ -435,6 +435,8 @@ export class App {
     if (users.length && !confirm(`البارتات ${users.join("، ")} ترث من هذا البارت وستظهر فيها أخطاء. حذف؟`)) return;
     this.snapshot();
     this.syncPart();
+    // its line types / colours go with it (a later part may get the same number)
+    for (const key of Object.keys(this.model.lineStyles ?? {})) if (key.startsWith(`${no}:`)) delete this.model.lineStyles![key];
     ps.splice(k, 1);
     const next = Math.min(k, ps.length - 1), p = ps[next];
     Object.assign(this.model, { steps: p.steps, names: p.names, nextId: p.nextId, pieces: p.pieces ?? [], activePart: next });
@@ -1370,6 +1372,7 @@ export class App {
         this.snapshot();
         f(d);
         this.changed();
+        this.refreshEditForm();
       };
       bar.addEventListener("change", (e) => {
         const t = e.target as HTMLInputElement;
@@ -2048,7 +2051,6 @@ export class App {
 
   /** The name of the element under the pointer (C1, L4 …): off, the user does not want it on the drawing. */
   nameTips = false;
-  private curveGrab: { ci: number; x: number; y: number; at: Pt } | null = null;
 
   /** The curve under the screen point (the selected curve first), or -1. */
   private curveAtScreen(sx: number, sy: number): number {
@@ -3580,6 +3582,12 @@ export class App {
 
   private refreshForm: (() => void) | null = null;
 
+  /** After a change from the bar (dimension options, curve point bound / freed / deleted …), an open values
+   * window of the same element shows the new values (its OK would otherwise bring the old ones back). */
+  private refreshEditForm(): void {
+    if (this.form?.editOf !== undefined && this.form.editOf === this.selectedStep) this.editStep(this.selectedStep, true);
+  }
+
   /** An open window that is not the values window of the active element (that one leaves its bar,
    * handles and points usable). */
   private blockingForm(): boolean {
@@ -3697,6 +3705,7 @@ export class App {
       if (this.curveMode && this.selectedCurve()) {
         const rr = svg.getBoundingClientRect();
         this.curveModeClick(e.clientX - rr.left, e.clientY - rr.top);
+        if (!this.dragPoint) this.refreshEditForm(); // (an added point being dragged refreshes on release)
         e.preventDefault();
         return;
       }
@@ -3783,7 +3792,6 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
-      if (this.curveGrab) this.curveGrab = null; // a click on the active curve without dragging: nothing
       // a click on a dimension (no drag) makes it active: its bar of options shows
       if (this.dragDim !== null && !this.dimMoved) this.selectedStep = this.dragDim;
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
@@ -3840,11 +3848,6 @@ export class App {
           this.render();
         }
         return;
-      }
-      if (this.curveGrab && Math.hypot(sx - this.curveGrab.x, sy - this.curveGrab.y) > 3) {
-        const g = this.curveGrab;
-        this.curveGrab = null;
-        this.insertCurvePoint(g.ci, g.at);
       }
       if (this.dragDim !== null) {
         this.dimMoved = true;
@@ -3982,7 +3985,9 @@ export class App {
       } else if (key === "f") {
         this.fit();
       } else {
-        const t = TOOLS.find((x) => x.shortcut === e.key);
+        // the digit by its key's place (Digit7 → 7): Arabic keyboards type ٧
+        const digit = /^(Digit|Numpad)(\d)$/.exec(e.code)?.[2] ?? e.key;
+        const t = TOOLS.find((x) => x.shortcut === digit);
         if (t) this.selectTool(t);
       }
     });

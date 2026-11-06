@@ -659,11 +659,9 @@ body.embedded #tab-steps { padding: 0; }
 .za-foot { display: flex; gap: 6px; justify-content: flex-start; margin-top: 6px; }
 /* 0.9.129: X / Z pick list in the point panel; plain "mm" label */
 .pt-modes { width: 138px; }
-.pt-modes .pt-ref { width: 34px; padding: 1px 0; font: 10px Arial, sans-serif; color: var(--muted); }
 .pt-modes input { width: 50px; }
 .pt-modes .pt-mm { font: 600 12px "Segoe UI", Arial, sans-serif; }
 .pt-modes .pt-xy span { display: grid; grid-template-columns: 50px 34px; gap: 2px; }
-.pt-modes .pt-xy .pt-ref { align-self: center; }
 .table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 #canvas text.name-tip { fill: var(--text); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
@@ -937,7 +935,6 @@ th.sz-off { opacity: .45; text-decoration: line-through; }
 .me-table td input { width: 100%; min-width: 120px; box-sizing: border-box; }
 .me-table td input.num { min-width: 64px; width: 70px; text-align: center; font-family: Consolas, monospace; }
 .me-table td.xid { color: var(--muted); font: 12px Consolas, monospace; }
-.size-export-note { color: var(--muted); font-size: 12.5px; }
 /* 0.9.149 X table: X, name, MTM and the base size stay in place while the sizes scroll sideways
    (frozen like Excel); the header row stays on top while scrolling down. */
 .xgrid .xg-table table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; }
