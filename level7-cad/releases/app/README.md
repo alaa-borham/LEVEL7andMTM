@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.162
+
+LEVEL7 design: show all parts (as GRAFIS): every part drawn side by side in rows, in solid lines, not on top of each other; the part under the pointer lights up and a click switches to it where it is on the screen; hide all shows the active part alone. The eye of a single part still shows it faded in place behind the active one.
+
 LEVEL7 and MTM 0.9.161
 
 LEVEL7 design: double-click opens the element that glows under the pointer (a point close beside a curve no longer takes it); double-click on a curve shows its handles, points and curve bar (as GRAFIS) instead of a window, and ✎ in the bar opens its values; an inherited element says which part it follows and is edited in.

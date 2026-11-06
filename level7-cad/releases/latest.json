@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.161",
- "notes": "دابل كليك على المنحنى يظهر مقابضه مثل GRAFIS؛ يفتح العنصر المتوهج تحت الماوس",
+ "version": "0.9.162",
+ "notes": "إظهار كل البارتات جنباً إلى جنب مثل GRAFIS؛ النقر على بارت ينقلك إليه",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b26891d321a0744b7acfddc8c2a1f3eaf42177d435cbfa29156dc94b7baf60a2",
-   "size": 140884
+   "sha256": "4bdd7fd824ce62bbfd2e7c70d6e40ecf738ad17ca4f689177727fd8c4e2b7bb9",
+   "size": 141240
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-CFbdWJAb.js",
-   "sha256": "bcfe4711908bc1e716e854545011b6aa9c87d595ed36af5a90c45613803af5e3",
-   "size": 282388
+   "path": "assets/l7design/assets/index-BjDwl9aI.css",
+   "sha256": "bbb455a1924d3f70207124699c45c4d74b415272ff1885161a61517b5bfc0927",
+   "size": 40449
   },
   {
-   "path": "assets/l7design/assets/index-DF6yi-i-.css",
-   "sha256": "2f32fd8b0444d9437eb2098387f9ea092539d1b5a72446e2afd1d69da1567db6",
-   "size": 40305
+   "path": "assets/l7design/assets/index-DFj0WeZD.js",
+   "sha256": "b2e66e19acf5d58b406c88e58e9ee26bf79cbce268f3f50a307585371cb1ed54",
+   "size": 284850
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "a9071702306375e39d53cd81feb5f0243203aa8ff353a9de78c1f0ad13b22e78",
+   "sha256": "7d628c66dac2f4cb951a866a833599a1d5c3b5a217bd29ce64f29bd1372b5301",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "6a7dc135306969078375aea72dced097f0a577aba14254333d54dab3bfd1c868",
+   "sha256": "de31412b9ccb969534ee720e4451ca41943585c9bf42c15e7ab830afa5c18a35",
    "size": 301
   },
   {
