@@ -22,7 +22,7 @@ const GLYPH = {
   grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
   textCreate: 'textCreate', delText: 'delFrame', delTextFrame: 'delFrame', delSymbolsFrame: 'delFrame', delStitchesFrame: 'delFrame', delNotchesFrame: 'delFrame',
   delPoints: 'delPoints', delLines: 'delLines', delPointsFrame: 'delFrame', delLinesFrame: 'delFrame', delAllFrame: 'delFrame',
-  convertNotch: 'convertNotch',   inheritBlock: 'library', saveBlock: 'folder', inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam',
+  convertNotch: 'convertNotch',   inheritBlock: 'library', saveBlock: 'folder', inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam', seamAllowance: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
 };
 const HINT = {
@@ -34,10 +34,10 @@ const HINT = {
   grainLine: 'انقر بداية خط النسيج ثم نهايته.', symButton: 'انقر موضع الزر ثم اكتب قطره.', symDrill: 'انقر موضع الثقب ثم اكتب قطره.', symCross: 'انقر موضع العلامة.',
   delPoints: 'انقر النقاط واحدة واحدة ثم Enter أو كليك يمين؛ ما يعتمد عليها يُسأل عنه قبل الحذف.', delLines: 'انقر الخطوط والمنحنيات ثم Enter أو كليك يمين.',
   delPointsFrame: 'انقر ركني إطار: تُحذف النقاط الواقعة داخله بالكامل.', delLinesFrame: 'انقر ركني إطار: تُحذف الخطوط والمنحنيات الواقعة داخله بالكامل.', delAllFrame: 'انقر ركني إطار: يُحذف كل ما داخله.',
-  inheritObjects: 'يفتح نافذة: اختر بارتاً سابقاً ثم العناصر؛ تُنسخ إلى البارت النشط وتبقى مرتبطة بالأصل.',
+  inheritObjects: 'تظهر البارتات السابقة: مرّر على خط حتى يتلوّن ثم انقره فيُنقل إلى البارت النشط ويبقى تابعاً لبارته. كليك يمين للإنهاء، وزر «القائمة» للاختيار من قائمة.',
   inheritPart: 'يفتح نافذة: اختر بارتاً سابقاً فتُنسخ كل عناصره إلى البارت النشط مرتبطة بالأصل.',
-  mirrorPts: 'انقر نقطتي محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين؛ اختر نسخة أو نقل.',
-  mirrorDir: 'انقر نقطة على المحور، ثم العناصر، ثم Enter؛ اكتب اتجاه المحور (رقماً أو X/Z).',
+  mirrorPts: 'انقر نقطتي المحور، ثم اختر نسخة أو نقل، ثم انقر العناصر واحداً واحداً: كل عنصر يُعكس فوراً. كليك يمين للإنهاء.',
+  mirrorDir: 'انقر نقطة على المحور واكتب اتجاهه واختر نسخة أو نقل، ثم انقر العناصر: كل عنصر يُعكس فوراً. كليك يمين للإنهاء.',
   scalePts: 'انقر مركز التكبير، ثم العناصر، ثم Enter؛ اكتب النسبة % (100 = نفس الحجم) رقماً أو X/Z.',
   scaleDir: 'انقر نقطة الأساس، ثم العناصر، ثم Enter؛ اكتب الاتجاه والنسبة %: يُمط في ذلك الاتجاه فقط.',
   parallelMany: 'انقر الخطوط والمنحنيات واحداً واحداً، كلاً في الجهة التي تريد الموازي فيها، ثم Enter أو كليك يمين. اكتب المسافة رقماً أو X/Z أو حرّك الماوس، ثم انقر للاعتماد. تبقى مرتبطة: غيّر X فتتحرك كلها.',
@@ -59,10 +59,11 @@ const HINT = {
   parallel: 'انقر الخط، ثم حرّك الماوس إلى الجهة المطلوبة: الخط الموازي يتبعه والمسافة تظهر. انقر لتثبيته أو اكتب المسافة.',
   setLength: 'انقر الخط قرب الطرف الذي يتغير، ثم حرّك الماوس: الخط يطول أو يقصر معه. انقر لتثبيته أو اكتب الطول.',
   trim: 'انقر الخط المراد قصه أو تمديده، ثم مرّر الماوس على الحد: النتيجة تظهر قبل النقر.',
-  mirrorCopy: 'انقر محور الانعكاس، ثم العناصر، ثم Enter أو كليك يمين.',
-  mirrorMove: 'اختر العناصر ثم محور الانعكاس.',
+  mirrorCopy: 'انقر محور الانعكاس، ثم انقر العناصر واحداً واحداً: تُنسخ إلى الجهة الأخرى فوراً. كليك يمين للإنهاء.',
+  mirrorMove: 'انقر محور الانعكاس، ثم انقر العناصر واحداً واحداً: تُقلب إلى الجهة الأخرى فوراً. كليك يمين للإنهاء.',
   curve: 'انقر نقاط المنحنى بالترتيب (موجودة أو فارغة)، ثم Enter أو كليك يمين. بعدها اسحب الدائرة الحمراء عند كل طرف لضبط اتجاهه؛ دابل كليك عليها يعيده حراً.',
   piece: 'اختر حدود القطعة بالترتيب ثم Enter.',
+  seamAllowance: 'اختر نوع الحاشية وقيمتها من الشريط: قياسي، مسافة، غير متوازية (القيمة الأولى عند الطرف الأقرب للنقرة)، أو بدون؛ ثم انقر حواف القطع. كليك يمين للإنهاء.',
   notch: 'اختر نقطة على حد القطعة.',
   measureDist: 'اختر نقطتين لقياس المسافة بينهما.',
   measureLength: 'اختر خطاً أو منحنى لقياس طوله.'

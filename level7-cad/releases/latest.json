@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.158",
- "notes": "مقبض المنحنى حر الحركة في كل الاتجاهات، Shift كل 15 درجة",
+ "version": "0.9.159",
+ "notes": "شريط المنحنى (تثبيت/فك/حذف نقطة، زاوية على خط)، أنواع الخطوط وألوانها، الانعكاس بالنقر، الوراثة بالنقر، حواشي الخياطة، البارتات ظاهرة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "76c5f3225a1c41054e3ebc887c0890ca26b14cdff35593f4f8d8884ac1428778",
-   "size": 139429
+   "sha256": "4468db83381d68289172573b5a8321cc03bcbc0adade8f8c75c8c3de0bb74f8d",
+   "size": 140328
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-Cj38HwEz.js",
-   "sha256": "3516d800812384821a4643dae2a08714512fd624f50a9b18685e33741cd09df4",
-   "size": 259849
+   "path": "assets/l7design/assets/index-CtA6ez_u.js",
+   "sha256": "ad2abd54ce1531eb08ca53280d994e40310a7a3917a80210947cb856044a4758",
+   "size": 281688
   },
   {
-   "path": "assets/l7design/assets/index-Dzlw7R8E.css",
-   "sha256": "3741f3bb6d67b5ac5629f73b1a0550dd8f7f69cb05db7f746616692732bbeafc",
-   "size": 38063
+   "path": "assets/l7design/assets/index-DF6yi-i-.css",
+   "sha256": "2f32fd8b0444d9437eb2098387f9ea092539d1b5a72446e2afd1d69da1567db6",
+   "size": 40305
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "38ab0be909f12316f6b8c6d9c53788610f713ca29e89c2a700c5f838678fc5ab",
+   "sha256": "59f2a01b787ebe78dee63d679fcdb02ae21659ae3bcf2dcceac15b9f19e6e381",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "0da144a31c5ffe020aafc97f02636f13b96b402e77ffb2d16ab78a7cd5ff476e",
+   "sha256": "eb5fa76e025e4fb25fa2eec2558ce01bc1457c31945876bcde1e5ea8035d6783",
    "size": 301
   },
   {
@@ -370,13 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "c14ef94b71570d7f3e4d044552ab33703bf9896e7514a2e5df92096c6170001b",
-   "size": 44769
+   "sha256": "4697df8802812a404b414fa8559e06e4c9fef6c9ed0fb8a0f0df6aa46367b8dc",
+   "size": 45542
   },
   {
    "path": "src/l7-icons.js",
-   "sha256": "de6e6885d08423e3832bdcbb8ce7ef6ff9038f8d69cdab9b4df7130512056eaa",
-   "size": 7889
+   "sha256": "de1039e42465b5ab7abe77707aac11aefa00f6134882ec5827e7a6d946881c38",
+   "size": 8114
   },
   {
    "path": "src/line-transform-ui.js",

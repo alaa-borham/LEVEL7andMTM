@@ -48,6 +48,8 @@ const I = {
   textCreate: '<path class="k" d="M6 5h12M12 5v13"/><path class="b" d="M5 21h14"/>',
   // pieces
   piece: `<path class="f" d="${PIECE}"/><path class="st" d="${STITCH}"/>`,
+  // 0.9.160 seam allowance: sewing line (ink) and the cutting line around it (dashed green)
+  seamAllowance: `<path class="f" d="M7 7h10v12H7z"/><path class="k" d="M7 7h10v12H7z"/><path class="g" d="M3.5 3.5h17v19h-17z"/>`,
   notch: '<path class="f" d="M3 9h18v12H3z"/><path class="x" d="M12 9v6"/><path class="o" d="M9.5 3.5L12 6l2.5-2.5"/>',
   // dimensions and measuring
   dimAligned: '<path class="k" d="M4 19L18 5"/><path class="g" d="M4 19l-2.5-2.5M18 5l-2.5-2.5"/><path class="o" d="M2.5 15.5l13-13M2.5 15.5l.6-3M2.5 15.5l3-.6M15.5 2.5l-.6 3M15.5 2.5l-3 .6"/>',
