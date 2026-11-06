@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.169",
- "notes": "النقر على الخطأ يظهر مكانه؛ شريط خيارات البعد (ملاحظة، اتجاه، حجم، وحدة، ×2/×4)",
+ "version": "0.9.170",
+ "notes": "نافذة الكرف تعرض نقاطه بقيم Z",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "e77405a4bcd81f06722e27a1b56fa19acb41dc565068fcb6853e01bbc04cbbaa",
-   "size": 143695
+   "sha256": "1d284f2c5ddab6e036681860973e809832feac37e422a3b6f81ff18add455672",
+   "size": 143940
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BYBBJU44.js",
-   "sha256": "9773cae4c0b6d18ebe5d055d3564e5935733df1d0d1f73230b73aa1e2df732b5",
-   "size": 294635
-  },
-  {
    "path": "assets/l7design/assets/index-CjJTxPp8.css",
    "sha256": "4479c64f2b8f6f06e66e797ab4f5e776ea1abf2da9f7b5fd166c6ac7626aa671",
    "size": 41750
   },
   {
+   "path": "assets/l7design/assets/index-j0q-eQgy.js",
+   "sha256": "c4cb7a247bb38e8b474af0105c1275ea3b9ce43ad3fb9ee2595734e5b515bbc3",
+   "size": 295005
+  },
+  {
    "path": "assets/l7design/index.html",
-   "sha256": "2dacb316d3108cbed9479cda1157b42cd4d8d582243777ce3f7517a222d1bfed",
+   "sha256": "5e6f21c85292cab3b1751ce785bf83ad12a1b5996925757dc0f0e6d657cff008",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "254a6119aff58843c316e271c89cbcedda5a77a04a18652ed96e0a97177ab70c",
+   "sha256": "ad2453dd44de2a0cce3fccc74eb326f191cac8c59283b45164af1c74adc9fedc",
    "size": 301
   },
   {

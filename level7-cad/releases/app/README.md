@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.170
+
+LEVEL7 design: the values window of a curve also shows the points it passes through with the values they were made with (e.g. its start on a line at Z14, its end x / y), and which line an end direction is measured from.
+
 LEVEL7 and MTM 0.9.169
 
 LEVEL7 design: test run / grade: a click on an error shows where it is (its part and size, the step zoomed with a red ring, or what it is built on when it could not be drawn; the piece; the Z table); dimensions: a click on a dimension makes it active and shows its bar: a note / name before the value, the text on the other side, text size, unit (mm / cm / inch) and ×2 / ×4, each one undo step.
