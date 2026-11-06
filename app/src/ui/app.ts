@@ -1316,7 +1316,7 @@ export class App {
     if (this.near && !this.pan) parts.push(this.nearSvg(this.near));
     // the curve under the pointer shows the points it passes through (drag one to reshape it, as GRAFIS)
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
-    parts.push(this.vis.dims ? this.dimsSvg() : "");
+    parts.push(this.vis.dims ? this.dimsSvg() + this.ghostDimsSvg() : "");
     const dhv = this.dimHover !== null ? this.dimHits.find((h) => h.i === this.dimHover) : undefined;
     if (dhv) parts.push(`<polyline class="near-glow" points="${dhv.pts.map((q) => q.map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
     parts.push(this.vis.marks ? this.marksSvg() : "");
@@ -1585,6 +1585,29 @@ export class App {
       } catch {
         /* incomplete */
       }
+    }
+    return out.join("");
+  }
+
+  /** With all parts shown: the other parts' dimensions too, each in its part's place (F7 shows / hides
+   * them all). They are drawn from that part's own result, the view moved by the part's offset. */
+  private ghostDimsSvg(): string {
+    if (!this.allParts) return "";
+    const out: string[] = [];
+    const keep = { res: this.res, cx: this.cx, cy: this.cy, hits: this.dimHits };
+    try {
+      this.ghosts.forEach((g, gi) => {
+        const info = this.ghostInfo[gi], p = info?.all ? this.model.parts?.[info.k] : undefined;
+        if (!p) return;
+        this.res = g;
+        this.cx = keep.cx - info.off[0];
+        this.cy = keep.cy - info.off[1];
+        p.steps.forEach((st, i) => {
+          if (st.op === "dim" && !g.stepErrors.has(i)) out.push(this.dimSvg(st, false, -1));
+        });
+      });
+    } finally {
+      Object.assign(this, { res: keep.res, cx: keep.cx, cy: keep.cy, dimHits: keep.hits });
     }
     return out.join("");
   }

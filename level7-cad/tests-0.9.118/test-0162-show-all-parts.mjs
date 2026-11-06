@@ -13,7 +13,7 @@ try{
  await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();localStorage.removeItem('level7.allParts');a.allParts=false;delete m.lineStyles;m.pieces=[];
    const sq=(n)=>[{op:'point',id:1,x:'0',y:'0'},{op:'point',id:2,x:String(n),y:'0'},{op:'point',id:3,x:String(n),y:String(n)},{op:'point',id:4,x:'0',y:String(n)},
      {op:'line',id:5,p1:{obj:1},p2:{obj:2}},{op:'line',id:6,p1:{obj:2},p2:{obj:3}},{op:'line',id:7,p1:{obj:3},p2:{obj:4}},{op:'line',id:8,p1:{obj:4},p2:{obj:1}}];
-   m.parts=[{no:1,name:'a',steps:sq(300),names:{},nextId:9,pieces:[],amount:1},{no:2,name:'b',steps:sq(200),names:{},nextId:9,pieces:[],amount:1},
+   m.parts=[{no:1,name:'a',steps:sq(300),names:{},nextId:9,pieces:[],amount:1},{no:2,name:'b',steps:[...sq(200),{op:'dim',kind:'length',obj:5,offset:'-20'}],names:{},nextId:9,pieces:[],amount:1},
      {no:3,name:'c',steps:[{op:'point',id:1,x:'0',y:'0'},{op:'lineAngle',id:2,start:{obj:1},angle:'0',length:'250'}],names:{},nextId:3,pieces:[],amount:1}];
    m.activePart=0;const p=m.parts[0];m.steps=p.steps;m.names=p.names;m.nextId=p.nextId;a.selectedStep=-1;a.changed();a.fit();});
  assert.equal(await f.evaluate(()=>window.level7.ghosts.length),0);
@@ -23,8 +23,18 @@ try{
  assert(r.n===2&&r.all&&r.offs[0][0]>=300&&r.offs[1][0]>r.offs[0][0]+200&&r.cls===5&&r.dashed===0,JSON.stringify(r));
  pass(`👁 show all: parts 002 and 003 drawn beside part 001 in solid lines (offsets ${JSON.stringify(r.offs)}), not on top of it`);
  // 0.9.178: the active part stands out (blue) while all parts are shown
- const strokes=await f.evaluate(()=>[...document.querySelectorAll('#canvas polyline:not(.allpart):not(.ghost)')].map(p=>p.getAttribute('stroke')));
+ const strokes=await f.evaluate(()=>[...document.querySelectorAll('#canvas > polyline:not(.allpart):not(.ghost)')].map(p=>p.getAttribute('stroke')));
  assert(strokes.length&&strokes.every(c=>c==='var(--active-part, #2fa4dd)'),JSON.stringify(strokes));pass('with all parts shown the active part is drawn in its own colour (blue)');
+ // 0.9.179: the other parts' dimensions show in their places too; F7 hides / shows them all
+ await f.evaluate(()=>{window.level7.vis.dims=true;window.level7.render();});
+ const dt=await f.evaluate(()=>[...document.querySelectorAll('#canvas .dim-text')].map(t=>t.textContent.replace(/[\u2066-\u2069]/g,'')));
+ assert(dt.includes('200'),JSON.stringify(dt));
+ const dimX=await f.evaluate(()=>{const t=[...document.querySelectorAll('#canvas .dim-text')].find(t=>t.textContent.includes('200'));return Number(t.getAttribute('x'));});
+ const p2x=await f.evaluate(()=>{const a=window.level7,o=a.ghostInfo[0].off;return[a.toScreen([0+o[0],0])[0],a.toScreen([200+o[0],0])[0]];});
+ assert(dimX>p2x[0]&&dimX<p2x[1],JSON.stringify({dimX,p2x}));
+ await f.evaluate(()=>{window.level7.setVis('dims',false);});assert.equal(await f.evaluate(()=>document.querySelectorAll('#canvas .dim-text').length),0);
+ await f.evaluate(()=>{window.level7.setVis('dims',true);});
+ pass('the dimensions of part 002 show in its place beside part 001; F7 (dimensions off) hides them all');
  // hover part 002 then click it: it becomes active and stays where it was on the screen
  const box=await page.locator('#l7-design-frame').boundingBox();
  const s2=await f.evaluate(()=>{const a=window.level7,o=a.ghostInfo[0].off;return a.toScreen([100+o[0],0+o[1]]);});
