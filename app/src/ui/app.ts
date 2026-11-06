@@ -19,6 +19,8 @@ import {
   sizeActive,
   withSize,
   usedIds,
+  LINE_DASHES,
+  type LineDash,
   evaluateModel,
   Vars,
   type EvalResult,
@@ -56,6 +58,15 @@ const COLOR_KEYS: [string, string][] = [["--line", "الخطوط المستقي�
 const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00838f", "#ad1457", "#5d4037", "#827717", "#283593"];
 
 type Hover = Pick | null;
+
+/** Curve bar icons (24 grid, drawn like the LEVEL7 tool icons: ink, blue curve, red pin / cross). */
+const cbSvg = (d: string) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const CB_ICON = {
+  bind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M15.5 8.5l-4 4M17 3.5l3.5 3.5" stroke="currentColor"/><circle cx="11.5" cy="12.5" r="2.2" fill="#e53935" stroke="none"/>'),
+  unbind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M17 3.5l3.5 3.5" stroke="currentColor"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/><circle cx="11.5" cy="12.5" r="2" fill="currentColor" stroke="none"/>'),
+  del: cbSvg('<path d="M3 19C8 18 13 14 18 5" stroke="#2fa4dd"/><circle cx="10" cy="14.5" r="2.4" fill="currentColor" stroke="none"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
+  rel: cbSvg('<path d="M5 3v18" stroke="currentColor"/><path d="M5 14C11 14 16 10 20 4" stroke="#2fa4dd"/><path d="M5 10h4v4" stroke="#f08c00"/>'),
+};
 
 interface FormState {
   title: string;
@@ -159,7 +170,7 @@ export class App {
     this.res = evaluateModel(withSize(this.model));
     // other parts shown faded behind the active one
     const parts = this.model.parts ?? [];
-    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
+    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible !== false ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
     this.nest = this.gradeView !== "off" ? this.nestResults() : [];
   }
 
@@ -228,7 +239,7 @@ export class App {
     this.syncPart();
     const no = ps.reduce((a, p) => Math.max(a, p.no), 0) + 1;
     const src = copyOf !== undefined ? ps[copyOf] : undefined;
-    const part: Part = src ? (JSON.parse(JSON.stringify({ ...src, no, name: `${src.name} (2)`, visible: false })) as Part) : { no, name: "", steps: [], names: {}, nextId: 1, pieces: [], amount: 1 };
+    const part: Part = src ? (JSON.parse(JSON.stringify({ ...src, no, name: `${src.name} (2)` })) as Part) : { no, name: "", steps: [], names: {}, nextId: 1, pieces: [], amount: 1 };
     // a copy keeps inheriting from the same earlier parts
     ps.push(part);
     this.switchPart(ps.length - 1);
@@ -297,9 +308,14 @@ export class App {
             localStorage.setItem("level7.partStrip", this.stripMode);
           } catch {}
           this.renderPartStrip();
+        } else if (t.closest("[data-sall]")) {
+          const on = t.closest<HTMLElement>("[data-sall]")!.dataset.sall === "1";
+          for (const p of this.model.parts ?? []) p.visible = on;
+          this.changed();
+          this.toast(on ? "كل البارتات ظاهرة" : "كل البارتات مخفية (عدا النشط)");
         } else if (eye) {
           const p = (this.model.parts ?? [])[Number(eye.dataset.seye)];
-          if (p) (p.visible = !p.visible), this.changed();
+          if (p) (p.visible = p.visible === false), this.changed();
         } else if (th) this.switchPart(Number(th.dataset.spart));
       });
     }
@@ -308,10 +324,10 @@ export class App {
     const items = (ps ?? [{ no: 1, name: this.model.name } as Part]).map((p, k) => {
       const pv = this.partPreview(ps ? this.partResult(k) : this.res);
       return `<div class="ps-item${k === act ? " act" : ""}" data-spart="${k}" title="${String(p.no).padStart(3, "0")} ${esc(p.name)}">
-        <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible || k === act ? "on" : ""}" title="إظهار البارت باهتاً"${k === act || !ps ? " disabled" : ""}>👁</button></div>
+        <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible !== false || k === act ? "on" : ""}" title="إظهار / إخفاء البارت خلف البارت النشط"${k === act || !ps ? " disabled" : ""}>👁</button></div>
         <svg viewBox="${pv.box}">${pv.svg}</svg></div>`;
     });
-    strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء">⦸</button></div><div class="ps-list">${items.join("")}</div>`;
+    strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء الشريط">⦸</button><button data-sall="1" title="إظهار كل البارتات · Show all parts">👁</button><button data-sall="0" title="إخفاء كل البارتات · Hide all parts">🚫</button></div><div class="ps-list">${items.join("")}</div>`;
   }
 
   /** Product info (as GRAFIS 2026): product texts, logo, two sketches and a fabric picture,
@@ -410,7 +426,7 @@ export class App {
       .map((p, k) => {
         const objs = p.steps.reduce((a, st) => a + createdIds(st).length, 0);
         return `<tr data-part="${k}" class="${k === act ? "sel" : ""}"><td class="pno">${String(p.no).padStart(3, "0")}</td>
-          <td class="peye"><button data-peye="${k}" title="إظهار البارت باهتاً خلف البارت النشط" class="${p.visible || k === act ? "on" : ""}"${k === act ? " disabled" : ""}>👁</button></td>
+          <td class="peye"><button data-peye="${k}" title="إظهار البارت باهتاً خلف البارت النشط" class="${p.visible !== false || k === act ? "on" : ""}"${k === act ? " disabled" : ""}>👁</button></td>
           <td class="pname"><input data-pname="${k}" value="${esc(p.name)}" placeholder="#"/></td><td class="pn">${p.steps.length}</td><td class="pn">${objs}</td><td class="pn">${p.production ? "✂" : ""}</td></tr>`;
       })
       .join("");
@@ -444,7 +460,7 @@ export class App {
     });
     box.querySelectorAll<HTMLButtonElement>("[data-peye]").forEach((b) => b.addEventListener("click", () => {
       const q = ps[Number(b.dataset.peye)];
-      q.visible = !q.visible;
+      q.visible = q.visible === false;
       this.changed();
     }));
     box.querySelector('[data-pa="add"]')?.addEventListener("click", () => this.addPart());
@@ -842,8 +858,10 @@ export class App {
     for (const o of this.res.objects.values()) {
       if (o.kind !== "line") continue;
       const pts = o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ");
-      const w = highlight.has(o.id) ? 2.5 : 1.4;
-      parts.push(`<polyline points="${pts}" fill="none" stroke="${lineColor(o)}" stroke-width="${w}"/>`);
+      const w = highlight.has(o.id) ? 2.5 : 1.4, sty = this.lineStyle(o.id);
+      const dash = sty.dash ? ` stroke-dasharray="${LINE_DASHES[sty.dash]}"${sty.dash === "dotted" ? ' stroke-linecap="round"' : ""}` : "";
+      const col = sty.color ?? lineColor(o);
+      parts.push(`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${sty.color && highlight.has(o.id) ? 3 : w}"${dash}/>`);
       if (this.showNames) {
         const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
         parts.push(`<text x="${mid[0] + 4}" y="${mid[1] - 4}">${esc(o.name)}</text>`);
@@ -875,9 +893,11 @@ export class App {
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     parts.push(this.formulaLabelsSvg());
+    this.renderCurveBar();
     // no letters on the drawing: the name of the element under the pointer only
+    // no name under the pointer either (only with "names" switched on): the drawing stays clean
     const under = this.nameHover;
-    if (under && !this.showNames) {
+    if (under && !this.showNames && this.nameTips) {
       const o = this.res.objects.get(under);
       if (o) {
         const [x, y] = this.toScreen(o.kind === "point" ? o.pts[0] : o.pts[Math.floor(o.pts.length / 2)]);
@@ -1231,8 +1251,13 @@ export class App {
       put(start, s1, pointText(s.p1));
       put(end, e1, pointText(s.p2));
     } else if (s.op === "curve") {
-      put(start, s1, pointText(s.through[0]));
-      put(end, e1, pointText(s.through[s.through.length - 1]));
+      const st = pointText(s.through[0]), en = pointText(s.through[s.through.length - 1]);
+      put(start, s1, st);
+      put(end, e1, en);
+      // an end square / at an angle to a line: "∠ 90° L4"
+      const relText = (a: string, rel?: number) => (rel !== undefined && a.trim() ? `∠ ${this.formulaText(a, "°")} ${this.model.names[rel] ?? ""}` : "");
+      put(start, s1, relText(s.startAngle, s.startRel), st ? 1 : 0);
+      put(end, e1, relText(s.endAngle, s.endRel), en ? 1 : 0);
     } else if (s.op === "parallel") {
       const m = o.pts[Math.floor(n / 2)];
       const a = this.toScreen(m);
@@ -1241,6 +1266,221 @@ export class App {
     return out.join("");
   }
 
+  // ---- curve bar (as GRAFIS, shown while a curve is selected): bind / unbind / delete a point, angle on a line
+  curveMode: "bind" | "unbind" | "del" | "rel" | null = null;
+
+  private selectedCurve(): Extract<Step, { op: "curve" }> | null {
+    const s = this.model.steps[this.selectedStep];
+    return s && s.op === "curve" && !this.tool && !this.form ? s : null;
+  }
+
+  /** The selected step when it makes a line or curve (no tool open): its style can be set. */
+  private selectedLineStep(): Step | null {
+    const s = this.model.steps[this.selectedStep];
+    if (!s || this.tool || this.form) return null;
+    return createdIds(s).some((id) => this.res.objects.get(id)?.kind === "line") ? s : null;
+  }
+
+  private styleKey(id: number): string {
+    return `${this.model.parts?.[this.model.activePart ?? 0]?.no ?? 1}:${id}`;
+  }
+
+  lineStyle(id: number): { dash?: LineDash; color?: string } {
+    return this.model.lineStyles?.[this.styleKey(id)] ?? {};
+  }
+
+  private setLineStyle(st: Step, patch: { dash?: LineDash; color?: string | null }): void {
+    this.snapshot();
+    const all = (this.model.lineStyles ??= {});
+    for (const id of createdIds(st)) {
+      if (this.res.objects.get(id)?.kind !== "line") continue;
+      const k = this.styleKey(id), cur = { ...(all[k] ?? {}) };
+      if (patch.dash) patch.dash === "solid" ? delete cur.dash : (cur.dash = patch.dash);
+      if (patch.color !== undefined) patch.color ? (cur.color = patch.color) : delete cur.color;
+      if (cur.dash || cur.color) all[k] = cur;
+      else delete all[k];
+    }
+    this.changed();
+  }
+
+  private renderCurveBar(): void {
+    const ls = this.selectedLineStep();
+    const c = ls?.op === "curve" ? ls : null;
+    let bar = document.querySelector(".curve-bar") as HTMLElement | null;
+    if (!ls) {
+      bar?.remove();
+      this.curveMode = null;
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "curve-bar";
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
+      bar.addEventListener("mousedown", (e) => e.stopPropagation());
+      bar.addEventListener("click", (e) => {
+        const m = (e.target as HTMLElement).closest<HTMLElement>("[data-cm]")?.dataset.cm as typeof this.curveMode | "off";
+        if (!m) return;
+        this.curveMode = m === "off" || m === this.curveMode ? null : m;
+        this.render();
+      });
+      bar.addEventListener("change", (e) => {
+        const t = e.target as HTMLInputElement, st = this.selectedLineStep();
+        if (!st) return;
+        if (t.dataset.dash) this.setLineStyle(st, { dash: t.value as LineDash });
+        else if (t.dataset.color) this.setLineStyle(st, { color: t.value });
+      });
+      bar.addEventListener("click", (e) => {
+        const st = this.selectedLineStep();
+        if (st && (e.target as HTMLElement).closest("[data-nocolor]")) this.setLineStyle(st, { color: null });
+      });
+    }
+    const first = createdIds(ls).find((id) => this.res.objects.get(id)?.kind === "line") as number, sty = this.lineStyle(first);
+    const dashes: [LineDash, string][] = [["solid", "─── متصل"], ["dashed", "- - - متقطع"], ["dotted", "······ نقاط"], ["long", "── ── متقطع طويل"], ["shortlong", "── - ── قصير-طويل"], ["dashdot", "─ · ─ شرطة-نقطة"]];
+    const styleCtl = `<select data-dash="1" title="نوع الخط · Line type">${dashes.map(([v, t]) => `<option value="${v}"${(sty.dash ?? "solid") === v ? " selected" : ""}>${t}</option>`).join("")}</select>` +
+      `<input type="color" data-color="1" value="${sty.color ?? "#2fa4dd"}" title="لون الخط"/><button data-nocolor="1" title="اللون الافتراضي"${sty.color ? "" : " disabled"}>↺</button>`;
+    if (!c) {
+      this.curveMode = null;
+      bar.innerHTML = `<b>${esc(this.model.names[first] ?? "خط")}</b>${styleCtl}<span>رايت كليك للخروج</span>`;
+      return;
+    }
+    const b = (m: string, icon: string, tip: string) => `<button data-cm="${m}" class="${this.curveMode === m ? "on" : ""}" title="${tip}">${icon}</button>`;
+    const say: Record<string, string> = {
+      bind: "انقر نقطة أو طرف خط أو مكاناً على خط: يمر المنحنى به ويبقى مثبتاً عليه",
+      unbind: "انقر نقطة مثبتة على المنحنى: تصير نقطة حرة في مكانها",
+      del: "انقر نقطة داخل المنحنى لحذفها منه",
+      rel: "انقر الخط الذي تُقاس منه زاوية طرف المنحنى (مثلاً 90° عمودي عليه)",
+    };
+    bar.innerHTML = `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
+      b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
+      b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") + styleCtl +
+      `<span>${this.curveMode ? say[this.curveMode] : "اسحب المقابض أو النقاط · رايت كليك للخروج"}</span>`;
+  }
+
+  /** Index of the step that makes object id, or -1. */
+  private creatorOf(id: number): number {
+    let i = -1;
+    this.model.steps.forEach((st, k) => createdIds(st).includes(id) && (i = k));
+    return i;
+  }
+
+  /** The curve must come after step k (it reads what k makes): move it there when nothing between
+   * uses the curve. Returns the curve's index, or -1 when it cannot move. */
+  private curveAfter(ci: number, k: number): number {
+    if (k < ci) return ci;
+    const c = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
+    for (let j = ci + 1; j <= k; j++) if (usedIds(this.model.steps[j]).includes(c.id)) return -1;
+    this.model.steps.splice(ci, 1);
+    this.model.steps.splice(k, 0, c);
+    return k;
+  }
+
+  /** Where along the curve a point lies: the place in its list of points (inner points only). */
+  private throughSlot(c: Extract<Step, { op: "curve" }>, at: Pt): number {
+    const o = this.res.objects.get(c.id);
+    if (!o) return c.through.length - 1;
+    const sAt = closestOnPolyline(o.pts, at).s;
+    let k = 1;
+    for (let j = 1; j < c.through.length - 1; j++) {
+      try {
+        if (closestOnPolyline(o.pts, this.pointOf(c.through[j])).s < sAt) k = j + 1;
+      } catch {
+        /* keeps its place */
+      }
+    }
+    return k;
+  }
+
+  private curveModeClick(sx: number, sy: number): void {
+    const c = this.selectedCurve();
+    if (!c) return;
+    let ci = this.selectedStep;
+    const throughAt = () => c.through.findIndex((r) => {
+      try {
+        return dist(this.toScreen(this.pointOf(r)), [sx, sy]) <= 10;
+      } catch {
+        return false;
+      }
+    });
+    if (this.curveMode === "bind") {
+      const hp = this.hit("point", sx, sy);
+      let ref: PointRef | null = hp?.kind === "point" && hp.ref.obj !== c.id && !c.through.some((r) => r.obj === hp.ref.obj && r.end === hp.ref.end) ? hp.ref : null;
+      let line: { id: number; s: number } | null = null;
+      if (!ref) {
+        const nr = this.nearest(sx, sy), o = nr && nr.id !== c.id ? this.res.objects.get(nr.id) : undefined;
+        if (o?.kind === "line") line = { id: o.id, s: closestOnPolyline(o.pts, nr!.at).s };
+      }
+      if (!ref && !line) return this.toast("انقر نقطة أو طرف خط أو خطاً آخر");
+      this.snapshot();
+      ci = this.curveAfter(ci, this.creatorOf(ref ? ref.obj : line!.id));
+      if (ci < 0) {
+        this.undoStack.pop();
+        return this.toast("لا يمكن: هذا الخط مبني على المنحنى نفسه");
+      }
+      if (line) {
+        // a point on that line where it was clicked, linked to the line (moves with it)
+        const id = newId(this.model, "point");
+        this.model.steps.splice(ci, 0, { op: "pointOn", id, on: line.id, dist: String(Math.round(line.s * 10) / 10), unit: "mm", from: "start" });
+        ci++;
+        ref = { obj: id };
+      }
+      this.evaluate();
+      const slot = this.throughSlot(c, this.pointOf(ref!));
+      c.through.splice(slot, 0, ref!);
+      this.selectedStep = ci;
+      this.changed();
+      this.toast("ثُبّتت النقطة: المنحنى يمر بها ويتبعها");
+    } else if (this.curveMode === "unbind") {
+      const k = throughAt();
+      if (k < 0) return this.toast("انقر نقطة على المنحنى");
+      const r = c.through[k], st = r.end === undefined ? this.model.steps[this.creatorOf(r.obj)] : undefined;
+      if (st?.op === "point" && /^-?\d+(\.\d+)?$/.test(st.x.trim()) && /^-?\d+(\.\d+)?$/.test(st.y.trim())) return this.toast("هذه النقطة حرة أصلاً");
+      const q = this.pointOf(r), id = newId(this.model, "point"), rd = (v: number) => String(Math.round(v * 10) / 10);
+      this.snapshot();
+      this.model.steps.splice(ci, 0, { op: "point", id, x: rd(q[0]), y: rd(q[1]) });
+      c.through[k] = { obj: id };
+      this.selectedStep = ci + 1;
+      this.changed();
+      this.toast("فُك التثبيت: النقطة حرة في مكانها، اسحبها كما تريد");
+    } else if (this.curveMode === "del") {
+      const k = throughAt();
+      if (k <= 0 || k >= c.through.length - 1) return this.toast(k < 0 ? "انقر نقطة داخل المنحنى" : "طرفا المنحنى لا يُحذفان");
+      this.snapshot();
+      c.through.splice(k, 1);
+      this.changed();
+      this.toast("حُذفت النقطة من المنحنى");
+    } else if (this.curveMode === "rel") {
+      const nr = this.nearest(sx, sy), o = nr && nr.id !== c.id ? this.res.objects.get(nr.id) : undefined;
+      if (o?.kind !== "line") return this.toast("انقر خطاً");
+      const co = this.res.objects.get(c.id)!, a = co.pts[0], z = co.pts[co.pts.length - 1];
+      const end = closestOnPolyline(o.pts, a).d <= closestOnPolyline(o.pts, z).d ? "start" : "end";
+      const name = this.model.names[o.id] ?? "الخط";
+      this.curveMode = null;
+      const cur = end === "start" ? c.startAngle : c.endAngle, curRel = end === "start" ? c.startRel : c.endRel;
+      this.openForm({
+        title: `زاوية طرف المنحنى على ${name}`,
+        fields: [
+          { key: "end", label: "الطرف", value: end, options: [["start", "البداية"], ["end", "النهاية"]] },
+          { key: "angle", label: `الزاوية من ${name} °`, value: curRel === o.id && cur.trim() ? cur : "90" },
+        ],
+        onOk: (v) => {
+          this.snapshot();
+          const ci2 = this.curveAfter(this.model.steps.indexOf(c), this.creatorOf(o.id));
+          if (ci2 < 0) {
+            this.undoStack.pop();
+            return this.toast("لا يمكن: هذا الخط مبني على المنحنى نفسه");
+          }
+          if (v.end === "start") (c.startRel = o.id), (c.startAngle = v.angle);
+          else (c.endRel = o.id), (c.endAngle = v.angle);
+          this.selectedStep = ci2;
+          this.changed();
+          this.toast(`طرف المنحنى بزاوية ${v.angle}° على ${name}`);
+        },
+      });
+    }
+  }
+
+  /** The name of the element under the pointer (C1, L4 …): off, the user does not want it on the drawing. */
+  nameTips = false;
   private curveGrab: { ci: number; x: number; y: number; at: Pt } | null = null;
 
   /** The curve under the screen point (the selected curve first), or -1. */
@@ -1296,13 +1536,12 @@ export class App {
       out.push(`<line x1="${h.es[0]}" y1="${h.es[1]}" x2="${h.hs[0]}" y2="${h.hs[1]}" stroke="var(--text)" stroke-dasharray="4 3" stroke-width="1.3"/>`);
       out.push(`<circle class="curve-handle" cx="${h.hs[0]}" cy="${h.hs[1]}" r="6.5" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="2.2" fill="#e53935"/>`);
       out.push(`<circle cx="${h.es[0]}" cy="${h.es[1]}" r="4" fill="var(--live)"/>`);
-      out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"} · ${h.pct}%\u2069</text>`);
+      // the angle / strength shows only while that handle is dragged (as GRAFIS), not standing on the drawing
+      if (this.dragHandle?.end === h.end) out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"} · ${h.pct}%\u2069</text>`);
     }
     // the points the curve passes through: drag them to reshape the curve
     for (const p of this.curvePoints()) out.push(`<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`);
-    const s = this.model.steps[hs[0].i] as Extract<Step, { op: "curve" }>, o = this.res.objects.get(s.id) as GObj;
-    const mid = this.toScreen(o.pts[Math.floor(o.pts.length / 2)]);
-    out.push(`<text class="live-label" x="${mid[0] + 8}" y="${mid[1] + 18}" direction="ltr">\u2066${fmt(Math.round(polyLen(o.pts) * 10) / 10)} mm\u2069</text>`);
+    // no standing length label on the curve (the length is in Info / the dimension tools)
     return out.join("");
   }
 
@@ -1567,6 +1806,7 @@ export class App {
   }
 
   cancelTool(): void {
+    this.curveMode = null;
     if (this.tool) this.resetPointPanel();
     this.tool = null;
     this.picks = [];
@@ -2369,7 +2609,10 @@ export class App {
   private rightConfirm(): void {
     if (this.form || (this.collecting && this.extra.length)) this.confirmStep();
     else if (this.tool && !this.picks.length) this.cancelTool();
-    else if (!this.tool && this.selectedStep >= 0) {
+    else if (this.curveMode) {
+      this.curveMode = null;
+      this.render();
+    } else if (!this.tool && this.selectedStep >= 0) {
       // right click leaves the editing of the selected element (curve handles etc.)
       this.selectedStep = -1;
       this.render();
@@ -2691,6 +2934,12 @@ export class App {
         this.calibrateClick(this.toWorld(e.clientX - rr.left, e.clientY - rr.top));
         return;
       }
+      if (this.curveMode && this.selectedCurve()) {
+        const rr = svg.getBoundingClientRect();
+        this.curveModeClick(e.clientX - rr.left, e.clientY - rr.top);
+        e.preventDefault();
+        return;
+      }
       {
         const r0 = svg.getBoundingClientRect(), hh = this.handleAt(e.clientX - r0.left, e.clientY - r0.top);
         if (hh) {
@@ -2853,6 +3102,13 @@ export class App {
           const behind = (this.dragHandle.end === "start") !== this.dragHandle.flip; // handle lies behind the travel direction
           const v: Pt = behind ? [at[0] - this.mouse[0], at[1] - this.mouse[1]] : [this.mouse[0] - at[0], this.mouse[1] - at[1]];
           let deg = (Math.atan2(v[1], v[0]) * 180) / Math.PI;
+          // an end measured from a line keeps that: the angle is stored from the line's direction there
+          const rel = this.dragHandle.end === "start" ? s.startRel : s.endRel, ro = rel !== undefined ? this.res.objects.get(rel) : undefined;
+          if (ro) {
+            const d = directionAt(ro.pts, closestOnPolyline(ro.pts, at).s);
+            deg -= (Math.atan2(d[1], d[0]) * 180) / Math.PI;
+            deg = ((deg % 360) + 540) % 360 - 180;
+          }
           // the handle moves freely in every direction (1°), whatever the angle step of the line tools;
           // Shift snaps it to 15°
           const q = this.shift ? 15 : 1;

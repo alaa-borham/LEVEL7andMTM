@@ -767,7 +767,7 @@ body.embedded .pwin #tab-partlist { display: block !important; flex: 1; overflow
 .pg-row input.num { width: 52px; text-align: center; }
 .pg-row small { color: var(--muted); }
 .pg-row b { margin-inline-start: 8px; font-weight: 600; font-size: 12px; }
-#canvas polyline.ghost { stroke: var(--muted); stroke-width: 1; opacity: 0.45; stroke-dasharray: 5 3; }
+#canvas polyline.ghost { stroke: var(--line); stroke-width: 1; opacity: 0.5; } /* other visible parts: solid, a little dimmer than the active part (as GRAFIS) */
 .inherit-win { width: 560px; }
 .ih-main { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 280px; margin-top: 6px; }
 .ih-list { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--border); border-radius: 5px; }
@@ -793,7 +793,9 @@ body.dark { --mark: #f0b44c; }
 .part-strip[data-mode="off"] { width: 28px; }
 .part-strip[data-mode="off"] .ps-list { display: none; }
 .part-strip[data-mode="off"] .ps-head { flex-direction: column; }
-.ps-head { display: flex; gap: 2px; padding: 3px; border-bottom: 1px solid var(--border); }
+.ps-head { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-bottom: 1px solid var(--border); }
+.ps-head button[data-sall] { flex: 1 0 40%; }
+.part-strip[data-mode="off"] .ps-head button[data-sall] { display: none; }
 .ps-head button { flex: 1; height: 22px; padding: 0; font-size: 11px; border: 1px solid transparent; background: transparent; opacity: 0.55; }
 .ps-head button.on { opacity: 1; border-color: var(--live); }
 .ps-list { flex: 1; overflow-y: auto; padding: 3px; display: flex; flex-direction: column; gap: 4px; }
@@ -981,3 +983,12 @@ body.embedded #canvas.panning { cursor: grabbing; }
 .ztable th:nth-child(2) { color: #ffd866; } .ztable th:nth-child(3) { color: var(--muted); font-style: italic; }
 body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th:nth-child(2) { color: #7a5c00; }
 #canvas.zoom-mode, body.embedded #canvas.zoom-mode { cursor: zoom-in; }
+/* 0.9.159 curve bar (as GRAFIS): bind / unbind / delete a point, angle on a line; shown while a curve is selected */
+.curve-bar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.25); font-size: 12px; max-width: calc(100% - 32px); }
+.curve-bar b { color: var(--live); margin-inline-end: 4px; }
+.curve-bar button { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; }
+.curve-bar button.on { border-color: var(--live); background: color-mix(in srgb, var(--live) 18%, transparent); }
+.curve-bar span { color: var(--muted); margin-inline-start: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.curve-bar select { height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 12px; }
+.curve-bar input[type="color"] { width: 32px; height: 28px; padding: 1px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
+.curve-bar button:disabled { opacity: .35; cursor: default; }

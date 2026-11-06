@@ -6,6 +6,7 @@ import { evaluate, FormulaError } from "./formula";
 import { buildPiece, type Piece, type PieceGeo } from "./piece";
 import {
   crossings,
+  closestOnPolyline,
   directionAt,
   dist,
   mirrorPt,
@@ -71,11 +72,19 @@ export type Step =
   | { op: "inherit"; part: number; items: { src: number; dst: number }[] }
   /** Scale about a centre by factor %; with angle: only along that direction (stretch). */
   | { op: "scale"; center: PointRef; factor: string; angle?: string; items: { src: number; dst?: number }[] }
-  | { op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string }
+  | {
+      op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string;
+      /** The end's angle is measured from this line, where the curve meets it (e.g. 90 = square to the line). */
+      startRel?: number; endRel?: number;
+    }
   /** Corner of two lines, each taken at the end nearer the corner: "sharp" extends or trims
    * both to their intersection; "round" adds a tangent arc of radius `size`; "chamfer" cuts
    * the corner with a straight line `size` from the intersection on each line. */
   | { op: "corner"; kind: "sharp" | "round" | "chamfer"; id?: number; a: number; endA: "start" | "end"; b: number; endB: "start" | "end"; size: string };
+
+export type LineDash = "solid" | "dashed" | "dotted" | "long" | "shortlong" | "dashdot";
+/** Screen dash patterns (px) of the line types. */
+export const LINE_DASHES: Record<LineDash, string> = { solid: "", dashed: "8 5", dotted: "1.5 4", long: "16 6", shortlong: "16 4 4 4", dashdot: "10 4 1.5 4" };
 
 export interface Model {
   version: 1;
@@ -98,6 +107,8 @@ export interface Model {
    * names / nextId / pieces; parts[activePart] holds it again whenever it is synced. */
   parts?: Part[];
   activePart?: number;
+  /** How a line looks on the drawing (as GRAFIS line types and colours), per "part no:object id". */
+  lineStyles?: Record<string, { dash?: LineDash; color?: string }>;
   /** Background pictures to trace over (pixel images): placed in mm, bottom-left at x, y. */
   images?: { id: number; name: string; data: string; x: number; y: number; w: number; h: number; opacity: number; visible: boolean }[];
   /** Product info (as GRAFIS): texts, and images as data URLs (logo, sketches, fabric). */
@@ -428,9 +439,15 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
         }
         case "curve": {
           if (s.through.length < 2) throw new Error("المنحنى يحتاج نقطتين على الأقل");
-          const dir = (a: string): Pt | null => {
+          const pts = s.through.map(pointOf);
+          const dir = (a: string, rel: number | undefined, at: Pt): Pt | null => {
             if (!a.trim()) return null;
-            const r = (vars.eval(a) * Math.PI) / 180;
+            let r = (vars.eval(a) * Math.PI) / 180;
+            if (rel !== undefined) {
+              // relative to the line where the curve end meets it
+              const L = needLine(rel), d = directionAt(L.pts, closestOnPolyline(L.pts, at).s);
+              r += Math.atan2(d[1], d[0]);
+            }
             return [Math.cos(r), Math.sin(r)];
           };
           const ten = (t?: string) => {
@@ -439,7 +456,7 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
             if (!(v > 0 && v <= 10)) throw new Error("شدة طرف المنحنى بين 1% و 1000%");
             return v;
           };
-          put(s.id, "line", smoothCurve(s.through.map(pointOf), dir(s.startAngle), dir(s.endAngle), 24, ten(s.startTension), ten(s.endTension)), i);
+          put(s.id, "line", smoothCurve(pts, dir(s.startAngle, s.startRel, pts[0]), dir(s.endAngle, s.endRel, pts[pts.length - 1]), 24, ten(s.startTension), ten(s.endTension)), i);
           break;
         }
         case "trim": {
@@ -628,7 +645,7 @@ export function usedIds(s: Step): number[] {
     case "scale":
       return [s.center.obj, ...s.items.map((it) => it.src)];
     case "curve":
-      return s.through.map((r) => r.obj);
+      return [...s.through.map((r) => r.obj), ...[s.startRel, s.endRel].filter((v): v is number => v !== undefined)];
     case "corner":
       return [s.a, s.b];
   }

@@ -16,8 +16,8 @@ try{
  pass('sharp corner and mirror copy show their own icons again');
  // no letters, name on hover
  assert.equal(await f.evaluate(()=>[...document.querySelectorAll('#canvas text')].filter(t=>/^[PLC]\d+$/.test(t.textContent)).length),0);
- await page.mouse.move(...await at(0,200));await f.waitForFunction(()=>document.querySelector('#canvas text.name-tip')?.textContent==='P3');
- pass('no P/L letters on the drawing; the name appears only under the pointer (P3)');
+ await page.mouse.move(...await at(0,200));await page.waitForTimeout(200);assert.equal(await f.evaluate(()=>document.querySelectorAll('#canvas text.name-tip').length),0);
+ pass('no P/L letters on the drawing, also not under the pointer (0.9.159)');
  // right click closes an open menu (in the program and on the drawing)
  await page.locator('[data-l7d-cat="الخطوط"]').click({button:'right'});assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),1);
  await page.mouse.click(...await at(120,120),{button:'right'});await page.waitForFunction(()=>!document.querySelector('.l7-design-flyout:not([hidden])'));
