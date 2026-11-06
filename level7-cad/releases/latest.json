@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.177",
- "notes": "إخفاء شاشة MDL القديمة؛ فتح ملف GRAFIS يحوّله مباشرة إلى تصميم LEVEL7",
+ "version": "0.9.178",
+ "notes": "البارت النشط بالأزرق مع إظهار الكل؛ التلميح اسم الأداة فقط",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "dd0d62eb56d0166b9a6b0331ab89d3bd18dfcade2a81648aa8b475c6c2dfe3cf",
-   "size": 146097
+   "sha256": "7f55f1e17548bf99361a1b3b53dba2270294123efed3e4d1b6d385d35dcea3fa",
+   "size": 146345
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DciUbDS8.js",
-   "sha256": "b25f70a3b8f044633554dd6446351b70d2cebafa44db256dc9f3d70ae0f13798",
-   "size": 299328
-  },
-  {
-   "path": "assets/l7design/assets/index-LqUVFNxK.css",
-   "sha256": "95d804a68d94684db86126aeb85001ed0aba19d61b9c5b73bf0e18a943a8820c",
+   "path": "assets/l7design/assets/index-17huwa9q.css",
+   "sha256": "5b316a3193e550cd8d82bc03588c4a54967dea02a84e15f826a374a78da0b5b0",
    "size": 43412
   },
   {
+   "path": "assets/l7design/assets/index-CB0IcAkq.js",
+   "sha256": "2493cd5b8ae84d25a37faa2ac4deb63c44974fa9ad3747f690f7b35023d9c37c",
+   "size": 299407
+  },
+  {
    "path": "assets/l7design/index.html",
-   "sha256": "1ba6114c8af52012b68753fbff7bd6f3651af4563a5bbf48d158712489cc389c",
+   "sha256": "f38a5c8eb9e0d061d202af193a88abf7a75c51a6d675c50781056d70b81686f9",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "f17f774b0227b54f786bb4cd9f2eefb14ede661329dfaf7c1a9388861054fe92",
+   "sha256": "9e761fe513612d208d45dc7bc49b3832a86dc86a4663e8dae2d37c8759b3a8ec",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "75d2e35a2ee1195fd7c281f225cd4adf92077d917b0727c774bf32c49e06efb4",
-   "size": 47510
+   "sha256": "f2f1d4e733704402b4d2f2eb55fec7af9a958ee687208ebf0368c22083b7f8c4",
+   "size": 47354
   },
   {
    "path": "src/l7-icons.js",

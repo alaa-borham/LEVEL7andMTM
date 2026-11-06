@@ -28,7 +28,7 @@ try{
  // 3) the strip icon's tip names its tool
  const tip=await page.locator('[data-l7d-cat="الأبعاد"]').getAttribute('title');const shown=await page.locator('[data-l7d-cat="الأبعاد"] svg').getAttribute('data-l7-icon');
  const first=await page.locator(`[data-l7d-cat-panel="الأبعاد"] [data-l7d-tool="${shown}"] span`).textContent();
- assert(tip===first,tip); // 0.9.178: the name onlypass(`the strip icon's tip starts with its tool: «${tip.split('\n')[0]}»`);
+ assert(tip===first,tip);pass(`0.9.178: the strip icon's tip is the tool's name only: «${tip.split('\n')[0]}»`);
  // 4) seam allowance with no piece: the piece tool starts, and the seam bar comes after the piece
  await open('seamAllowance');
  await f.waitForFunction(()=>window.level7.tool?.key==='piece',null,{timeout:5000});

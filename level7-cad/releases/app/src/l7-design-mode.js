@@ -216,7 +216,7 @@ export function installDesignMode() {
   };
   const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return iconOf(it); };
   // 0.9.176: the strip icon's tip names the tool it shows (and what it does), then how to reach the others
-  const stripTitle = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; const hint = it?.tool && HINT[it.tool]; return `${it?.name || c.name}${hint ? '\n' + hint : ''}\n— ${c.name} · كليك: هذه الأداة، كليك يمين: باقي الأدوات`; };
+  const stripTitle = c => (c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0])?.name || c.name; // 0.9.178: the tool's name only
   const renderTools = () => {
     toolsBox.replaceChildren();
     cats = categories();

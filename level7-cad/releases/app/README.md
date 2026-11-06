@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.178
+
+LEVEL7 design: the strip icons' tip shows only the tool's name; with all parts shown, the active part (the one being worked on) is drawn in its own colour (blue, as GRAFIS); another part under the pointer lights up orange.
+
 LEVEL7 and MTM 0.9.177
 
 The old MDL workspace is hidden: no × to it, and the MDL-only commands (new MDL from template, X/Z example, show design, convert) are gone. Opening a GRAFIS file (GRAFIS button or File → Open) loads it in the background and converts its parts straight into a LEVEL7 design.
