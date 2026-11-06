@@ -13,7 +13,7 @@ try{
  const bar=fr.locator('.curve-bar.obj-bar');await bar.waitFor();const b0=await bar.boundingBox();
  const g=await fr.locator('.curve-bar.obj-bar .bar-grip').boundingBox();
  await page.mouse.move(g.x+g.width/2,g.y+g.height/2);await page.mouse.down();await page.mouse.move(g.x-150,g.y+300,{steps:6});await page.mouse.up();
- const b1=await bar.boundingBox();assert(Math.abs(b1.x-(b0.x-150-g.width/2+ (g.x-b0.x)+g.width/2))<30&&b1.y>b0.y+250,JSON.stringify({b0,b1}));
+ const b1=await bar.boundingBox();assert(Math.abs((b1.x-b0.x)+150)<20&&Math.abs((b1.y-b0.y)-300)<20,JSON.stringify({b0,b1}));
  // stays there when the bar is drawn again
  await f.evaluate(()=>{window.level7.selectedStep=-1;window.level7.render();window.level7.selectedStep=2;window.level7.render();});
  const b2=await bar.boundingBox();assert(Math.abs(b2.x-b1.x)<2&&Math.abs(b2.y-b1.y)<2,JSON.stringify({b1,b2}));

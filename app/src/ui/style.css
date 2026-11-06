@@ -1012,7 +1012,7 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 .curve-bar .bar-grip { cursor: grab; color: var(--muted); font-size: 16px; padding: 0 2px; user-select: none; margin-inline-end: 0 !important; }
 .curve-bar .bar-grip:active { cursor: grabbing; }
 .curve-bar .bar-turn { min-width: 26px !important; font-size: 13px; }
-.curve-bar.vert { flex-direction: column; align-items: stretch; max-width: none; max-height: calc(100% - 16px); overflow-y: auto; }
+.curve-bar.vert { flex-direction: column; align-items: center; width: auto; max-width: none; max-height: calc(100% - 16px); overflow-y: auto; }
 .curve-bar.vert span:not(.bar-grip) { display: none; }
 .curve-bar.vert .bar-grip { text-align: center; }
-.curve-bar.vert select { width: 130px; }
+.curve-bar.vert select { width: 104px; }

@@ -1296,6 +1296,8 @@ export class App {
     // the curve under the pointer shows the points it passes through (drag one to reshape it, as GRAFIS)
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.vis.dims ? this.dimsSvg() : "");
+    const dhv = this.dimHover !== null ? this.dimHits.find((h) => h.i === this.dimHover) : undefined;
+    if (dhv) parts.push(`<polyline class="near-glow" points="${dhv.pts.map((q) => q.map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
     parts.push(this.vis.marks ? this.marksSvg() : "");
     parts.push(this.vis.texts ? this.textsSvg() : "");
     if (this.vis.lengths) parts.push(this.lengthsSvg());
@@ -1321,6 +1323,8 @@ export class App {
 
   // ---- dimensions (annotation steps): drawn from the current geometry, always up to date
   private dimHits: { i: number; pts: Pt[] }[] = [];
+  /** The dimension under the pointer (it glows; a press drags it). */
+  private dimHover: number | null = null;
 
   private dimSvg(s: Extract<Step, { op: "dim" }>, live = false, dimIndex = -1): string {
     let off = 0;
@@ -1574,7 +1578,7 @@ export class App {
     let best: { i: number; d: number } | null = null;
     for (const h of this.dimHits) {
       const d = closestOnPolyline(h.pts, [sx, sy]).d;
-      if (d <= 8 && (!best || d < best.d)) best = { i: h.i, d };
+      if (d <= 10 && (!best || d < best.d)) best = { i: h.i, d };
     }
     return best?.i ?? null;
   }
@@ -3665,9 +3669,13 @@ export class App {
       if (!this.pan) {
         const oh = this.hit("object", sx, sy), id = oh ? pickedId(oh) : null;
         // the object near the pointer is marked (glow) with a dot on its nearest point
-        const near = this.nearest(sx, sy);
-        const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5));
+        // a dimension under the pointer (no tool open) glows itself and takes the press, not the line beside it
+        const dh = !this.tool && !this.form ? this.dimAt(sx, sy) : null;
+        const near = dh === null ? this.nearest(sx, sy) : null;
+        const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5)) || dh !== this.dimHover;
         this.near = near;
+        this.dimHover = dh;
+        svg.style.cursor = dh !== null ? "move" : "";
         if (id !== this.nameHover || moved) {
           this.nameHover = id;
           this.render();
