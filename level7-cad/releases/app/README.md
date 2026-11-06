@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.160
+
+LEVEL7 design: a part shows only its own drawing; other parts show behind it only when their eye is switched on (or with show all parts), and are hidden again with hide all parts.
+
 LEVEL7 and MTM 0.9.159
 
 LEVEL7 design (as GRAFIS): curve bar while a curve is selected: bind a point (a line end, a point or a place on a line: the curve passes through it and follows it), unbind, delete a point, end angle measured from a line (90°, 45° ...); line type (continuous, dashed, dotted, long dashed, short-long, dash-dot) and colour per line; mirror tools: axis, then copy / move, then each clicked element is mirrored at once, right click ends; inherit objects by clicking: the earlier parts show, the element under the pointer lights up, a click brings it into the active part (linked); seam allowance tool: standard, distance (3 values), unparallel (start / end), none, per clicked edge, values written on the edges; parts are visible unless hidden, with show all / hide all; no angle / % / length / name labels standing on the drawing (the angle shows while a handle is dragged).

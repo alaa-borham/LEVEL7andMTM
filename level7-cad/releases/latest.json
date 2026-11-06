@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.159",
- "notes": "شريط المنحنى (تثبيت/فك/حذف نقطة، زاوية على خط)، أنواع الخطوط وألوانها، الانعكاس بالنقر، الوراثة بالنقر، حواشي الخياطة، البارتات ظاهرة",
+ "version": "0.9.160",
+ "notes": "كل بارت يظهر رسمه فقط؛ البارتات الأخرى بالعين أو إظهار الكل",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "4468db83381d68289172573b5a8321cc03bcbc0adade8f8c75c8c3de0bb74f8d",
-   "size": 140328
+   "sha256": "c62f0ac034dd55d54cdf76f3b3ebb3276662732678ebab5cfaccf909df002b07",
+   "size": 140533
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-CtA6ez_u.js",
-   "sha256": "ad2abd54ce1531eb08ca53280d994e40310a7a3917a80210947cb856044a4758",
-   "size": 281688
+   "path": "assets/l7design/assets/index-BDMqKy_Q.js",
+   "sha256": "33a3ef0fa6231b76fb09ad14a6578c9297368b7cb2bc02a68a164772fc19ce92",
+   "size": 281670
   },
   {
    "path": "assets/l7design/assets/index-DF6yi-i-.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "59f2a01b787ebe78dee63d679fcdb02ae21659ae3bcf2dcceac15b9f19e6e381",
+   "sha256": "4aaf853115b1e58814a69f3c36abc50a283837873a0e45e4e914e982653e5f38",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "eb5fa76e025e4fb25fa2eec2558ce01bc1457c31945876bcde1e5ea8035d6783",
+   "sha256": "4883742205f9fdcd89e8555ea15e00eed7907fbaf1e57ba4a9654150f34ba911",
    "size": 301
   },
   {
