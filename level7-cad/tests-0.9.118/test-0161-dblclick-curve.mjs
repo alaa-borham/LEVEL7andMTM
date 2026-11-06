@@ -24,6 +24,6 @@ try{
  // inherited curve in a new part
  await f.evaluate(()=>{const a=window.level7;a.addPart();a.snapshot();a.model.steps.push({op:'inherit',part:1,items:[{src:3,dst:a.model.nextId}]});a.model.nextId++;a.changed();});
  await page.mouse.move(box.x+cx,box.y+cy);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+cx,box.y+cy);
- await f.waitForFunction(()=>/موروث من البارت 001/.test(document.querySelector('.toast')?.textContent||''));pass('an inherited curve says it follows part 001 and is edited there');
+ await f.waitForFunction(()=>/موروث من البارت 001/.test(document.querySelector('#toast')?.textContent||''));pass('an inherited curve says it follows part 001 and is edited there');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
