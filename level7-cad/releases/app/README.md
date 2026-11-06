@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.180
+
+Full check after the recent updates: a damaged or hand-edited design file is set straight on opening (missing lists, active part out of range, next-id counter below an id in use); deleting a part drops its line types / colours; the values window of the active element follows changes made from its bar; digit tool shortcuts work with any keyboard language; dead code and unused styles removed.
+
 LEVEL7 and MTM 0.9.179
 
 LEVEL7 design: with all parts shown, every part's dimensions show in its place (not only the active part's); F7 / Visibility → dimensions hides or shows them all.

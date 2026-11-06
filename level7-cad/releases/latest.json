@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.179",
- "notes": "أبعاد كل البارتات ظاهرة مع إظهار الكل؛ F7 يخفيها كلها",
+ "version": "0.9.180",
+ "notes": "فحص كامل وتنظيف: فتح الملفات التالفة، حذف البارت، نافذة القيم، اختصارات الأرقام",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "4563ebac878dc06c723b5e628bd893189456783cffd0302655e30ca1305bd5bf",
-   "size": 146535
+   "sha256": "468ef2dccfc2d4de4e1e5935803f508e01f687df72cfe16b5aa2c38c2c90dce7",
+   "size": 146954
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-17huwa9q.css",
-   "sha256": "5b316a3193e550cd8d82bc03588c4a54967dea02a84e15f826a374a78da0b5b0",
-   "size": 43412
+   "path": "assets/l7design/assets/index-DKy4isWA.css",
+   "sha256": "686b2abcd22cb89cbc7e7b828df7e56136aaae43120559c2e897dc803f301ba5",
+   "size": 43226
   },
   {
-   "path": "assets/l7design/assets/index-DklMZiby.js",
-   "sha256": "4cd7b7245f5fdf210571911a6ccad09a926a9039a6e02aaa799ea39cc3412fc6",
-   "size": 299908
+   "path": "assets/l7design/assets/index-X7ldogy7.js",
+   "sha256": "376adf2e3be93a3df54364f47ba6285bbbfc3b7a2295683adb1a892a88801e56",
+   "size": 300813
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "fac5acce6598ac77a7becb5bff6d92f882e198df6977aa73758e108358aa0f8f",
+   "sha256": "3b6d7ecfa7c723173c5ff68c67ebf11fbeea65901b7d1b8d3eb6033bec1716b1",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "1d52e0fde4ce4c0c250161211c3776ae5750f30795d94c40d23de73f4921ece4",
+   "sha256": "4649be4f6a043d027578be2ad64fc206708fb6a1e6f530f40b69b073fdf3ba1c",
    "size": 301
   },
   {
