@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.181
+
+LEVEL7 design: clean seam-allowance corners where a curve bends tightly at the corner (no spike); the piece grain line stays inside the piece and gives way to a drawn one; F5 refreshes the screen; the number at a line / curve end names its line («L4 ▸ 1437.3»); the other parts' seam allowances show with them; a notch at the end of an inner line runs on along it, with its own length (mm or X / Z); round corner / chamfer on the cut (outer) line; background pictures moved and resized by hand, or fixed as the background of the whole screen.
+
 LEVEL7 and MTM 0.9.180
 
 Full check after the recent updates: a damaged or hand-edited design file is set straight on opening (missing lists, active part out of range, next-id counter below an id in use); deleting a part drops its line types / colours; the values window of the active element follows changes made from its bar; digit tool shortcuts work with any keyboard language; dead code and unused styles removed.

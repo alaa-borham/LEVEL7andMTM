@@ -21,7 +21,7 @@ try{
  assert.equal((await labels()).length,0); // 0.9.163: a single click makes nothing active
  await page.mouse.move(box.x+lx,box.y+ly);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+lx,box.y+ly);await fr.locator('#tool-box [data-cancel]').click();
  let l=await labels();assert.equal(await f.evaluate(()=>window.level7.selectedStep),3);
- assert(l.includes('Z17 نزول=65')&&l.includes('Z9 الكتف=225')&&l.some(t=>/^∠ 0°$/.test(t)),JSON.stringify(l));
+ assert(l.some(t=>/^\S+ ▸ Z17 نزول=65$/.test(t))&&l.includes('Z9 الكتف=225')&&l.some(t=>/^∠ 0°$/.test(t)),JSON.stringify(l));
  const order=await f.evaluate(()=>{const t=[...document.querySelectorAll('text.formula-label')].find(x=>x.textContent.includes('الكتف'));const s=t.textContent,x=i=>t.getStartPositionOfChar(i).x;return[x(s.indexOf('Z')),x(s.indexOf('ا')),x(s.indexOf('ف')),x(s.lastIndexOf('5'))];});
  assert(order[0]<order[2]&&order[2]<order[1]&&order[1]<order[3],'reads Z9 الكتف=225 from left to right: '+order);
  pass(`a double-click on the line shows its formulas on the drawing: ${l.join(' | ')}`);

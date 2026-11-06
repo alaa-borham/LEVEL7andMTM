@@ -1826,7 +1826,7 @@ export class App {
       // 0.9.181: say what the number is — the distance along which line (and from which end), or the offset in x / y
       if (t.op === "pointOn") {
         const v = this.formulaText(t.dist, t.unit === "%" ? "%" : "");
-        return v && `${this.model.names[t.on] ?? ""} ${t.from === "end" ? "◂" : "▸"} ${v}`.trim();
+        return v && `${this.model.names[t.on] ?? this.res.objects.get(t.on)?.name ?? ""} ${t.from === "end" ? "◂" : "▸"} ${v}`.trim();
       }
       if (t.op === "pointOffset") return [t.dx.trim() && `Δx ${this.formulaText(t.dx)}`, t.dy.trim() && `Δy ${this.formulaText(t.dy)}`].filter(Boolean).join(" · ");
       return "";

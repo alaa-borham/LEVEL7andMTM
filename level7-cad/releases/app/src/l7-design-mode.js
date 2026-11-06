@@ -83,7 +83,7 @@ function shortcut(e, typing) {
   if (e.key === 'F9') return 'imgtoggle';
   if (e.altKey && !ctrl && k === 'o') return 'visibility';
   if (e.key === 'F6') return 'fit';
-  if (e.key === 'F5') return 'tab-steps';
+  if (e.key === 'F5') return 'refresh'; // 0.9.181: F5 refreshes the screen (Record keeps its button)
   if (e.key === 'F11') return 'tab-z';
   if (!typing && !ctrl && !e.altKey && (e.key === '+' || e.key === '=')) return 'zoomIn';
   if (!typing && !ctrl && !e.altKey && e.key === '-') return 'zoomOut';
@@ -110,7 +110,7 @@ export function installDesignMode() {
   const icon = id => `<svg aria-hidden="true"><use href="#icon-${id}"/></svg>`, letter = t => `<span class="palette-letter" aria-hidden="true">${t}</span>`;
   const bar = [
     [['product', icon('info'), 'Info', 'معلومات المنتج · Product info'], ['save', icon('save'), 'Save', 'حفظ التصميم · Ctrl+S']],
-    [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء · F5']],
+    [['fit', icon('fit'), 'F6', 'ملء الشاشة بالرسم · F6'], ['tab-steps', icon('history'), 'Record', 'Record · سجل الإنشاء']],
     [['tab-x', letter('X'), 'Ctrl+X', 'القياسات X · Ctrl+X'], ['tab-z', letter('Z'), 'F11', 'المعادلات Z · F11'], ['tab-sizes', icon('grade'), 'Ctrl+G', 'المقاسات والتدرج · Ctrl+G'], ['gradeview', '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" d="M3 21V9h4v12M10 21V5h4v16M17 21V3h4v18M2 21h20"/></svg>', 'Grading', 'عرض التدريج: المقاسات فوق بعض ← جنباً إلى جنب ← إيقاف (كل نقرة تنتقل للتالي)'], ['tab-pieces', icon('parts'), 'Pieces', 'القطع'], ['tab-partlist', icon('parts'), 'Parts', 'البارتات (تنظيم البارتات) · Ctrl+T']],
     [['zoomOut', letter('−'), '−', 'تصغير · −'], ['zoomIn', letter('+'), '+', 'تكبير · +']],
     [['visibility', icon('eye'), 'View', 'الرؤية: ما يظهر على الرسم · Alt+O'], ['dims', letter('↔'), 'F7', 'إظهار/إخفاء الأبعاد · F7'], ['dup', icon('search'), 'F4', 'إبراز العناصر المكررة · F4'], ['lengths', letter('mm'), 'F8', 'إظهار أطوال الخطوط والمنحنيات · F8'], ['images', letter('🖼'), 'F9', 'صور الخلفية للتتبع (F9 إظهار/إخفاء)'], ['arrange', icon('dock'), 'Arrange', 'ترتيب البارتات: كل البارتات بصور كبيرة']],
@@ -379,7 +379,7 @@ export function installDesignMode() {
       } catch (e) { status('تعذر فتح الملف: ' + e.message); }
     })();
     else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
-    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || d.action === 'zoomMode' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
+    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || d.action === 'zoomMode' || d.action === 'refresh' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
   });
   host.addEventListener('click', e => {
     const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');
