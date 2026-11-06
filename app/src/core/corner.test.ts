@@ -58,4 +58,35 @@ describe("corner tools", () => {
     close(C[C.length - 1], L[L.length - 1]);
     expect(L[L.length - 1][0]).toBeGreaterThan(-30);
   });
+  it("sharp corner where one line runs past the corner and the other stops short: cut one, extend the other", () => {
+    const m: Model = emptyModel();
+    m.steps.push(
+      { op: "point", id: 1, x: "100", y: "0" }, { op: "point", id: 2, x: "-20", y: "0" },
+      { op: "point", id: 3, x: "0", y: "100" }, { op: "point", id: 4, x: "0", y: "20" },
+      { op: "line", id: 5, p1: { obj: 1 }, p2: { obj: 2 } }, { op: "line", id: 6, p1: { obj: 3 }, p2: { obj: 4 } },
+      { op: "corner", kind: "sharp", a: 5, endA: "end", b: 6, endB: "end", size: "0" },
+    );
+    m.nextId = 7;
+    const r = evaluateModel(m);
+    expect(r.stepErrors.size).toBe(0);
+    const A = r.objects.get(5)!.pts, B = r.objects.get(6)!.pts;
+    close(A[A.length - 1], [0, 0]);
+    close(B[B.length - 1], [0, 0]);
+    close(A[0], [100, 0]);
+    close(B[0], [0, 100]);
+  });
+  it("round corner works in that case too", () => {
+    const m: Model = emptyModel();
+    m.steps.push(
+      { op: "point", id: 1, x: "100", y: "0" }, { op: "point", id: 2, x: "-20", y: "0" },
+      { op: "point", id: 3, x: "0", y: "100" }, { op: "point", id: 4, x: "0", y: "20" },
+      { op: "line", id: 5, p1: { obj: 1 }, p2: { obj: 2 } }, { op: "line", id: 6, p1: { obj: 3 }, p2: { obj: 4 } },
+      { op: "corner", kind: "round", a: 5, endA: "end", b: 6, endB: "end", size: "10", id: 7 },
+    );
+    m.nextId = 8;
+    const r = evaluateModel(m);
+    expect(r.stepErrors.size).toBe(0);
+    close(r.objects.get(5)!.pts.at(-1)!, [10, 0]);
+    close(r.objects.get(6)!.pts.at(-1)!, [0, 10]);
+  });
 });
