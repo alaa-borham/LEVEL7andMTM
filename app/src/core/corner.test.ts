@@ -40,4 +40,22 @@ describe("corner tools", () => {
   it("refuses a radius larger than the lines", () => {
     expect([...corner("round", "500").stepErrors.values()][0]).toMatch(/نصف القطر/);
   });
+  it("sharp corner of two lines that already cross: both are cut back to the crossing (also a curve)", () => {
+    const m: Model = emptyModel();
+    m.steps.push(
+      { op: "point", id: 1, x: "100", y: "0" }, { op: "point", id: 2, x: "-30", y: "0" },
+      { op: "point", id: 3, x: "0", y: "100" }, { op: "point", id: 4, x: "-20", y: "40" }, { op: "point", id: 5, x: "10", y: "-30" },
+      { op: "line", id: 6, p1: { obj: 1 }, p2: { obj: 2 } },
+      { op: "curve", id: 7, through: [{ obj: 3 }, { obj: 4 }, { obj: 5 }], startAngle: "", endAngle: "" },
+      { op: "corner", kind: "sharp", a: 6, endA: "end", b: 7, endB: "end", size: "0" },
+    );
+    m.nextId = 8;
+    const r = evaluateModel(m);
+    expect(r.stepErrors.size).toBe(0);
+    const L = r.objects.get(6)!.pts, C = r.objects.get(7)!.pts;
+    // the line now ends where the curve crossed it (on y = 0), the curve ends there too
+    expect(Math.abs(L[L.length - 1][1])).toBeLessThan(1e-6);
+    close(C[C.length - 1], L[L.length - 1]);
+    expect(L[L.length - 1][0]).toBeGreaterThan(-30);
+  });
 });

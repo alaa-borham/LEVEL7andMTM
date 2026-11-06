@@ -28,4 +28,12 @@ describe("test run / grade", () => {
     expect(r.failed).toBe(2);
     expect(r.rows[2].errors[0]).toMatch(/^خطوة 1: .*X9/);
   });
+  it("a Z measured from part 001's drawing is not an error in an empty part that does not use it", () => {
+    const m = design();
+    m.parts![1].steps = [];
+    m.parts!.push({ no: 3, name: "uses", steps: [{ op: "point", id: 1, x: "Z5", y: "0" }] as Model["steps"], names: {}, nextId: 2, pieces: [] });
+    m.variables.push({ id: 5, name: "len", expr: "", measure: { type: "dist", a: { obj: 1 }, b: { obj: 2 } } });
+    const r = checkParts(m, { all: true, grade: false });
+    expect(r.rows.map((x) => [x.part, x.errors.some((e) => /^Z5/.test(e))])).toEqual([["001 front", false], ["002 back", false], ["003 uses", true]]);
+  });
 });

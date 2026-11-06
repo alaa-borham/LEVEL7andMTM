@@ -471,7 +471,7 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
         }
         case "corner": {
           if (s.a === s.b) throw new Error("الزاوية تحتاج خطين مختلفين");
-          const A = needLine(s.a), B = needLine(s.b);
+          let A = needLine(s.a), B = needLine(s.b);
           const seg = (o: GObj, end: "start" | "end") => {
             const n = o.pts.length;
             const P = end === "end" ? o.pts[n - 1] : o.pts[0], Q = end === "end" ? o.pts[n - 2] : o.pts[1];
@@ -479,13 +479,31 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
             if (!(L > 1e-9)) throw new Error(`طرف ${o.name} قصير جداً`);
             return { Q, d: [(P[0] - Q[0]) / L, (P[1] - Q[1]) / L] as Pt };
           };
-          const sa = seg(A, s.endA), sb = seg(B, s.endB);
-          const den = sa.d[0] * sb.d[1] - sa.d[1] * sb.d[0];
-          if (Math.abs(den) < 1e-9) throw new Error("الخطان متوازيان، لا توجد زاوية");
-          const t = ((sb.Q[0] - sa.Q[0]) * sb.d[1] - (sb.Q[1] - sa.Q[1]) * sb.d[0]) / den;
-          const X: Pt = [sa.Q[0] + t * sa.d[0], sa.Q[1] + t * sa.d[1]];
+          let sa = seg(A, s.endA), sb = seg(B, s.endB);
+          let den = sa.d[0] * sb.d[1] - sa.d[1] * sb.d[0];
+          let X: Pt = [NaN, NaN];
+          const meet = () => {
+            const t = ((sb.Q[0] - sa.Q[0]) * sb.d[1] - (sb.Q[1] - sa.Q[1]) * sb.d[0]) / den;
+            X = [sa.Q[0] + t * sa.d[0], sa.Q[1] + t * sa.d[1]];
+          };
           const reach = (sg: typeof sa) => (X[0] - sg.Q[0]) * sg.d[0] + (X[1] - sg.Q[1]) * sg.d[1];
-          if (reach(sa) <= 1e-6 || reach(sb) <= 1e-6) throw new Error("الزاوية خلف بداية أحد الخطين؛ اختر الطرفين الأقرب للزاوية");
+          if (Math.abs(den) >= 1e-9) meet();
+          if (!(Math.abs(den) >= 1e-9 && reach(sa) > 1e-6 && reach(sb) > 1e-6)) {
+            // the lines already cross before their ends (often a curve): the corner is that crossing,
+            // and each line is cut back to it on the chosen side
+            const endPt = (o: GObj, e: "start" | "end") => (e === "end" ? o.pts[o.pts.length - 1] : o.pts[0]);
+            const hits = crossings(A.pts, B.pts, false);
+            if (!hits.length) throw new Error(Math.abs(den) < 1e-9 ? "الخطان متوازيان، لا توجد زاوية" : "الزاوية خلف بداية أحد الخطين؛ اختر الطرفين الأقرب للزاوية");
+            const h = hits.reduce((x, y) => (dist(y.pt, endPt(A, s.endA)) + dist(y.pt, endPt(B, s.endB)) < dist(x.pt, endPt(A, s.endA)) + dist(x.pt, endPt(B, s.endB)) ? y : x));
+            const hb = crossings(B.pts, A.pts, false).reduce((x, y) => (dist(y.pt, h.pt) < dist(x.pt, h.pt) ? y : x));
+            const cut = (o: GObj, e: "start" | "end", at: number): GObj => ({ ...o, pts: e === "end" ? subPolyline(o.pts, 0, at) : subPolyline(o.pts, at, polyLen(o.pts)) });
+            A = cut(A, s.endA, h.s);
+            B = cut(B, s.endB, hb.s);
+            sa = seg(A, s.endA);
+            sb = seg(B, s.endB);
+            den = sa.d[0] * sb.d[1] - sa.d[1] * sb.d[0];
+            X = h.pt;
+          }
           const setEnd = (o: GObj, end: "start" | "end", p: Pt) => {
             const pts = o.pts.slice();
             pts[end === "end" ? pts.length - 1 : 0] = p;

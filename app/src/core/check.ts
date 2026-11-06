@@ -29,11 +29,21 @@ export function checkParts(model: Model, o: { all: boolean; grade: boolean }): C
       const r = evaluateModel(withSize({ ...model, steps, names, pieces, activePart: model.parts?.length ? k : model.activePart }, i));
       const errors = [
         ...[...r.stepErrors].map(([si, msg]) => `خطوة ${si + 1}: ${msg}`),
-        ...[...r.zErrors].map(([id, msg]) => `Z${id}: ${msg}`),
+        // a Z is reported where it is used: a Z measured from another part's drawing is not an error in
+        // a part that does not use it
+        ...[...r.zErrors].filter(([id]) => usesZ(steps, pieces, id)).map(([id, msg]) => `Z${id}: ${msg}`),
         ...[...r.pieceErrors].map(([id, msg]) => `قطعة ${pieces.find((pc) => pc.id === id)?.name ?? id}: ${msg}`),
       ];
       rows.push({ part: label, size: sizeName(model, i), errors });
     }
   }
   return { rows, parts: parts.length, sizes: sizes.length, failed: rows.filter((r) => r.errors.length).length };
+}
+
+/** Whether any value of these steps or pieces names Z<id> (Z7, z07 …). */
+function usesZ(steps: unknown[], pieces: unknown[], id: number): boolean {
+  const re = new RegExp(`(^|[^A-Za-z0-9_])Z0*${id}(?![0-9])`, "i");
+  const walk = (v: unknown): boolean =>
+    typeof v === "string" ? re.test(v) : Array.isArray(v) ? v.some(walk) : v !== null && typeof v === "object" ? Object.values(v as object).some(walk) : false;
+  return walk(steps) || walk(pieces);
 }
