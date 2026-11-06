@@ -631,6 +631,17 @@ export const TOOLS: Tool[] = [
     build: (c, v) => ({ op: "dim", kind: "length", obj: line(c, 0).obj, offset: v.offset }),
   },
   {
+    key: "dimLengthQuick",
+    name: "قياس طول بنقرة واحدة",
+    group: "الأبعاد",
+    picks: [{ kind: "line", prompt: "انقر الخط أو المنحنى: يُكتب طوله فوراً في الجهة التي نقرتها · انقر التالي أو كليك يمين للإنهاء" }],
+    // one click: no window; the dimension sits 8 mm off the line on the clicked side (drag it to move it)
+    build: (c) => {
+      const p = line(c, 0);
+      return { op: "dim", kind: "length", obj: p.obj, offset: String(8 * sideOf(obj(c, p.obj), p.at)) };
+    },
+  },
+  {
     key: "dimSum",
     name: "مجموع أطوال (Σ)",
     group: "الأبعاد",
