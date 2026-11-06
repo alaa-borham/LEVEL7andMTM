@@ -61,6 +61,12 @@ type Hover = Pick | null;
 
 /** Curve bar icons (24 grid, drawn like the LEVEL7 tool icons: ink, blue curve, red pin / cross). */
 const cbSvg = (d: string) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const SEAM_ICON = {
+  std: cbSvg('<path d="M7 3v18" stroke="currentColor"/><path d="M12 3v18" stroke="#9ccc3c" stroke-dasharray="2 2"/><path d="M15 3v18" stroke="#9ccc3c" stroke-dasharray="2 2"/>'),
+  dist: cbSvg('<path d="M8 3v18" stroke="currentColor"/><path d="M14 3v18" stroke="#9ccc3c" stroke-dasharray="2 2"/>'),
+  unpar: cbSvg('<path d="M8 3v18" stroke="currentColor"/><path d="M12 21L17 3" stroke="#9ccc3c"/>'),
+  none: cbSvg('<path d="M8 3v18" stroke="currentColor"/><path d="M13 9l6 6M19 9l-6 6" stroke="#e53935"/>'),
+};
 const CB_ICON = {
   bind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M15.5 8.5l-4 4M17 3.5l3.5 3.5" stroke="currentColor"/><circle cx="11.5" cy="12.5" r="2.2" fill="#e53935" stroke="none"/>'),
   unbind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M17 3.5l3.5 3.5" stroke="currentColor"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/><circle cx="11.5" cy="12.5" r="2" fill="currentColor" stroke="none"/>'),
@@ -610,6 +616,257 @@ export class App {
   }
 
   /** Inherit objects (or a whole part) from an earlier part: linked copies (as GRAFIS). */
+  // ---- seam allowance tool (as GRAFIS): pick the kind and value, then click the edges of the pieces
+  seamTool: { mode: "std" | "v0" | "v1" | "v2" | "unpar" | "none" } | null = null;
+  private seamHover: { pc: number; k: number } | null = null;
+  private seamVals = (() => {
+    const d = { std: "10", v0: "20", v1: "30", v2: "40", ua: "10", ub: "20" };
+    try {
+      return { ...d, ...JSON.parse(localStorage.getItem("level7.seamVals") || "{}") } as typeof d;
+    } catch {
+      return d;
+    }
+  })();
+
+  startSeamTool(): void {
+    if (!this.model.pieces?.length) return this.toast("لا توجد قطع بعد: اعمل قطعة من الحدود أولاً");
+    this.cancelTool();
+    this.seamTool = { mode: "std" };
+    this.renderSeamBar();
+    this.render();
+  }
+
+  endSeamTool(): void {
+    if (!this.seamTool) return;
+    this.seamTool = null;
+    this.seamHover = null;
+    document.querySelector(".seam-bar")?.remove();
+    this.render();
+  }
+
+  private renderSeamBar(): void {
+    let bar = document.querySelector(".seam-bar") as HTMLElement | null;
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "curve-bar seam-bar";
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
+      bar.addEventListener("mousedown", (e) => e.stopPropagation());
+      bar.addEventListener("click", (e) => {
+        const t = e.target as HTMLElement, m = t.closest<HTMLElement>("[data-sm]")?.dataset.sm;
+        if (t.closest("[data-sall]")) return this.seamAll();
+        if (t.closest("[data-send]")) return this.endSeamTool();
+        if (m && this.seamTool && !t.matches("input")) {
+          this.seamTool.mode = m as NonNullable<typeof this.seamTool>["mode"];
+          this.renderSeamBar();
+        }
+      });
+      bar.addEventListener("input", (e) => {
+        const t = e.target as HTMLInputElement;
+        if (!t.dataset.sv) return;
+        (this.seamVals as Record<string, string>)[t.dataset.sv] = t.value.trim();
+        try {
+          localStorage.setItem("level7.seamVals", JSON.stringify(this.seamVals));
+        } catch {}
+      });
+      bar.addEventListener("focusin", (e) => {
+        const m = (e.target as HTMLElement).closest<HTMLElement>("[data-sm]")?.dataset.sm;
+        if (m && this.seamTool && this.seamTool.mode !== m) {
+          this.seamTool.mode = m as NonNullable<typeof this.seamTool>["mode"];
+          bar!.querySelectorAll("[data-sm]").forEach((x) => x.classList.toggle("on", (x as HTMLElement).dataset.sm === m));
+        }
+      });
+    }
+    const m = this.seamTool?.mode, v = this.seamVals;
+    const box = (mode: string, icon: string, tip: string, inputs: string) => `<label data-sm="${mode}" class="sm${m === mode ? " on" : ""}" title="${tip}">${icon}${inputs}</label>`;
+    const inp = (k: keyof typeof v) => `<input data-sv="${k}" class="expr" dir="ltr" value="${esc(v[k])}"/>`;
+    bar.innerHTML = `<b>حواشي الخياطة</b>` +
+      box("std", SEAM_ICON.std, "مسافة قياسية · Assign standard distance", inp("std")) +
+      box("v0", SEAM_ICON.dist, "مسافة · Assign distance", inp("v0")) + box("v1", SEAM_ICON.dist, "مسافة · Assign distance", inp("v1")) + box("v2", SEAM_ICON.dist, "مسافة · Assign distance", inp("v2")) +
+      box("unpar", SEAM_ICON.unpar, "غير متوازية: القيمة الأولى عند الطرف الأقرب للنقرة · Assign unparallel", inp("ua") + inp("ub")) +
+      box("none", SEAM_ICON.none, "بدون حاشية · No allowance", "") +
+      `<button data-sall="1" title="القيمة القياسية على كل حواف كل القطع">⬚ الكل</button><span>انقر حافة القطعة · كليك يمين للإنهاء</span><button data-send="1">إنهاء</button>`;
+  }
+
+  /** The piece edge under the pointer: piece index and edge index in Piece.edges. */
+  private seamEdgeAt(sx: number, sy: number): { pc: number; k: number } | null {
+    const w = this.toWorld(sx, sy);
+    let best: { pc: number; k: number; d: number } | null = null;
+    (this.model.pieces ?? []).forEach((pc, pi) => {
+      const g = this.res.pieces.get(pc.id);
+      g?.edges.forEach((e, i) => {
+        const d = closestOnPolyline(e, w).d * this.scale;
+        if (d <= 12 && (!best || d < best.d)) best = { pc: pi, k: g.order[i], d };
+      });
+    });
+    const b = best as { pc: number; k: number; d: number } | null;
+    return b && { pc: b.pc, k: b.k };
+  }
+
+  private seamValue(src: string): string | null {
+    try {
+      new Vars(withSize(this.model), undefined, this.res.z).eval(src);
+      return src;
+    } catch {
+      this.toast(`القيمة «${src}» غير صحيحة`);
+      return null;
+    }
+  }
+
+  private seamClick(sx: number, sy: number): void {
+    const h = this.seamEdgeAt(sx, sy), t = this.seamTool;
+    if (!t) return;
+    if (!h) return this.toast("انقر حافة قطعة");
+    const pc = (this.model.pieces ?? [])[h.pc], v = this.seamVals;
+    let a: string | null = "0", b: string | null = "";
+    if (t.mode === "unpar") {
+      // the first value goes to the end of the edge nearer the click
+      const o = this.res.objects.get(pc.edges[h.k]), at = this.toWorld(sx, sy);
+      const nearStart = !o || closestOnPolyline(o.pts, at).s <= polyLen(o.pts) / 2;
+      a = this.seamValue(nearStart ? v.ua : v.ub);
+      b = this.seamValue(nearStart ? v.ub : v.ua);
+    } else if (t.mode !== "none") a = this.seamValue(t.mode === "std" ? v.std : v[t.mode]);
+    if (a === null || b === null) return;
+    this.snapshot();
+    pc.seam[h.k] = a;
+    pc.seamEnd ??= [];
+    while (pc.seamEnd.length < pc.edges.length) pc.seamEnd.push("");
+    pc.seamEnd[h.k] = b;
+    if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
+    this.changed();
+  }
+
+  private seamAll(): void {
+    const a = this.seamValue(this.seamVals.std);
+    if (a === null || !this.model.pieces?.length) return;
+    this.snapshot();
+    for (const pc of this.model.pieces) {
+      pc.seam = pc.edges.map(() => a);
+      delete pc.seamEnd;
+    }
+    this.changed();
+    this.toast(`حاشية ${a} على كل حواف القطع`);
+  }
+
+  /** While the tool is on: the allowance of each edge written on it ("9/11" when unparallel). */
+  private seamLabelsSvg(): string {
+    if (!this.seamTool) return "";
+    const out: string[] = [];
+    (this.model.pieces ?? []).forEach((pc, pi) => {
+      const g = this.res.pieces.get(pc.id);
+      g?.edges.forEach((e, i) => {
+        const k = g.order[i], hv = this.seamHover?.pc === pi && this.seamHover.k === k;
+        const val = (src: string) => this.formulaText(src || "0");
+        const end = pc.seamEnd?.[k]?.trim();
+        const txt = end ? `${val(pc.seam[k])} / ${val(end)}` : val(pc.seam[k]);
+        if (hv) out.push(`<polyline class="seam-hover" points="${e.map((p) => this.toScreen(p).map((q) => q.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+        const m = this.toScreen(pointAlong(e, polyLen(e) / 2)), c = this.toScreen(g.centre);
+        const dx = m[0] - c[0], dy = m[1] - c[1], L = Math.hypot(dx, dy) || 1;
+        out.push(`<text class="seam-label" x="${(m[0] - (dx / L) * 22).toFixed(1)}" y="${(m[1] - (dy / L) * 22 + 4).toFixed(1)}" text-anchor="middle">\u2066${esc(txt)}\u2069</text>`);
+      });
+    });
+    return out.join("");
+  }
+
+  /** New objects in the active part for objects of part k (they keep their names where free). */
+  private inheritItems(k: number, ids: number[]): { src: number; dst: number }[] {
+    const src = this.ensureParts()[k], res = this.partResult(k);
+    const taken = new Set(Object.values(this.model.names));
+    return ids.map((sid) => {
+      const o = res.objects.get(sid) as GObj, nm = src.names[sid];
+      let dst: number;
+      if (nm && !taken.has(nm)) {
+        dst = this.model.nextId++;
+        this.model.names[dst] = nm;
+        taken.add(nm);
+      } else dst = newId(this.model, o.kind === "point" ? "point" : nm?.startsWith("C") ? "curve" : "line");
+      return { src: sid, dst };
+    });
+  }
+
+  // ---- inherit by clicking (as GRAFIS): the earlier parts show, the element under the pointer lights up,
+  // a click brings it into the active part (linked: it follows its part); right click ends
+  inheritPick: { k: number; no: number; res: EvalResult }[] | null = null;
+  private ihHover: { k: number; id: number } | null = null;
+
+  startInheritPick(): void {
+    const ps = this.ensureParts(), me = ps[this.model.activePart ?? 0].no;
+    this.syncPart();
+    const earlier = ps.map((p, k) => ({ k, no: p.no })).filter((x) => x.no < me);
+    if (!earlier.length) return this.toast("لا توجد بارتات سابقة للوراثة منها؛ أنشئ بارتاً من نافذة البارتات (Parts)");
+    this.cancelTool();
+    this.inheritPick = earlier.map((x) => ({ ...x, res: this.partResult(x.k) }));
+    this.ihHover = null;
+    this.renderInheritBar();
+    this.render();
+  }
+
+  endInheritPick(): void {
+    if (!this.inheritPick) return;
+    this.inheritPick = null;
+    this.ihHover = null;
+    document.querySelector(".inherit-bar")?.remove();
+    this.render();
+  }
+
+  private renderInheritBar(): void {
+    let bar = document.querySelector(".inherit-bar") as HTMLElement | null;
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "curve-bar inherit-bar";
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
+      bar.addEventListener("mousedown", (e) => e.stopPropagation());
+      bar.addEventListener("click", (e) => {
+        const a = (e.target as HTMLElement).closest<HTMLElement>("[data-ihb]")?.dataset.ihb;
+        if (a === "list") (this.endInheritPick(), this.openInherit(false));
+        else if (a === "end") this.endInheritPick();
+      });
+    }
+    bar.innerHTML = `<b>وراثة عناصر</b><span>مرّر على خط من بارت سابق ثم انقره: يُنقل إلى البارت النشط ويبقى تابعاً لبارته · كليك يمين للإنهاء</span><button data-ihb="list" title="الاختيار من قائمة">☰ القائمة</button><button data-ihb="end">إنهاء</button>`;
+  }
+
+  private inheritAt(sx: number, sy: number): { k: number; id: number } | null {
+    let best: { k: number; id: number; d: number } | null = null;
+    const w = this.toWorld(sx, sy);
+    for (const pr of this.inheritPick ?? [])
+      for (const o of pr.res.objects.values()) {
+        if (pr.res.stepErrors.has(o.step)) continue;
+        const d = o.kind === "point" ? dist(this.toScreen(o.pts[0]), [sx, sy]) : closestOnPolyline(o.pts, w).d * this.scale;
+        if (d <= (o.kind === "point" ? 10 : PICK_PX / 2) && (!best || d < best.d - (o.kind === "point" ? 4 : 0))) best = { k: pr.k, id: o.id, d };
+      }
+    return best && { k: best.k, id: best.id };
+  }
+
+  private inheritClick(): void {
+    const h = this.ihHover, pr = h && this.inheritPick?.find((x) => x.k === h.k);
+    if (!h || !pr) return this.toast("مرّر على خط من بارت سابق حتى يتلوّن ثم انقره");
+    const done = this.model.steps.some((st) => st.op === "inherit" && st.part === pr.no && st.items.some((it) => it.src === h.id));
+    if (done) return this.toast("هذا العنصر موروث سابقاً في هذا البارت");
+    this.snapshot();
+    const items = this.inheritItems(h.k, [h.id]), last = this.model.steps[this.model.steps.length - 1];
+    if (last?.op === "inherit" && last.part === pr.no) last.items.push(...items);
+    else this.model.steps.push({ op: "inherit", part: pr.no, items });
+    this.changed();
+    this.toast(`نُقل ${this.ensureParts()[h.k].names[h.id] ?? "العنصر"} من البارت ${String(pr.no).padStart(3, "0")} · انقر التالي أو كليك يمين للإنهاء`);
+  }
+
+  private inheritSvg(): string {
+    if (!this.inheritPick) return "";
+    const out: string[] = [];
+    const taken = new Set<string>();
+    for (const st of this.model.steps) if (st.op === "inherit") for (const it of st.items) taken.add(`${st.part}:${it.src}`);
+    for (const pr of this.inheritPick)
+      for (const o of pr.res.objects.values()) {
+        if (pr.res.stepErrors.has(o.step)) continue;
+        const hv = this.ihHover?.k === pr.k && this.ihHover.id === o.id, done = taken.has(`${pr.no}:${o.id}`);
+        const cls = hv ? "ih-hover" : done ? "ih-done" : "ih-src";
+        if (o.kind === "point") {
+          const [x, y] = this.toScreen(o.pts[0]);
+          out.push(`<circle class="${cls}" cx="${x}" cy="${y}" r="${hv ? 4 : 2.4}"/>`);
+        } else out.push(`<polyline class="${cls}" points="${o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+      }
+    return out.join("");
+  }
+
   private openInherit(whole: boolean): void {
     const ps = this.ensureParts(), act = this.model.activePart ?? 0, me = ps[act].no;
     this.syncPart();
@@ -652,18 +909,7 @@ export class App {
       const k = Number(q<HTMLSelectElement>('[data-ih="part"]').value), src = ps[k], ids = [...picked()];
       if (!ids.length) return void (q<HTMLElement>(".za-msg").textContent = "اختر عنصراً واحداً على الأقل");
       this.snapshot();
-      const res = this.partResult(k);
-      const taken = new Set(Object.values(this.model.names));
-      const items = ids.map((sid) => {
-        const o = res.objects.get(sid) as GObj, nm = src.names[sid];
-        let dst: number;
-        if (nm && !taken.has(nm)) {
-          dst = this.model.nextId++;
-          this.model.names[dst] = nm;
-          taken.add(nm);
-        } else dst = newId(this.model, o.kind === "point" ? "point" : nm?.startsWith("C") ? "curve" : "line");
-        return { src: sid, dst };
-      });
+      const items = this.inheritItems(k, ids);
       this.model.steps.push({ op: "inherit", part: src.no, items });
       this.changed();
       el.remove();
@@ -893,6 +1139,8 @@ export class App {
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     parts.push(this.formulaLabelsSvg());
+    parts.push(this.inheritSvg());
+    parts.push(this.seamLabelsSvg());
     this.renderCurveBar();
     // no letters on the drawing: the name of the element under the pointer only
     // no name under the pointer either (only with "names" switched on): the drawing stays clean
@@ -1306,7 +1554,7 @@ export class App {
   private renderCurveBar(): void {
     const ls = this.selectedLineStep();
     const c = ls?.op === "curve" ? ls : null;
-    let bar = document.querySelector(".curve-bar") as HTMLElement | null;
+    let bar = document.querySelector(".curve-bar.obj-bar") as HTMLElement | null;
     if (!ls) {
       bar?.remove();
       this.curveMode = null;
@@ -1314,7 +1562,7 @@ export class App {
     }
     if (!bar) {
       bar = document.createElement("div");
-      bar.className = "curve-bar";
+      bar.className = "curve-bar obj-bar";
       (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
       bar.addEventListener("mousedown", (e) => e.stopPropagation());
       bar.addEventListener("click", (e) => {
@@ -1791,6 +2039,8 @@ export class App {
       this.cancelTool();
       if (t.key === "inheritBlock") this.openLibrary();
       else if (t.key === "saveBlock") this.saveBlock();
+      else if (t.key === "inheritObjects") this.startInheritPick();
+      else if (t.key === "seamAllowance") this.startSeamTool();
       else this.openInherit(t.key === "inheritPart");
       return;
     }
@@ -1806,7 +2056,10 @@ export class App {
   }
 
   cancelTool(): void {
+    this.endInheritPick();
+    this.endSeamTool();
     this.curveMode = null;
+    this.instantValues = null;
     if (this.tool) this.resetPointPanel();
     this.tool = null;
     this.picks = [];
@@ -1821,6 +2074,7 @@ export class App {
 
   private restartTool(): void {
     const t = this.tool;
+    this.instantValues = null;
     this.picks = [];
     this.extra = [];
     this.collecting = false;
@@ -2377,6 +2631,11 @@ export class App {
       } else {
         const id = pickedId(p);
         if (id === null || (p.kind === "point" && p.ref.end)) return;
+        if (t.instant && this.instantValues) {
+          this.extra = [p];
+          this.commit(this.instantValues);
+          return;
+        }
         const i = this.extra.findIndex((q) => pickedId(q) === id);
         if (i >= 0) this.extra.splice(i, 1);
         else this.extra.push(p);
@@ -2391,6 +2650,20 @@ export class App {
       this.render();
       return;
     }
+    if (t.multi && t.instant) {
+      // mirror (as GRAFIS): the axis is set; first copy or move (and the axis angle), then each click
+      // mirrors that element at once, until a right click
+      const fields = t.fields?.({ model: this.model, res: this.res, picks: this.picks, extra: [] }) ?? [];
+      const start = (v: Record<string, string>) => {
+        this.instantValues = v;
+        this.collecting = true;
+        this.updatePrompt();
+        this.render();
+      };
+      if (fields.length) this.openForm({ title: t.name, fields, onOk: start });
+      else start({});
+      return;
+    }
     if (t.multi) {
       this.collecting = true;
       this.updatePrompt();
@@ -2399,6 +2672,9 @@ export class App {
     }
     this.finishPicks();
   }
+
+  /** The values of an instant tool (mirror: copy / move, axis angle), chosen before the elements. */
+  private instantValues: Record<string, string> | null = null;
 
   private finishPicks(): void {
     const t = this.tool as Tool;
@@ -2607,6 +2883,9 @@ export class App {
   /** Right click: confirm the open value box (or finish a multi-pick); with nothing
    * pending it ends the tool, so the next operation can be chosen. */
   private rightConfirm(): void {
+    if (this.inheritPick) return void this.endInheritPick();
+    if (this.seamTool) return void this.endSeamTool();
+    if (this.tool?.instant && this.collecting && !this.form) return void this.cancelTool();
     if (this.form || (this.collecting && this.extra.length)) this.confirmStep();
     else if (this.tool && !this.picks.length) this.cancelTool();
     else if (this.curveMode) {
@@ -2621,6 +2900,7 @@ export class App {
 
   /** Embedded mode: the ✓ of the step card (Enter). */
   confirmStep(): void {
+    if (this.tool?.instant && this.collecting && !this.form) return void this.cancelTool();
     if (this.form) ($("#tool-box").querySelector("[data-ok]") as HTMLButtonElement | null)?.click();
     else if (this.collecting) this.finishPicks();
   }
@@ -2723,6 +3003,14 @@ export class App {
       this.changed();
       const err = this.res.stepErrors.get(this.model.steps.length - 1);
       if (err) this.toast(`تمت إضافة الخطوة لكن فيها خطأ: ${err}`);
+      if (t.instant && this.instantValues && this.collecting) {
+        // the axis stays: the next click mirrors the next element
+        this.extra = [];
+        if (!err) this.toast(this.instantValues.mode === "move" || t.key === "mirrorMove" ? "عُكس العنصر (نقل) · انقر التالي أو كليك يمين للإنهاء" : "نُسخ العنصر بالانعكاس · انقر التالي أو كليك يمين للإنهاء");
+        this.updatePrompt();
+        this.render();
+        return;
+      }
     }
     this.resetPointPanel();
     this.restartTool();
@@ -2934,6 +3222,17 @@ export class App {
         this.calibrateClick(this.toWorld(e.clientX - rr.left, e.clientY - rr.top));
         return;
       }
+      if (this.seamTool) {
+        const rr = svg.getBoundingClientRect();
+        this.seamClick(e.clientX - rr.left, e.clientY - rr.top);
+        e.preventDefault();
+        return;
+      }
+      if (this.inheritPick) {
+        this.inheritClick();
+        e.preventDefault();
+        return;
+      }
       if (this.curveMode && this.selectedCurve()) {
         const rr = svg.getBoundingClientRect();
         this.curveModeClick(e.clientX - rr.left, e.clientY - rr.top);
@@ -3070,6 +3369,22 @@ export class App {
         return;
       }
       this.mouse = this.toWorld(sx, sy);
+      if (this.seamTool) {
+        const h = this.seamEdgeAt(sx, sy);
+        if (JSON.stringify(h) !== JSON.stringify(this.seamHover)) {
+          this.seamHover = h;
+          this.render();
+        }
+        return;
+      }
+      if (this.inheritPick) {
+        const h = this.inheritAt(sx, sy);
+        if (JSON.stringify(h) !== JSON.stringify(this.ihHover)) {
+          this.ihHover = h;
+          this.render();
+        }
+        return;
+      }
       if (this.curveGrab && Math.hypot(sx - this.curveGrab.x, sy - this.curveGrab.y) > 3) {
         const g = this.curveGrab;
         this.curveGrab = null;
@@ -4054,8 +4369,8 @@ export class App {
               <label>القماش <input data-pf="fabric" value="${esc(pc.fabric)}"/></label>
               <label>خط النسيج ° <input class="expr" data-pf="grain" value="${esc(pc.grain)}"/></label>
             </div>
-            <table class="grid"><thead><tr><th>الحد</th><th>حاشية الخياطة مم</th></tr></thead><tbody>
-              ${pc.edges.map((id, k) => `<tr><td class="id">${nm(id)}</td><td><input class="expr" data-seam="${k}" value="${esc(pc.seam[k] ?? "0")}"/></td></tr>`).join("")}
+            <table class="grid"><thead><tr><th>الحد</th><th>حاشية الخياطة مم</th><th title="غير متوازية: القيمة عند نهاية الحد (فارغ = متوازية)">عند النهاية</th></tr></thead><tbody>
+              ${pc.edges.map((id, k) => `<tr><td class="id">${nm(id)}</td><td><input class="expr" data-seam="${k}" value="${esc(pc.seam[k] ?? "0")}"/></td><td><input class="expr" data-seam-end="${k}" placeholder="—" value="${esc(pc.seamEnd?.[k] ?? "")}"/></td></tr>`).join("")}
             </tbody></table>
             <div class="notches">النوتشات: ${
               pc.notches.length
@@ -4097,6 +4412,16 @@ export class App {
       );
       card.querySelectorAll<HTMLInputElement>("input[data-seam]").forEach((inp) =>
         inp.addEventListener("input", () => edit(() => (pc.seam[Number(inp.dataset.seam)] = inp.value))),
+      );
+      card.querySelectorAll<HTMLInputElement>("input[data-seam-end]").forEach((inp) =>
+        inp.addEventListener("input", () =>
+          edit(() => {
+            pc.seamEnd ??= pc.edges.map(() => "");
+            while (pc.seamEnd.length < pc.edges.length) pc.seamEnd.push("");
+            pc.seamEnd[Number(inp.dataset.seamEnd)] = inp.value;
+            if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
+          }),
+        ),
       );
       card.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", () => ((snapped = false), this.renderPieces())));
       card.querySelector("[data-pdel]")?.addEventListener("click", () => {
@@ -4457,6 +4782,8 @@ export class App {
       inp.addEventListener("focus", () => {
         const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
         setTimeout(() => inp.value === v0 && inp.select(), 0);
+        // the mouse-up of the click that focused the field would put the caret back where it was pressed
+        inp.addEventListener("mouseup", (e) => inp.value === v0 && (e.preventDefault(), inp.select()), { once: true });
       });
       inp.addEventListener("keydown", (e) => {
         if (e.key !== "Enter") return;
@@ -4767,6 +5094,8 @@ export class App {
       inp.addEventListener("focus", () => {
         const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
         setTimeout(() => inp.value === v0 && inp.select(), 0);
+        // the mouse-up of the click that focused the field would put the caret back where it was pressed
+        inp.addEventListener("mouseup", (e) => inp.value === v0 && (e.preventDefault(), inp.select()), { once: true });
       });
       // Enter saves the value at once and moves to the same field of the next row
       inp.addEventListener("keydown", (e) => {

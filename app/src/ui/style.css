@@ -992,3 +992,16 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 .curve-bar select { height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 12px; }
 .curve-bar input[type="color"] { width: 32px; height: 28px; padding: 1px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
 .curve-bar button:disabled { opacity: .35; cursor: default; }
+/* 0.9.160 inherit by clicking: earlier parts' elements, the one under the pointer lights up */
+#canvas .ih-src { stroke: var(--muted); stroke-width: 1.2; opacity: .8; fill: var(--muted); }
+#canvas polyline.ih-src { fill: none; stroke-dasharray: 6 3; }
+#canvas .ih-done { stroke: var(--live); stroke-width: 1; opacity: .35; fill: var(--live); }
+#canvas polyline.ih-done { fill: none; }
+#canvas .ih-hover { stroke: #ff9f1c; stroke-width: 3; fill: #ff9f1c; }
+#canvas polyline.ih-hover { fill: none; }
+/* 0.9.160 seam allowance tool */
+.seam-bar label.sm { display: inline-flex; align-items: center; gap: 3px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.seam-bar label.sm.on { border-color: var(--live); background: color-mix(in srgb, var(--live) 18%, transparent); }
+.seam-bar input.expr { width: 44px; height: 24px; padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 12px; }
+#canvas text.seam-label { fill: #9ccc3c; font-size: 12.5px; font-weight: 600; direction: ltr; unicode-bidi: isolate; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; pointer-events: none; }
+#canvas polyline.seam-hover { stroke: #ff9f1c; stroke-width: 3.5; }

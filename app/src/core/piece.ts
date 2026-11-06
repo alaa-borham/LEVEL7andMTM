@@ -11,6 +11,9 @@ export interface Piece {
   fabric: string;
   edges: number[]; // object ids, in order around the piece
   seam: string[]; // seam allowance (mm, formula) for each edge
+  /** Unparallel allowance (as GRAFIS): the value at the edge's end; seam[k] is then the value at its
+   * start (start / end as the edge object is drawn). Empty or missing = parallel. */
+  seamEnd?: string[];
   notches: PointRef[];
   /** Notch shape per notch (same order): slit (default), T, V or castle (box). */
   notchTypes?: NotchType[];
@@ -117,11 +120,15 @@ export function outline(edges: Pt[][], order?: number[]): { sew: Pt[]; parts: Pt
 }
 
 /** Cutting line: every edge moved outward by its allowance, corners mitred. */
-export function cutLine(parts: Pt[][], allowance: number[]): { pts: Pt[]; edges: Pt[][] } {
+export function cutLine(parts: Pt[][], allowance: (number | [number, number])[]): { pts: Pt[]; edges: Pt[][] } {
   const n = parts.length;
+  const pair = (a: number | [number, number]): [number, number] => (typeof a === "number" ? [a, a] : a);
   // counter-clockwise outline: outward = right of travel = negative offset
-  const off = parts.map((p, i) => (allowance[i] > 0 ? offsetPolyline(p, -allowance[i]) : [...p]));
-  const maxA = Math.max(...allowance, 1);
+  const off = parts.map((p, i) => {
+    const [a0, a1] = pair(allowance[i]);
+    return a0 === a1 ? (a0 > 0 ? offsetPolyline(p, -a0) : [...p]) : offsetVarying(p, -a0, -a1);
+  });
+  const maxA = Math.max(...allowance.flatMap(pair), 1);
   const startAt = off.map(() => 0);
   const endAt = off.map((p) => polyLen(p));
   const corner: (Pt | null)[] = [];
@@ -153,6 +160,18 @@ export function cutLine(parts: Pt[][], allowance: number[]): { pts: Pt[]; edges:
   return { pts: out, edges };
 }
 
+/** Offset that changes evenly along the line from d0 at its start to d1 at its end. */
+function offsetVarying(p: Pt[], d0: number, d1: number): Pt[] {
+  const L = polyLen(p) || 1;
+  let acc = 0;
+  return p.map((q, i) => {
+    if (i) acc += dist(p[i - 1], q);
+    const a = p[Math.max(0, i - 1)], b = p[Math.min(p.length - 1, i + 1)];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, d = d0 + ((d1 - d0) * acc) / L;
+    return [q[0] - ((b[1] - a[1]) / len) * d, q[1] + ((b[0] - a[0]) / len) * d] as Pt;
+  });
+}
+
 /** Outward unit normal of the sewing line near point x. */
 function outwardAt(sew: Pt[], x: Pt): { pt: Pt; n: Pt } {
   const c = close(sew);
@@ -174,6 +193,8 @@ export interface PieceInput {
   piece: Piece;
   edges: Pt[][];
   allowance: number[];
+  /** Unparallel: the allowance at the end of each edge (as the edge object runs); undefined = parallel. */
+  allowanceEnd?: (number | undefined)[];
   notchPoints: Pt[];
   grainAngle: number;
 }
@@ -181,13 +202,21 @@ export interface PieceInput {
 export function buildPiece(inp: PieceInput): PieceGeo {
   const { sew, parts, order } = outline(inp.edges);
   // allowance follows the parts (outline() may have reversed the order)
-  const allowance = order.map((k) => inp.allowance[k]);
-  const cl = allowance.some((a) => a > 0) ? cutLine(parts, allowance) : { pts: [...sew], edges: parts };
+  // each part: allowance at its start and end (an unparallel one turns with the part's direction)
+  const allowance = order.map((k, i): [number, number] => {
+    const a = inp.allowance[k], b = inp.allowanceEnd?.[k];
+    if (b === undefined || b === a) return [a, a];
+    const e = inp.edges[k], p = parts[i];
+    const same = closestOnPolyline(e, p[0]).s <= closestOnPolyline(e, p[p.length - 1]).s;
+    return same ? [a, b] : [b, a];
+  });
+  const cl = allowance.some(([a, b]) => a > 0 || b > 0) ? cutLine(parts, allowance) : { pts: [...sew], edges: parts };
   const cut = cl.pts;
   const notches = inp.notchPoints.map((x, idx) => {
     const { pt, n } = outwardAt(sew, x);
     const k = nearestPart(parts, pt);
-    const a = allowance[k];
+    const [a0, a1] = allowance[k];
+    const a = a0 === a1 ? a0 : a0 + ((a1 - a0) * closestOnPolyline(parts[k], pt).s) / (polyLen(parts[k]) || 1);
     const depth = a > 0 ? Math.min(a, 6) : 6;
     const at: Pt = [pt[0] + n[0] * a, pt[1] + n[1] * a];
     const to: Pt = [at[0] - n[0] * depth, at[1] - n[1] * depth];

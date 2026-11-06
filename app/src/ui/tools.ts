@@ -55,6 +55,8 @@ export interface Tool {
   /** Delete tools: what they remove, picked one by one or inside a frame (two corners). */
   remove?: "points" | "lines" | "all" | "texts" | "symbols" | "stitches" | "notches";
   frame?: boolean;
+  /** Each element picked after the first picks is done at once (mirror as GRAFIS); right click ends the tool. */
+  instant?: boolean;
 }
 
 /** Object id of a multi-pick (a whole point or line). */
@@ -219,7 +221,8 @@ export const TOOLS: Tool[] = [
     group: "التحويلات",
     shortcut: "8",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
-    multi: { kind: "object", prompt: "انقر العناصر المراد نسخها بالانعكاس، ثم Enter للتنفيذ", min: 1 },
+    multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
+    instant: true,
     build: (c) => ({
       op: "mirror",
       axis: line(c, 0).obj,
@@ -231,7 +234,8 @@ export const TOOLS: Tool[] = [
     name: "انعكاس حول خط (نقل)",
     group: "التحويلات",
     picks: [{ kind: "line", prompt: "انقر محور الانعكاس" }],
-    multi: { kind: "object", prompt: "انقر العناصر المراد قلبها في مكانها، ثم Enter للتنفيذ", min: 1 },
+    multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
+    instant: true,
     build: (c) => ({ op: "mirror", axis: line(c, 0).obj, items: c.extra.map((p) => ({ src: pickedId(p) as number })) }),
   },
   {
@@ -428,6 +432,13 @@ export const TOOLS: Tool[] = [
     frame: true,
   },
   {
+    key: "seamAllowance",
+    name: "حواشي الخياطة (قياسي / مسافة / غير متوازي / بدون)",
+    group: "القطع",
+    picks: [],
+    action: true,
+  },
+  {
     key: "inheritObjects",
     name: "وراثة عناصر من بارت سابق",
     group: "الوراثة",
@@ -463,7 +474,8 @@ export const TOOLS: Tool[] = [
       { kind: "point", prompt: "انقر النقطة الأولى لمحور الانعكاس" },
       { kind: "point", prompt: "انقر النقطة الثانية لمحور الانعكاس" },
     ],
-    multi: { kind: "object", prompt: "انقر العناصر المراد عكسها، ثم Enter أو كليك يمين", min: 1 },
+    multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
+    instant: true,
     fields: () => [MODE_FIELD],
     build: (c, v) => ({ op: "mirror", axisPts: [point(c, 0).ref, point(c, 1).ref], items: transformItems(c, v.mode) }),
   },
@@ -472,7 +484,8 @@ export const TOOLS: Tool[] = [
     name: "انعكاس بمحور من نقطة واتجاه",
     group: "التحويلات",
     picks: [{ kind: "point", prompt: "انقر نقطة على محور الانعكاس" }],
-    multi: { kind: "object", prompt: "انقر العناصر المراد عكسها، ثم Enter أو كليك يمين", min: 1 },
+    multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
+    instant: true,
     fields: () => [{ key: "angle", label: "اتجاه المحور °", value: "90" }, MODE_FIELD],
     build: (c, v) => ({ op: "mirror", axisAt: point(c, 0).ref, axisAngle: v.angle, items: transformItems(c, v.mode) }),
   },

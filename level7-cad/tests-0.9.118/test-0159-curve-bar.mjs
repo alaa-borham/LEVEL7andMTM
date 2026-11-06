@@ -10,7 +10,7 @@ try{
  page.on('dialog',d=>d.dismiss());await page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
  // vertical line L(0,0)-(0,-400) id 2, horizontal line (0,-300)-(300,-300) id 4, a slanted line id 6 ending at (200,-100); curve 9 from (0,-300) to (300,0)
- await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();m.steps=[{op:'point',id:1,x:'0',y:'0'},{op:'lineAngle',id:2,start:{obj:1},angle:'-90',length:'400'},
+ await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();delete m.parts;delete m.activePart;delete m.lineStyles;m.pieces=[];m.steps=[{op:'point',id:1,x:'0',y:'0'},{op:'lineAngle',id:2,start:{obj:1},angle:'-90',length:'400'},
    {op:'point',id:3,x:'0',y:'-300'},{op:'lineAngle',id:4,start:{obj:3},angle:'0',length:'300'},{op:'point',id:5,x:'120',y:'-40'},{op:'lineAngle',id:6,start:{obj:5},angle:'-30',length:'90'},
    {op:'point',id:7,x:'300',y:'0'},{op:'curve',id:9,through:[{obj:3},{obj:7}],startAngle:'0',endAngle:'90'}];m.nextId=10;a.selectedStep=7;a.changed();a.fit();});
  const box=await page.locator('#l7-design-frame').boundingBox(),S=async p=>{const q=await f.evaluate(p=>window.level7.toScreen(p),p);return[box.x+q[0],box.y+q[1]];};

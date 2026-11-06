@@ -566,6 +566,7 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           piece: pc,
           edges: pc.edges.map((id) => needLine(id).pts),
           allowance: pc.edges.map((_, k) => vars.eval(pc.seam[k] ?? "0")),
+          allowanceEnd: pc.edges.map((_, k) => (pc.seamEnd?.[k]?.trim() ? vars.eval(pc.seamEnd[k]) : undefined)),
           notchPoints: pc.notches.map((r) => {
             const p = refPoint(r);
             if (!p) throw new Error(`نقطة النوتش ${model.names[r.obj] ?? r.obj} غير موجودة`);

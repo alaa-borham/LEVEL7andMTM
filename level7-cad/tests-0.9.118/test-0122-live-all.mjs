@@ -79,8 +79,9 @@ try{
  pass('changing X7 to 20 moves all of them to 40 mm');
  // 0.9.134 transformations: mirror point-to-point and scale about a point by X
  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
- await tool('mirrorPts');await page.mouse.click(...await at(0,0));await page.mouse.click(...await at(0,200));await page.mouse.click(...await at(150,0.5));await page.keyboard.press('Enter');
- await fr.locator('#tool-box select[data-key="mode"]').waitFor();await fr.locator('#tool-box [data-ok]').click();
+ await tool('mirrorPts');await page.mouse.click(...await at(0,0));await page.mouse.click(...await at(0,200));
+ // 0.9.160: copy / move is chosen right after the axis, then each clicked element is mirrored at once
+ await fr.locator('#tool-box select[data-key="mode"]').waitFor();await fr.locator('#tool-box [data-ok]').click();await page.mouse.click(...await at(150,0.5));
  await f.waitForFunction(()=>window.level7.model.steps.at(-1).op==='mirror');
  const mr=await f.evaluate(()=>{const a=window.level7,s=a.model.steps.at(-1);const r=v=>Math.round(v*1000)/1000;return{dst:a.res.objects.get(s.items[0].dst).pts.map(p=>p.map(r)),src:a.res.objects.get(s.items[0].src).pts.map(p=>[r(-p[0]),r(p[1])])};});
  assert.deepEqual(mr.dst,mr.src);pass('mirror from point to point (P2–P3 axis): L1 copied to the other side');
