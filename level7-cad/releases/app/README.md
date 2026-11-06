@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.173
+
+LEVEL7 design: the values window of a curve is short again: its direction and strength, plus only the point values set with X / Z or a formula (e.g. "start: distance = Z14"); no plain coordinates of dragged points and no unit / measured-from lists.
+
 LEVEL7 and MTM 0.9.172
 
 LEVEL7 design: dimension bar: unit (mm / cm / inch) and ×1 / ×2 / ×4 as buttons in sight (the inch was hidden in a list); the tool bars (curve, dimension, seam allowance, inherit) follow the drawing background: dark with light writing on a dark drawing, light on a light one.
