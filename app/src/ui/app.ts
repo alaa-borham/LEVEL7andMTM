@@ -1580,6 +1580,7 @@ export class App {
       bar.addEventListener("click", (e) => {
         const st = this.selectedLineStep();
         if (st && (e.target as HTMLElement).closest("[data-nocolor]")) this.setLineStyle(st, { color: null });
+        if (st && (e.target as HTMLElement).closest("[data-cedit]")) this.editStep(this.selectedStep);
       });
     }
     const first = createdIds(ls).find((id) => this.res.objects.get(id)?.kind === "line") as number, sty = this.lineStyle(first);
@@ -1600,7 +1601,8 @@ export class App {
     };
     bar.innerHTML = `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
       b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
-      b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") + styleCtl +
+      b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") +
+      `<button data-cedit="1" title="كتابة قيم المنحنى: الاتجاهات والشدة">✎</button>` + styleCtl +
       `<span>${this.curveMode ? say[this.curveMode] : "اسحب المقابض أو النقاط · رايت كليك للخروج"}</span>`;
   }
 
@@ -3184,8 +3186,11 @@ export class App {
         return;
       }
       if (this.tool && !this.form && this.picks.length) this.backStep(); // undo the first click's pick
-      const h = this.hit("object", e.clientX - r.left, e.clientY - r.top);
-      const id = h && pickedId(h);
+      // what glows under the pointer (the near mark) is what opens: a point beside the curve does not
+      // take the double-click from the curve
+      const nr = this.nearest(e.clientX - r.left, e.clientY - r.top);
+      const h = nr ? null : this.hit("object", e.clientX - r.left, e.clientY - r.top);
+      const id = nr ? nr.id : h && pickedId(h);
       if (id === null || id === undefined) return;
       let i = -1;
       this.model.steps.forEach((st, k) => {
@@ -3193,7 +3198,20 @@ export class App {
       });
       if (i < 0) return;
       this.cancelTool();
-      if (stepFields(this.model.steps[i]).length) this.editStep(i);
+      const st = this.model.steps[i];
+      if (st.op === "inherit") {
+        this.selectedStep = i;
+        this.render();
+        return this.toast(`${this.model.names[id] ?? "هذا العنصر"} موروث من البارت ${String(st.part).padStart(3, "0")} ويتبعه: عدّله في ذلك البارت`);
+      }
+      if (st.op === "curve") {
+        // a curve: its handles and points show for dragging (as GRAFIS); ✎ in the bar opens its values
+        this.selectedStep = i;
+        this.renderSteps();
+        this.render();
+        return this.toast("اسحب المقابض الحمراء أو نقاط المنحنى · ✎ لكتابة القيم · كليك يمين للخروج");
+      }
+      if (stepFields(st).length) this.editStep(i);
       else {
         this.selectedStep = i;
         this.renderSteps();
