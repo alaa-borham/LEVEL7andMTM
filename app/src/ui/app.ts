@@ -59,6 +59,28 @@ const NEST_COLORS = ["#2e7d32", "#c62828", "#1565c0", "#ef6c00", "#6a1b9a", "#00
 
 type Hover = Pick | null;
 
+/** "Show all parts" (as GRAFIS): where each part is drawn, side by side in rows, in part order;
+ * a translation per part (null = empty part). */
+function layoutParts(res: EvalResult[]): (Pt | null)[] {
+  const boxes = res.map((r) => {
+    const pts = [...r.objects.values()].flatMap((o) => o.pts);
+    if (!pts.length) return null;
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  });
+  const ws = boxes.filter((b): b is NonNullable<typeof b> => !!b).map((b) => b.x1 - b.x0);
+  const gap = Math.max(60, Math.max(...ws, 0) * 0.08), rowMax = Math.max(2500, 3 * Math.max(...ws, 0));
+  let x = 0, top = 0, rowH = 0;
+  return boxes.map((b) => {
+    if (!b) return null;
+    if (x > 0 && x + (b.x1 - b.x0) > rowMax) (x = 0), (top -= rowH + gap), (rowH = 0);
+    const t: Pt = [x - b.x0, top - b.y1]; // rows hang from their top line (y up)
+    x += b.x1 - b.x0 + gap;
+    rowH = Math.max(rowH, b.y1 - b.y0);
+    return t;
+  });
+}
+
 /** Curve bar icons (24 grid, drawn like the LEVEL7 tool icons: ink, blue curve, red pin / cross). */
 const cbSvg = (d: string) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const SEAM_ICON = {
@@ -174,9 +196,30 @@ export class App {
     if ((this.model.activeSize ?? -1) >= n) this.model.activeSize = -1;
     this.syncPart();
     this.res = evaluateModel(withSize(this.model));
-    // other parts shown faded behind the active one
-    const parts = this.model.parts ?? [];
-    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible === true ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
+    // other parts: with "show all parts" laid out side by side (as GRAFIS); otherwise the parts whose eye
+    // is on, faded behind the active one in place
+    const parts = this.model.parts ?? [], act = this.model.activePart ?? 0;
+    const evalPart = (k: number) => evaluateModel(withSize({ ...this.model, steps: parts[k].steps, names: parts[k].names, nextId: parts[k].nextId, pieces: [], activePart: k }));
+    if (this.allParts && parts.length > 1) {
+      const res = parts.map((_, k) => (k === act ? this.res : evalPart(k)));
+      const lay = layoutParts(res);
+      const base = lay[act] ?? [0, 0];
+      this.ghosts = [];
+      this.ghostInfo = [];
+      res.forEach((r, k) => {
+        if (k === act || !lay[k]) return;
+        this.ghosts.push(r);
+        this.ghostInfo.push({ k, off: [lay[k]![0] - base[0], lay[k]![1] - base[1]], all: true });
+      });
+    } else {
+      this.ghosts = [];
+      this.ghostInfo = [];
+      parts.forEach((p, k) => {
+        if (k === act || p.visible !== true) return;
+        this.ghosts.push(evalPart(k));
+        this.ghostInfo.push({ k, off: [0, 0], all: false });
+      });
+    }
     this.nest = this.gradeView !== "off" ? this.nestResults() : [];
   }
 
@@ -209,6 +252,60 @@ export class App {
   /** Call before every change so it can be undone. */
   // ------------------------------------------------------------ parts (as GRAFIS)
   private ghosts: EvalResult[] = [];
+  /** For each ghost: its part, where it is drawn (offset from its own coordinates), laid out or in place. */
+  private ghostInfo: { k: number; off: Pt; all: boolean }[] = [];
+  /** "Show all parts" (as GRAFIS): every part drawn, side by side; a click on one switches to it. */
+  allParts = (() => {
+    try {
+      return localStorage.getItem("level7.allParts") === "1";
+    } catch {
+      return false;
+    }
+  })();
+  private partHover: number | null = null;
+
+  /** With all parts shown: the other part whose line is under the pointer. */
+  private partAt(sx: number, sy: number): number | null {
+    if (!this.allParts) return null;
+    const w = this.toWorld(sx, sy);
+    let best: { k: number; d: number } | null = null;
+    this.ghosts.forEach((g, gi) => {
+      const info = this.ghostInfo[gi];
+      if (!info?.all) return;
+      const q: Pt = [w[0] - info.off[0], w[1] - info.off[1]];
+      for (const o of g.objects.values()) {
+        if (o.kind !== "line") continue;
+        const d = closestOnPolyline(o.pts, q).d * this.scale;
+        if (d <= 8 && (!best || d < best.d)) best = { k: info.k, d };
+      }
+    });
+    return (best as { k: number; d: number } | null)?.k ?? null;
+  }
+
+  /** Switch to part k from the all-parts view: the drawing stays where it is on the screen. */
+  private switchPartInPlace(k: number): void {
+    const info = this.ghostInfo.find((g) => g.k === k);
+    const cx = this.cx, cy = this.cy, sc = this.scale;
+    this.switchPart(k);
+    if (info) {
+      this.cx = cx - info.off[0];
+      this.cy = cy - info.off[1];
+      this.scale = sc;
+      this.partHover = null;
+      this.render();
+    }
+  }
+
+  setAllParts(on: boolean): void {
+    this.allParts = on;
+    try {
+      localStorage.setItem("level7.allParts", on ? "1" : "0");
+    } catch {}
+    if (!on) for (const p of this.model.parts ?? []) p.visible = false;
+    this.evaluate();
+    this.renderPartStrip();
+    this.fit();
+  }
 
   /** The active part's construction is model.steps / names / nextId / pieces; keep the
    * parts list pointing at it so other parts (inheritance, ghosts) see it current. */
@@ -316,9 +413,8 @@ export class App {
           this.renderPartStrip();
         } else if (t.closest("[data-sall]")) {
           const on = t.closest<HTMLElement>("[data-sall]")!.dataset.sall === "1";
-          for (const p of this.model.parts ?? []) p.visible = on;
-          this.changed();
-          this.toast(on ? "كل البارتات ظاهرة" : "كل البارتات مخفية (عدا النشط)");
+          this.setAllParts(on);
+          this.toast(on ? "كل البارتات ظاهرة جنباً إلى جنب · انقر خط أي بارت للانتقال إليه" : "يظهر البارت النشط وحده");
         } else if (eye) {
           const p = (this.model.parts ?? [])[Number(eye.dataset.seye)];
           if (p) (p.visible = !p.visible), this.changed();
@@ -333,7 +429,7 @@ export class App {
         <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible || k === act ? "on" : ""}" title="إظهار / إخفاء البارت خلف البارت النشط"${k === act || !ps ? " disabled" : ""}>👁</button></div>
         <svg viewBox="${pv.box}">${pv.svg}</svg></div>`;
     });
-    strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء الشريط">⦸</button><button data-sall="1" title="إظهار كل البارتات · Show all parts">👁</button><button data-sall="0" title="إخفاء كل البارتات · Hide all parts">🚫</button></div><div class="ps-list">${items.join("")}</div>`;
+    strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء الشريط">⦸</button><button data-sall="1" class="${this.allParts ? "on" : ""}" title="إظهار كل البارتات جنباً إلى جنب · Show all parts">👁</button><button data-sall="0" title="إخفاء كل البارتات · Hide all parts">🚫</button></div><div class="ps-list">${items.join("")}</div>`;
   }
 
   /** Product info (as GRAFIS 2026): product texts, logo, two sketches and a fabric picture,
@@ -1039,6 +1135,10 @@ export class App {
 
   fit(): void {
     const all = [...this.res.objects.values()].flatMap((o) => o.pts);
+    this.ghosts.forEach((g, gi) => {
+      const info = this.ghostInfo[gi];
+      if (info?.all) for (const o of g.objects.values()) for (const p of o.pts) all.push([p[0] + info.off[0], p[1] + info.off[1]]);
+    });
     const r = this.svg.getBoundingClientRect();
     if (!all.length || !r.width) {
       this.cx = 0;
@@ -1096,9 +1196,13 @@ export class App {
     const highlight = this.highlighted();
     const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : o.pts.length > 2 ? "var(--curve, var(--line))" : "var(--line)");
 
-    for (const g of this.vis.ghosts ? this.ghosts : [])
+    this.ghosts.forEach((g, gi) => {
+      const gi2 = this.ghostInfo[gi];
+      if (!gi2 || (!gi2.all && !this.vis.ghosts)) return;
+      const [ox, oy] = gi2.off, hv = this.partHover === gi2.k;
       for (const o of g.objects.values())
-        if (o.kind === "line") parts.push(`<polyline class="ghost" points="${o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+        if (o.kind === "line") parts.push(`<polyline class="${gi2.all ? (hv ? "allpart hover" : "allpart") : "ghost"}" points="${o.pts.map((p) => this.toScreen([p[0] + ox, p[1] + oy]).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+    });
     if (this.showNest) parts.push(this.nestSvg());
     if (this.showPieces) parts.push(this.piecesSvg());
     for (const o of this.res.objects.values()) {
@@ -3307,6 +3411,8 @@ export class App {
         if (!this.tool && !this.form) {
           // no tool: a click on a line selects it and shows the formulas it is built on (as GRAFIS)
           const rr = svg.getBoundingClientRect(), nr = this.nearest(e.clientX - rr.left, e.clientY - rr.top);
+          const other = nr ? null : this.partAt(e.clientX - rr.left, e.clientY - rr.top);
+          if (other !== null) return void this.switchPartInPlace(other);
           let i = -1;
           if (nr) this.model.steps.forEach((st, k) => createdIds(st).includes(nr.id) && (i = k));
           if (i !== this.selectedStep) {
@@ -3461,6 +3567,14 @@ export class App {
         return;
       }
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
+      if (this.allParts && !this.tool) {
+        const ph = this.nearest(sx, sy) ? null : this.partAt(sx, sy);
+        if (ph !== this.partHover) {
+          this.partHover = ph;
+          svg.style.cursor = ph !== null ? "pointer" : "";
+          this.render();
+        }
+      }
       if (!this.pan) {
         const oh = this.hit("object", sx, sy), id = oh ? pickedId(oh) : null;
         // the object near the pointer is marked (glow) with a dot on its nearest point
