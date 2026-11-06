@@ -1531,7 +1531,12 @@ export class App {
   }
 
   /** Start dragging through-point k of the curve at step index ci. */
+  /** The point of the active curve under the pointer / being dragged (index in its list of points). */
+  private cpHover: number | null = null;
+  private cpDrag: number | null = null;
+
   private grabCurvePoint(ci: number, k: number): void {
+    this.cpDrag = k;
     const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
     const ref = curve.through[k];
     const plain = (v: string) => /^-?\d+(\.\d+)?$/.test(v.trim());
@@ -1869,6 +1874,7 @@ export class App {
     this.selectedStep = ci + 1;
     this.evaluate();
     this.dragPoint = { step: ci, mode: "xy", base: [0, 0] };
+    this.cpDrag = k;
     this.toast("نقطة جديدة على المنحنى: اسحبها لضبط الشكل");
   }
 
@@ -1890,7 +1896,13 @@ export class App {
       if (this.dragHandle?.end === h.end) out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"} · ${h.pct}%\u2069</text>`);
     }
     // the points the curve passes through: drag them to reshape the curve
-    for (const p of this.curvePoints()) out.push(`<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`);
+    // a small dot on each; the square only on the point under the pointer or being dragged (as GRAFIS)
+    for (const p of this.curvePoints())
+      out.push(
+        p.k === this.cpHover || p.k === this.cpDrag
+          ? `<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`
+          : `<circle class="curve-dot" cx="${p.s[0]}" cy="${p.s[1]}" r="3" fill="#2fa4dd"/>`,
+      );
     // no standing length label on the curve (the length is in Info / the dimension tools)
     return out.join("");
   }
@@ -3451,6 +3463,7 @@ export class App {
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         this.dragHandle = null;
         this.dragPoint = null;
+        this.cpDrag = null;
         this.dragDim = null;
         this.changed();
       }
@@ -3558,6 +3571,13 @@ export class App {
         return;
       }
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
+      {
+        const cph = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9)?.k ?? null;
+        if (cph !== this.cpHover) {
+          this.cpHover = cph;
+          this.render();
+        }
+      }
       if (this.allParts && !this.tool) {
         const ph = this.nearest(sx, sy) ? null : this.partAt(sx, sy);
         if (ph !== this.partHover) {
