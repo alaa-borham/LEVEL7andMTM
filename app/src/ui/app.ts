@@ -175,6 +175,8 @@ const CB_ICON = {
 
 interface FormState {
   title: string;
+  /** The values window of an existing step (double-click / ✎): its handles, points and bar stay usable. */
+  editOf?: number;
   fields: Field[];
   onOk: (v: Record<string, string>) => void;
   /** Live drawing: the line follows the mouse from `from`; angle and length fill in
@@ -1353,7 +1355,7 @@ export class App {
   private renderDimBar(): void {
     const s = this.model.steps[this.selectedStep];
     let bar = document.querySelector(".curve-bar.dim-bar") as HTMLElement | null;
-    if (!s || s.op !== "dim" || this.tool || this.form) return void bar?.remove();
+    if (!s || s.op !== "dim" || this.tool || this.blockingForm()) return void bar?.remove();
     if (!bar) {
       bar = document.createElement("div");
       bar.className = "curve-bar dim-bar";
@@ -1605,7 +1607,7 @@ export class App {
 
   private curveHandles(): { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean; pct: number }[] {
     const i = this.selectedStep, s = this.model.steps[i];
-    if (!s || s.op !== "curve" || this.form) return [];
+    if (!s || s.op !== "curve" || this.blockingForm()) return [];
     const o = this.res.objects.get(s.id);
     if (!o || o.pts.length < 2) return [];
     const out: { i: number; end: "start" | "end"; at: Pt; hs: Pt; es: Pt; set: boolean; deg: number; flip: boolean; pct: number }[] = [];
@@ -1638,7 +1640,7 @@ export class App {
    * gets an offset (dx, dy) from where it is tied, so it still follows its line. */
   private curvePoints(idx = this.selectedStep): { k: number; ref: PointRef; s: Pt }[] {
     const s = this.model.steps[idx];
-    if (!s || s.op !== "curve" || this.form) return [];
+    if (!s || s.op !== "curve" || this.blockingForm()) return [];
     const n = s.through.length;
     return s.through.flatMap((ref, k) => {
       if (k === 0 || k === n - 1) return []; // the ends have the direction handles
@@ -1774,13 +1776,13 @@ export class App {
 
   private selectedCurve(): Extract<Step, { op: "curve" }> | null {
     const s = this.model.steps[this.selectedStep];
-    return s && s.op === "curve" && !this.tool && !this.form ? s : null;
+    return s && s.op === "curve" && !this.tool && !this.blockingForm() ? s : null;
   }
 
   /** The selected step when it makes a line or curve (no tool open): its style can be set. */
   private selectedLineStep(): Step | null {
     const s = this.model.steps[this.selectedStep];
-    if (!s || this.tool || this.form) return null;
+    if (!s || this.tool || this.blockingForm()) return null;
     return createdIds(s).some((id) => this.res.objects.get(id)?.kind === "line") ? s : null;
   }
 
@@ -3365,7 +3367,7 @@ export class App {
     const box = $("#tool-box");
     box.hidden = false;
     box.innerHTML =
-      `<h4>${esc(f.title)}</h4>` +
+      `<h4><span>${esc(f.title)}</span>${f.editOf !== undefined ? `<button type="button" class="form-min" title="تصغير / تكبير النافذة">${this.formMini ? "▢" : "▁"}</button>` : ""}</h4>` +
       f.fields
         .map((fl) =>
           fl.options
@@ -3472,6 +3474,15 @@ export class App {
     box.querySelector("[data-ok]")?.addEventListener("click", ok);
     if (f.live) f.live.submit = ok;
     box.querySelector("[data-cancel]")?.addEventListener("click", () => (this.tool ? this.restartTool() : this.closeForm()));
+    box.classList.toggle("mini", f.editOf !== undefined && this.formMini);
+    box.querySelector(".form-min")?.addEventListener("click", (e) => {
+      this.formMini = !this.formMini;
+      try {
+        localStorage.setItem("level7.formMini", this.formMini ? "1" : "0");
+      } catch {}
+      box.classList.toggle("mini", this.formMini);
+      (e.currentTarget as HTMLElement).textContent = this.formMini ? "▢" : "▁";
+    });
     box.onkeydown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -3488,6 +3499,20 @@ export class App {
   }
 
   private refreshForm: (() => void) | null = null;
+
+  /** An open window that is not the values window of the active element (that one leaves its bar,
+   * handles and points usable). */
+  private blockingForm(): boolean {
+    return !!this.form && this.form.editOf !== this.selectedStep;
+  }
+  /** The values window: minimized to its title (remembered). */
+  private formMini = (() => {
+    try {
+      return localStorage.getItem("level7.formMini") === "1";
+    } catch {
+      return false;
+    }
+  })();
 
   private closeForm(): void {
     this.form = null;
@@ -3545,11 +3570,9 @@ export class App {
         return this.toast(`${this.model.names[id] ?? "هذا العنصر"} موروث من البارت ${String(st.part).padStart(3, "0")} ويتبعه: عدّله في ذلك البارت`);
       }
       if (st.op === "curve") {
-        // a curve: its handles and points show for dragging (as GRAFIS); ✎ in the bar opens its values
-        this.selectedStep = i;
+        // a curve: its handles, points and bar show for dragging (as GRAFIS) together with its values window
         this.renderSteps();
-        this.render();
-        return this.toast("اسحب المقابض الحمراء أو نقاط المنحنى · ✎ لكتابة القيم · كليك يمين للخروج");
+        return this.editStep(i);
       }
       if (stepFields(st).length) this.editStep(i);
       else {
@@ -3684,6 +3707,8 @@ export class App {
       // a click on a dimension (no drag) makes it active: its bar of options shows
       if (this.dragDim !== null && !this.dimMoved) this.selectedStep = this.dragDim;
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
+        const refresh = (this.dragHandle || this.dragPoint !== null) && this.form?.editOf === this.selectedStep;
+        if (refresh) queueMicrotask(() => this.form?.editOf === this.selectedStep && this.editStep(this.selectedStep, true));
         this.dragHandle = null;
         this.dragPoint = null;
         this.cpDrag = null;
@@ -4167,9 +4192,10 @@ export class App {
     (box.querySelector(".rec-at") as HTMLElement).textContent = `${upto + 1} / ${this.model.steps.length}`;
   }
 
-  private editStep(i: number): void {
+  private editStep(i: number, refresh = false): void {
     const s = this.model.steps[i];
-    this.cancelTool();
+    if (refresh) this.closeForm();
+    else this.cancelTool();
     this.selectedStep = i;
     this.render();
     // a line's start (and end) point made for it, a point on a line or a free point, is edited here
@@ -4193,6 +4219,7 @@ export class App {
       return rel !== undefined ? { ...f, label: `${f.label} (من ${this.model.names[rel] ?? "الخط"})` } : f;
     });
     this.openForm({
+      editOf: i,
       title: `تعديل الخطوة ${i + 1}`,
       // for a curve only what was set with X / Z or a formula (kept short: no plain coordinates of dragged
       // points, no unit / measured-from lists); a line shows its start / end in full

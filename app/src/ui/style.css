@@ -1041,3 +1041,8 @@ body:is(.canvas-dark, .canvas-light) .curve-bar span:not(.bar-grip):not(.seg) { 
 body:is(.canvas-dark, .canvas-light) .curve-bar .bar-grip { color: color-mix(in srgb, var(--bar-fg) 70%, transparent); }
 body:is(.canvas-dark, .canvas-light) .curve-bar button.on { border-color: var(--live); background: color-mix(in srgb, var(--live) 30%, var(--bar-field)); }
 body.canvas-dark .curve-bar svg { color: var(--bar-fg); }
+/* 0.9.176 values window of the active element: minimize to its title */
+#tool-box h4 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#tool-box .form-min { min-width: 28px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; line-height: 1; }
+#tool-box.mini > :not(h4) { display: none !important; }
+#tool-box.mini h4 { margin: 0; }
