@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.170",
- "notes": "نافذة الكرف تعرض نقاطه بقيم Z",
+ "version": "0.9.171",
+ "notes": "رقم الإصدار في الشريط السفلي",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "1d284f2c5ddab6e036681860973e809832feac37e422a3b6f81ff18add455672",
-   "size": 143940
+   "sha256": "baf892c91bab480a8595229e40410962ba012c357049fdd9108ebb6951d89e5a",
+   "size": 144065
   },
   {
    "path": "assets/icon.ico",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "ad2453dd44de2a0cce3fccc74eb326f191cac8c59283b45164af1c74adc9fedc",
+   "sha256": "4d25b89b649c470cebb9e046542739b0d503952c371d3f0db3aaa9ee9ff1af0b",
    "size": 301
   },
   {
@@ -430,8 +430,8 @@
   },
   {
    "path": "src/native-app.js",
-   "sha256": "fb7d04788e1d1d03ffb338ff250a295d5dab25666f906eb9a377d895a68928cd",
-   "size": 139354
+   "sha256": "013d6cf15636f64ce52867f0fb0e51c23545fac974dce6535e334fcb041bfd27",
+   "size": 139588
   },
   {
    "path": "src/native-bartack10-template.mjs",

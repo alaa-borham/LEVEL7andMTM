@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.171
+
+The bottom bar shows the installed version ("الإصدار 0.9.171 · التحديثات · …").
+
 LEVEL7 and MTM 0.9.170
 
 LEVEL7 design: the values window of a curve also shows the points it passes through with the values they were made with (e.g. its start on a line at Z14, its end x / y), and which line an end direction is measured from.

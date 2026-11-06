@@ -1,0 +1,45 @@
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/README.md releases/app/README.md
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/README.md	2026-11-06 14:24:45.834947183 +0000
++++ releases/app/README.md	2026-11-06 14:24:45.913219442 +0000
+@@ -1,3 +1,7 @@
++LEVEL7 and MTM 0.9.171
++
++The bottom bar shows the installed version ("الإصدار 0.9.171 · التحديثات · …").
++
+ LEVEL7 and MTM 0.9.170
+ 
+ LEVEL7 design: the values window of a curve also shows the points it passes through with the values they were made with (e.g. its start on a line at Z14, its end x / y), and which line an end direction is measured from.
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/package.json releases/app/package.json
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/package.json	2026-11-06 14:24:45.835547383 +0000
++++ releases/app/package.json	2026-11-06 14:24:45.915164349 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.170",
++  "version": "0.9.171",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/src/native-app.js releases/app/src/native-app.js
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-170/src/native-app.js	2026-11-06 14:24:45.836684740 +0000
++++ releases/app/src/native-app.js	2026-11-06 14:24:45.918691702 +0000
+@@ -76,7 +76,7 @@
+ let overview = false, hiddenParts = new Set();
+ const parameterChecks = new WeakMap();
+ let parameterContext = null, parameterAnnouncement = null;
+-let localUpdateState = null, localUpdateBusy = false;
++let localUpdateState = null, localUpdateBusy = false, shownVersion = '';
+ let construction = null;
+ let ownedParts = null;
+ let n38 = null;
+@@ -157,7 +157,9 @@
+   const labels = {disabled:'غير مفعّل',checking:'جارٍ الفحص…',current:'محدّث',ready:`${localUpdateState.version || 'تحديث'} جاهز · يُثبّت عند الإغلاق`,error:'تعذر الفحص'};
+   const output = $('#local-update-status'), button = $('#check-local-updates');
+   output.hidden = false; output.dataset.state = localUpdateState.state;
+-  text(output, `التحديثات · ${labels[localUpdateState.state]}`);
++  // 0.9.171: the installed version stays in sight in the bottom bar
++  if (localUpdateState.currentVersion) shownVersion = localUpdateState.currentVersion;
++  text(output, `${shownVersion ? `الإصدار ${shownVersion} · ` : ''}التحديثات · ${labels[localUpdateState.state]}`);
+   output.title = `التحديث التلقائي${localUpdateState.currentVersion ? ` · الإصدار المثبت ${localUpdateState.currentVersion}` : ''}\n${localUpdateState.message || ''}`;
+   button.hidden = false; button.disabled = localUpdateBusy || ['disabled','checking'].includes(localUpdateState.state);
+   button.title = localUpdateState.message || 'فحص وجود إصدار جديد الآن. التحديث الموثّق يُثبّت تلقائياً عند الإغلاق.';

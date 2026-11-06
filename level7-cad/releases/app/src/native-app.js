@@ -76,7 +76,7 @@ let partFilter = '';
 let overview = false, hiddenParts = new Set();
 const parameterChecks = new WeakMap();
 let parameterContext = null, parameterAnnouncement = null;
-let localUpdateState = null, localUpdateBusy = false;
+let localUpdateState = null, localUpdateBusy = false, shownVersion = '';
 let construction = null;
 let ownedParts = null;
 let n38 = null;
@@ -157,7 +157,9 @@ function renderLocalUpdates(result) {
   const labels = {disabled:'غير مفعّل',checking:'جارٍ الفحص…',current:'محدّث',ready:`${localUpdateState.version || 'تحديث'} جاهز · يُثبّت عند الإغلاق`,error:'تعذر الفحص'};
   const output = $('#local-update-status'), button = $('#check-local-updates');
   output.hidden = false; output.dataset.state = localUpdateState.state;
-  text(output, `التحديثات · ${labels[localUpdateState.state]}`);
+  // 0.9.171: the installed version stays in sight in the bottom bar
+  if (localUpdateState.currentVersion) shownVersion = localUpdateState.currentVersion;
+  text(output, `${shownVersion ? `الإصدار ${shownVersion} · ` : ''}التحديثات · ${labels[localUpdateState.state]}`);
   output.title = `التحديث التلقائي${localUpdateState.currentVersion ? ` · الإصدار المثبت ${localUpdateState.currentVersion}` : ''}\n${localUpdateState.message || ''}`;
   button.hidden = false; button.disabled = localUpdateBusy || ['disabled','checking'].includes(localUpdateState.state);
   button.title = localUpdateState.message || 'فحص وجود إصدار جديد الآن. التحديث الموثّق يُثبّت تلقائياً عند الإغلاق.';
