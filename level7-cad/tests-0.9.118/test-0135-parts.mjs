@@ -14,6 +14,7 @@ try{
  await fr.locator('.pgrid input[data-pname="1"]').fill('back');await fr.locator('.pgrid input[data-pname="1"]').press('Enter');
  pass('⊕ new part 002 becomes the active part (empty drawing)');
  await page.locator('[data-l7d-cat="الوراثة"]').click({button:'right'});await page.locator('[data-l7d-tool="inheritObjects"]').click();
+ await fr.locator('.inherit-bar [data-ihb="list"]').click(); // 0.9.159: inherit picks by clicking; the list is one button away
  await fr.locator('.inherit-win').waitFor();await fr.locator('.inherit-win input[data-obj="3"]').check();await fr.locator('.inherit-win [data-ih="ok"]').click();
  await f.waitForFunction(()=>window.level7.model.steps.at(-1)?.op==='inherit');
  const inh=await f.evaluate(()=>{const a=window.level7,s=a.model.steps.at(-1);return{name:a.model.names[s.items[0].dst],pts:a.res.objects.get(s.items[0].dst).pts};});
@@ -23,7 +24,10 @@ try{
  await fr.locator('.pgrid tr[data-part="1"] td.pno').click();await f.waitForFunction(()=>window.level7.model.activePart===1);
  const after=await f.evaluate(()=>{const a=window.level7,s=a.model.steps.at(-1);return a.res.objects.get(s.items[0].dst).pts[1];});
  assert.deepEqual(after,[450,0]);pass('linked: the source part changed (450) and the inherited line followed');
- await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);pass('👁 shows part 001 faded behind part 002');
+ // 0.9.159: parts are visible unless hidden (as GRAFIS): 👁 hides part 001, a second click shows it again
+ await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);
+ await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length===0);
+ await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);pass('part 001 shows behind part 002 by default; 👁 hides it and shows it again');
  await fr.locator('.pgrid input[name="pkind"][value="prod"]').check();await fr.locator('.pgrid [data-pp="amount"]').fill('2');await fr.locator('.pgrid [data-pp="amount"]').press('Enter');
  assert.deepEqual(await f.evaluate(()=>{const p=window.level7.model.parts[1];return[p.production,p.amount,p.name]}),[true,2,'back']);pass('properties: production part, amount 2, name «back»');
  await page.screenshot({path:'shot-0135-parts.png'});

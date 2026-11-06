@@ -8,6 +8,8 @@ try{
  await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');
  page.on('dialog',d=>d.accept());await f.evaluate(()=>{window.confirm=()=>true;});
+ // an earlier test's unsaved design is offered back after a restart (and accepted above): start from an empty one
+ await f.waitForFunction(()=>!!window.level7);await f.evaluate(()=>{const a=window.level7;a.unsaved=false;a.newDesign();});
  await f.evaluate(()=>{const a=window.level7,m=a.model;m.steps.push({op:'point',id:1,x:'200',y:'0'},{op:'point',id:2,x:'0',y:'0'},{op:'point',id:3,x:'0',y:'200'},{op:'line',id:4,p1:{obj:1},p2:{obj:2}},{op:'line',id:5,p1:{obj:3},p2:{obj:2}},{op:'point',id:6,x:'150',y:'150'},{op:'point',id:7,x:'170',y:'170'});Object.assign(m.names,{1:'P1',2:'P2',3:'P3',4:'L1',5:'L2',6:'P6',7:'P7'});m.nextId=8;a.changed();a.fit();});
  const box=await fr.locator('#canvas').boundingBox();const at=async(x,y)=>{const[sx,sy]=await f.evaluate(([x,y])=>window.level7.toScreen([x,y]),[x,y]);return[box.x+sx,box.y+sy];};
  const tool=async key=>{const b=page.locator(`[data-l7d-tool="${key}"]`);if(!await b.isVisible()){const cat=await b.evaluate(e=>e.closest('[data-l7d-cat-panel]').dataset.l7dCatPanel);await page.locator(`[data-l7d-cat="${cat}"]`).click({button:"right"});}await b.click();await page.waitForFunction(k=>document.querySelector(`[data-l7d-tool="${k}"]`).getAttribute('aria-pressed')==='true',key);};
