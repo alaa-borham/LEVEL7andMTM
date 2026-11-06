@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.179
+
+LEVEL7 design: with all parts shown, every part's dimensions show in its place (not only the active part's); F7 / Visibility → dimensions hides or shows them all.
+
 LEVEL7 and MTM 0.9.178
 
 LEVEL7 design: the strip icons' tip shows only the tool's name; with all parts shown, the active part (the one being worked on) is drawn in its own colour (blue, as GRAFIS); another part under the pointer lights up orange.
