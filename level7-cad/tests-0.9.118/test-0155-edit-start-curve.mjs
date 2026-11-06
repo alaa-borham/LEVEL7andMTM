@@ -19,9 +19,15 @@ try{
  // 2) drag the curve's middle point without selecting the curve first
  await f.evaluate(()=>{window.level7.selectedStep=-1;window.level7.render();});const box=await page.locator('#l7-design-frame').boundingBox();
  const [px,py]=await f.evaluate(()=>window.level7.toScreen([90,-360]));await page.mouse.move(box.x+px+2,box.y+py+2);await page.waitForTimeout(150);
+ // 0.9.163: nothing reacts before a double-click: the drag leaves the point where it is
  await page.mouse.down();await page.mouse.move(box.x+px+40,box.y+py-30,{steps:5});await page.mouse.up();
+ assert.deepEqual(await f.evaluate(()=>{const st=window.level7.model.steps.find(s=>s.id===6);return[st.x,st.y];}),['90','-360']);
+ // double-click on the curve (away from its point) makes it active; now its point is dragged
+ const q=await f.evaluate(()=>{const o=window.level7.res.objects.get(8);return window.level7.toScreen(o.pts[Math.floor(o.pts.length*0.8)]);});
+ await page.mouse.move(box.x+q[0],box.y+q[1]);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+q[0],box.y+q[1]);
+ await page.mouse.move(box.x+px+2,box.y+py+2);await page.mouse.down();await page.mouse.move(box.x+px+40,box.y+py-30,{steps:5});await page.mouse.up();
  const moved=await f.evaluate(()=>{const o=window.level7.res.objects.get(6)??null;const st=window.level7.model.steps.find(s=>s.id===6);return{x:Number(st.x),y:Number(st.y)};});
- assert(moved.x>95&&moved.y>-355,JSON.stringify(moved));pass(`the curve's middle point is dragged directly (90, -360 → ${moved.x}, ${moved.y})`);
+ assert(moved.x>95&&moved.y>-355,JSON.stringify(moved));pass(`before a double-click the curve's point does not move; after a double-click on the curve it is dragged (90, -360 → ${moved.x}, ${moved.y})`);
  // 3) Record: back to step 2
  const n0=await f.evaluate(()=>window.level7.model.steps.length);await f.evaluate(()=>window.level7.backTo(1));
  assert.equal(await f.evaluate(()=>window.level7.model.steps.length),2);await f.evaluate(()=>window.level7.undo());assert.equal(await f.evaluate(()=>window.level7.model.steps.length),n0);

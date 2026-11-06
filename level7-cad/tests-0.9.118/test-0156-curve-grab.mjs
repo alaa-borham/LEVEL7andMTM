@@ -13,9 +13,10 @@ try{
  const box=await page.locator('#l7-design-frame').boundingBox();
  const mid=await f.evaluate(()=>{const o=window.level7.res.objects.get(3);return o.pts[Math.floor(o.pts.length/2)];});
  const [px,py]=await f.evaluate(p=>window.level7.toScreen(p),mid);
- // 1) a click on the curve selects it
- await page.mouse.click(box.x+px,box.y+py);
- assert.equal(await f.evaluate(()=>window.level7.selectedStep),2);pass('a click on the curve selects it (its handles show)');
+ // 1) 0.9.163: a single click makes nothing active; a double-click on the curve does (its handles show)
+ await page.mouse.click(box.x+px,box.y+py);assert.equal(await f.evaluate(()=>window.level7.selectedStep),-1);
+ await page.mouse.move(box.x+px,box.y+py);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+px,box.y+py);
+ assert.equal(await f.evaluate(()=>window.level7.selectedStep),2);pass('a single click makes nothing active; a double-click on the curve shows its handles');
  // 2) dragging the curve adds a point there and moves it
  const before=await f.evaluate(()=>window.level7.res.objects.get(3).pts.map(p=>p.join()).join(';'));
  await page.mouse.move(box.x+px,box.y+py);await page.mouse.down();await page.mouse.move(box.x+px-50,box.y+py-40,{steps:6});await page.mouse.up();

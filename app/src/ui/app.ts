@@ -1232,8 +1232,6 @@ export class App {
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.near && !this.pan) parts.push(this.nearSvg(this.near));
     // the curve under the pointer shows the points it passes through (drag one to reshape it, as GRAFIS)
-    const hv = this.near && !this.tool ? this.model.steps.findIndex((t) => t.op === "curve" && t.id === this.near!.id) : -1;
-    if (hv >= 0 && hv !== this.selectedStep) for (const p of this.curvePoints(hv)) parts.push(`<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`);
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.vis.dims ? this.dimsSvg() : "");
     parts.push(this.vis.marks ? this.marksSvg() : "");
@@ -1846,9 +1844,7 @@ export class App {
       const o = this.res.objects.get(t.id);
       return !!o && o.pts.length > 1 && closestOnPolyline(o.pts, at).d <= tol;
     };
-    if (near(this.selectedStep)) return this.selectedStep;
-    for (let j = this.model.steps.length - 1; j >= 0; j--) if (near(j)) return j;
-    return -1;
+    return near(this.selectedStep) ? this.selectedStep : -1;
   }
 
   /** Add a free point at `at` to the curve at step ci, in its place along the curve, and drag it. */
@@ -3381,11 +3377,9 @@ export class App {
         }
         // a point a curve passes through is dragged straight away (as GRAFIS), also when the curve is
         // not selected: the selected curve first, then any curve
-        let cpStep = this.selectedStep;
-        let cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9);
-        if (!cp && !this.tool)
-          for (let j = this.model.steps.length - 1; j >= 0 && !cp; j--)
-            if (this.model.steps[j].op === "curve") (cp = this.curvePoints(j).find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9)), (cpStep = j);
+        // only the curve made active by a double-click can be reshaped (nothing reacts before that)
+        const cpStep = this.selectedStep;
+        const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9);
         if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
           this.selectedStep = cpStep;
           this.grabCurvePoint(cpStep, cp.k);
@@ -3413,10 +3407,12 @@ export class App {
           const rr = svg.getBoundingClientRect(), nr = this.nearest(e.clientX - rr.left, e.clientY - rr.top);
           const other = nr ? null : this.partAt(e.clientX - rr.left, e.clientY - rr.top);
           if (other !== null) return void this.switchPartInPlace(other);
+          // nothing is made active by a single click (only by a double-click, as GRAFIS); a click
+          // beside the active element leaves it
           let i = -1;
           if (nr) this.model.steps.forEach((st, k) => createdIds(st).includes(nr.id) && (i = k));
-          if (i !== this.selectedStep) {
-            this.selectedStep = i;
+          if (this.selectedStep >= 0 && i !== this.selectedStep) {
+            this.selectedStep = -1;
             this.renderSteps();
             this.render();
           }
@@ -3451,12 +3447,7 @@ export class App {
     });
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
-      if (this.curveGrab) {
-        // a click on the curve without dragging selects it (shows its handles)
-        this.selectedStep = this.curveGrab.ci;
-        this.curveGrab = null;
-        this.render();
-      }
+      if (this.curveGrab) this.curveGrab = null; // a click on the active curve without dragging: nothing
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         this.dragHandle = null;
         this.dragPoint = null;
