@@ -22,6 +22,9 @@ try{
  // part b (200) and c laid out to the right of part a (300 wide) without overlapping
  assert(r.n===2&&r.all&&r.offs[0][0]>=300&&r.offs[1][0]>r.offs[0][0]+200&&r.cls===5&&r.dashed===0,JSON.stringify(r));
  pass(`👁 show all: parts 002 and 003 drawn beside part 001 in solid lines (offsets ${JSON.stringify(r.offs)}), not on top of it`);
+ // 0.9.178: the active part stands out (blue) while all parts are shown
+ const strokes=await f.evaluate(()=>[...document.querySelectorAll('#canvas polyline:not(.allpart):not(.ghost)')].map(p=>p.getAttribute('stroke')));
+ assert(strokes.length&&strokes.every(c=>c==='var(--active-part, #2fa4dd)'),JSON.stringify(strokes));pass('with all parts shown the active part is drawn in its own colour (blue)');
  // hover part 002 then click it: it becomes active and stays where it was on the screen
  const box=await page.locator('#l7-design-frame').boundingBox();
  const s2=await f.evaluate(()=>{const a=window.level7,o=a.ghostInfo[0].off;return a.toScreen([100+o[0],0+o[1]]);});
@@ -32,6 +35,7 @@ try{
  assert(r.act===1&&Math.abs(r.at[0]-Math.round(s2[0]))<=1&&Math.abs(r.at[1]-Math.round(s2[1]))<=1&&r.n===2,JSON.stringify({r,s2}));
  pass('the part under the pointer lights up; a click makes part 002 active and it stays in its place on the screen');
  await fr.locator('.part-strip [data-sall="0"]').click();
- assert.equal(await f.evaluate(()=>window.level7.ghosts.length),0);pass('🚫 shows the active part alone again');
+ assert.equal(await f.evaluate(()=>window.level7.ghosts.length),0);
+ assert(await f.evaluate(()=>[...document.querySelectorAll('#canvas polyline')].every(p=>p.getAttribute('stroke')!=='var(--active-part, #2fa4dd)')));pass('🚫 shows the active part alone again, in the normal colours');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

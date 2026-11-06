@@ -1008,7 +1008,7 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 #canvas polyline.seam-hover { stroke: #ff9f1c; stroke-width: 3.5; }
 /* 0.9.162 show all parts (as GRAFIS): the other parts side by side in solid lines; the one under the pointer lights up */
 #canvas polyline.allpart { stroke: var(--line); stroke-width: 1.2; opacity: .85; }
-#canvas polyline.allpart.hover { stroke: #2fa4dd; stroke-width: 2; opacity: 1; }
+#canvas polyline.allpart.hover { stroke: #ff9f1c; stroke-width: 2; opacity: 1; } /* another part under the pointer: orange (the active part is blue) */
 /* 0.9.167 tool bars: moved by their grip, horizontal or vertical */
 .curve-bar .bar-grip { cursor: grab; color: var(--muted); font-size: 16px; padding: 0 2px; user-select: none; margin-inline-end: 0 !important; }
 .curve-bar .bar-grip:active { cursor: grabbing; }

@@ -1275,7 +1275,9 @@ export class App {
     const r = this.svg.getBoundingClientRect();
     const parts: string[] = [this.imagesSvg(), this.gridSvg(r.width, r.height)];
     const highlight = this.highlighted();
-    const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : o.pts.length > 2 ? "var(--curve, var(--line))" : "var(--line)");
+    // with all parts shown, the part being worked on stands out in its own colour (as GRAFIS)
+    const activeMark = this.allParts && this.ghostInfo.some((g) => g.all);
+    const lineColor = (o: GObj) => (highlight.has(o.id) ? "var(--select)" : activeMark ? "var(--active-part, #2fa4dd)" : o.pts.length > 2 ? "var(--curve, var(--line))" : "var(--line)");
 
     this.ghosts.forEach((g, gi) => {
       const gi2 = this.ghostInfo[gi];
