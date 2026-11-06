@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.158
+
+LEVEL7 design: a curve end handle moves freely in every direction (1°), whatever the angle step chosen for the line tools (it used to follow it, e.g. only up / down at 90°); Shift snaps it to 15°.
+
 LEVEL7 and MTM 0.9.157
 
 LEVEL7 design: a click on a line or curve selects it and writes on the drawing the formulas it is built on (as GRAFIS): at its start the formula of the point it starts on (e.g. "Z17 name=65") and the angle of a line by angle, at its end its length or the formula of its end point, in the middle of a parallel its distance; also while the step is edited; a click on empty space clears it.

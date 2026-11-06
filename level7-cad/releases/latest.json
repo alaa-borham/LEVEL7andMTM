@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.157",
- "notes": "عند اختيار خط أو منحنى تظهر معادلاته على الرسم مثل GRAFIS",
+ "version": "0.9.158",
+ "notes": "مقبض المنحنى حر الحركة في كل الاتجاهات، Shift كل 15 درجة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b7c25b7b88b97bba51b150d6b64b25e48e7a79bdac60df0d0baab23d6930ed00",
-   "size": 139204
+   "sha256": "76c5f3225a1c41054e3ebc887c0890ca26b14cdff35593f4f8d8884ac1428778",
+   "size": 139429
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DGTWnh_Z.js",
-   "sha256": "9a0191c55db51f45604c8ce44fa27e88573e7d88859c4d66144ec0674e498195",
-   "size": 259867
+   "path": "assets/l7design/assets/index-Cj38HwEz.js",
+   "sha256": "3516d800812384821a4643dae2a08714512fd624f50a9b18685e33741cd09df4",
+   "size": 259849
   },
   {
    "path": "assets/l7design/assets/index-Dzlw7R8E.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "60bc89d4590569037b8016818cce5f412350750a99a9621957b139e84234a3c6",
+   "sha256": "38ab0be909f12316f6b8c6d9c53788610f713ca29e89c2a700c5f838678fc5ab",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "4d910de042cb69bffbd6190858ac8fc0baf8182edb90f6c015e6dc4f1e4b6233",
+   "sha256": "0da144a31c5ffe020aafc97f02636f13b96b402e77ffb2d16ab78a7cd5ff476e",
    "size": 301
   },
   {
