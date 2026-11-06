@@ -61,8 +61,8 @@ try{
  assert(st.dash==='8 5'&&/"dashed"/.test(st.s),JSON.stringify(st));pass('line type «متقطع» and a red colour stay on the line L4 ('+st.s+')');
  // 7) parts: a new part leaves the others visible; hide all / show all
  await f.evaluate(()=>window.level7.addPart());const g1=await f.evaluate(()=>window.level7.ghosts.length);
- await fr.locator('.part-strip [data-sall="0"]').click();const g0=await f.evaluate(()=>window.level7.ghosts.length);
  await fr.locator('.part-strip [data-sall="1"]').click();const g2=await f.evaluate(()=>window.level7.ghosts.length);
- assert(g1===1&&g0===0&&g2===1,[g1,g0,g2].join());pass('a new part: part 001 stays visible behind it; 🚫 hides all parts, 👁 shows all again');
+ await fr.locator('.part-strip [data-sall="0"]').click();const g0=await f.evaluate(()=>window.level7.ghosts.length);
+ assert(g1===0&&g0===0&&g2===1,[g1,g0,g2].join());pass('a new part shows only its own drawing (0.9.160); 👁 shows all parts behind it, 🚫 hides them again');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

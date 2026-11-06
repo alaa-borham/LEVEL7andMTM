@@ -176,7 +176,7 @@ export class App {
     this.res = evaluateModel(withSize(this.model));
     // other parts shown faded behind the active one
     const parts = this.model.parts ?? [];
-    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible !== false ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
+    this.ghosts = parts.flatMap((p, k) => (k !== this.model.activePart && p.visible === true ? [evaluateModel(withSize({ ...this.model, steps: p.steps, names: p.names, nextId: p.nextId, pieces: [], activePart: k }))] : []));
     this.nest = this.gradeView !== "off" ? this.nestResults() : [];
   }
 
@@ -321,7 +321,7 @@ export class App {
           this.toast(on ? "كل البارتات ظاهرة" : "كل البارتات مخفية (عدا النشط)");
         } else if (eye) {
           const p = (this.model.parts ?? [])[Number(eye.dataset.seye)];
-          if (p) (p.visible = p.visible === false), this.changed();
+          if (p) (p.visible = !p.visible), this.changed();
         } else if (th) this.switchPart(Number(th.dataset.spart));
       });
     }
@@ -330,7 +330,7 @@ export class App {
     const items = (ps ?? [{ no: 1, name: this.model.name } as Part]).map((p, k) => {
       const pv = this.partPreview(ps ? this.partResult(k) : this.res);
       return `<div class="ps-item${k === act ? " act" : ""}" data-spart="${k}" title="${String(p.no).padStart(3, "0")} ${esc(p.name)}">
-        <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible !== false || k === act ? "on" : ""}" title="إظهار / إخفاء البارت خلف البارت النشط"${k === act || !ps ? " disabled" : ""}>👁</button></div>
+        <div class="ps-side"><b>${p.no}</b><button data-seye="${k}" class="${p.visible || k === act ? "on" : ""}" title="إظهار / إخفاء البارت خلف البارت النشط"${k === act || !ps ? " disabled" : ""}>👁</button></div>
         <svg viewBox="${pv.box}">${pv.svg}</svg></div>`;
     });
     strip.innerHTML = `<div class="ps-head"><button data-smode="permanent" class="${this.stripMode === "permanent" ? "on" : ""}" title="دائم">📌</button><button data-smode="dynamic" class="${this.stripMode === "dynamic" ? "on" : ""}" title="ديناميكي: يظهر عند الاقتراب">⇔</button><button data-smode="off" class="${this.stripMode === "off" ? "on" : ""}" title="إخفاء الشريط">⦸</button><button data-sall="1" title="إظهار كل البارتات · Show all parts">👁</button><button data-sall="0" title="إخفاء كل البارتات · Hide all parts">🚫</button></div><div class="ps-list">${items.join("")}</div>`;
@@ -432,7 +432,7 @@ export class App {
       .map((p, k) => {
         const objs = p.steps.reduce((a, st) => a + createdIds(st).length, 0);
         return `<tr data-part="${k}" class="${k === act ? "sel" : ""}"><td class="pno">${String(p.no).padStart(3, "0")}</td>
-          <td class="peye"><button data-peye="${k}" title="إظهار البارت باهتاً خلف البارت النشط" class="${p.visible !== false || k === act ? "on" : ""}"${k === act ? " disabled" : ""}>👁</button></td>
+          <td class="peye"><button data-peye="${k}" title="إظهار البارت باهتاً خلف البارت النشط" class="${p.visible || k === act ? "on" : ""}"${k === act ? " disabled" : ""}>👁</button></td>
           <td class="pname"><input data-pname="${k}" value="${esc(p.name)}" placeholder="#"/></td><td class="pn">${p.steps.length}</td><td class="pn">${objs}</td><td class="pn">${p.production ? "✂" : ""}</td></tr>`;
       })
       .join("");
@@ -466,7 +466,7 @@ export class App {
     });
     box.querySelectorAll<HTMLButtonElement>("[data-peye]").forEach((b) => b.addEventListener("click", () => {
       const q = ps[Number(b.dataset.peye)];
-      q.visible = q.visible === false;
+      q.visible = !q.visible;
       this.changed();
     }));
     box.querySelector('[data-pa="add"]')?.addEventListener("click", () => this.addPart());

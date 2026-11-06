@@ -24,10 +24,10 @@ try{
  await fr.locator('.pgrid tr[data-part="1"] td.pno').click();await f.waitForFunction(()=>window.level7.model.activePart===1);
  const after=await f.evaluate(()=>{const a=window.level7,s=a.model.steps.at(-1);return a.res.objects.get(s.items[0].dst).pts[1];});
  assert.deepEqual(after,[450,0]);pass('linked: the source part changed (450) and the inherited line followed');
- // 0.9.159: parts are visible unless hidden (as GRAFIS): 👁 hides part 001, a second click shows it again
- await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);
- await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length===0);
- await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);pass('part 001 shows behind part 002 by default; 👁 hides it and shows it again');
+ // 0.9.160: a part shows only its own drawing; 👁 shows part 001 behind it, a second click hides it again
+ assert.equal(await f.evaluate(()=>document.querySelectorAll('#canvas polyline.ghost').length),0);
+ await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length>0);
+ await fr.locator('.pgrid [data-peye="0"]').click();await f.waitForFunction(()=>document.querySelectorAll('#canvas polyline.ghost').length===0);pass('part 002 shows only its own drawing; 👁 shows part 001 behind it and hides it again');
  await fr.locator('.pgrid input[name="pkind"][value="prod"]').check();await fr.locator('.pgrid [data-pp="amount"]').fill('2');await fr.locator('.pgrid [data-pp="amount"]').press('Enter');
  assert.deepEqual(await f.evaluate(()=>{const p=window.level7.model.parts[1];return[p.production,p.amount,p.name]}),[true,2,'back']);pass('properties: production part, amount 2, name «back»');
  await page.screenshot({path:'shot-0135-parts.png'});
