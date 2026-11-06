@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.169
+
+LEVEL7 design: test run / grade: a click on an error shows where it is (its part and size, the step zoomed with a red ring, or what it is built on when it could not be drawn; the piece; the Z table); dimensions: a click on a dimension makes it active and shows its bar: a note / name before the value, the text on the other side, text size, unit (mm / cm / inch) and ×2 / ×4, each one undo step.
+
 LEVEL7 and MTM 0.9.168
 
 LEVEL7 design: a dark or light drawing background turns the line, curve and point colours that would not show on it readable, and the labels on the drawing follow it; corner (sharp / round / chamfer) where one line runs past the corner and the other stops short of it: one is cut back and the other extended to their meeting point, where it used to fail; a clear message when the chosen ends never meet.
