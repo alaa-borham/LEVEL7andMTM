@@ -1676,6 +1676,8 @@ export class App {
   }
 
   /** Start dragging through-point k of the curve at step index ci. */
+  /** The curve end handle under the pointer. */
+  private handleHover: "start" | "end" | null = null;
   /** The point of the active curve under the pointer / being dragged (index in its list of points). */
   private cpHover: number | null = null;
   private cpDrag: number | null = null;
@@ -2048,8 +2050,14 @@ export class App {
     if (!hs.length) return "";
     const out: string[] = [];
     for (const h of hs) {
-      out.push(`<line x1="${h.es[0]}" y1="${h.es[1]}" x2="${h.hs[0]}" y2="${h.hs[1]}" stroke="var(--text)" stroke-dasharray="4 3" stroke-width="1.3"/>`);
-      out.push(`<circle class="curve-handle" cx="${h.hs[0]}" cy="${h.hs[1]}" r="6.5" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="2.2" fill="#e53935"/>`);
+      // the handle under the pointer or being dragged stands out from the other one
+      const hot = this.dragHandle ? this.dragHandle.end === h.end : this.handleHover === h.end;
+      out.push(`<line x1="${h.es[0]}" y1="${h.es[1]}" x2="${h.hs[0]}" y2="${h.hs[1]}" stroke="${hot ? "#e53935" : "var(--text)"}"${hot ? "" : ' stroke-dasharray="4 3"'} stroke-width="${hot ? 2 : 1.3}"/>`);
+      out.push(
+        hot
+          ? `<circle class="curve-handle hot" cx="${h.hs[0]}" cy="${h.hs[1]}" r="9" fill="rgba(229,57,53,.28)" stroke="#e53935" stroke-width="3"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="3.2" fill="#e53935"/>`
+          : `<circle class="curve-handle" cx="${h.hs[0]}" cy="${h.hs[1]}" r="6.5" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="${h.hs[0]}" cy="${h.hs[1]}" r="2.2" fill="#e53935"/>`,
+      );
       out.push(`<circle cx="${h.es[0]}" cy="${h.es[1]}" r="4" fill="var(--live)"/>`);
       // the angle / strength shows only while that handle is dragged (as GRAFIS), not standing on the drawing
       if (this.dragHandle?.end === h.end) out.push(`<text class="live-label" x="${h.hs[0] + 9}" y="${h.hs[1] - 9}" direction="ltr">\u2066${h.deg}°${h.set ? "" : " (حر)"} · ${h.pct}%\u2069</text>`);
@@ -3789,8 +3797,10 @@ export class App {
       $("#coords").textContent = `x ${fmt(this.mouse[0])}   y ${fmt(this.mouse[1])}   mm`;
       {
         const cph = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9)?.k ?? null;
-        if (cph !== this.cpHover) {
+        const hh = this.handleAt(sx, sy)?.end ?? null;
+        if (cph !== this.cpHover || hh !== this.handleHover) {
           this.cpHover = cph;
+          this.handleHover = hh;
           this.render();
         }
       }
