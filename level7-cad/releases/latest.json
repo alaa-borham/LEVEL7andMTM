@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.174",
- "notes": "المقبض تحت الماوس أو أثناء السحب مميز عن الآخر",
+ "version": "0.9.175",
+ "notes": "لا تُضاف نقاط للكرف إلا بزر ➕ إضافة نقطة",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "bd2e13f5d5735b0a1856291b894da544f0de92c62ef486d487ad92d43470edff",
-   "size": 144812
+   "sha256": "6307a89b6845b738b9342487672c0aca7d72de5b87b39d3b7f02715a4100c5a0",
+   "size": 145045
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-B-oac_Nt.js",
-   "sha256": "9d0e744f138af4890050115005220e732870bda54da775487ff228cd8763785d",
-   "size": 295940
+   "path": "assets/l7design/assets/index-3S2H8kOS.js",
+   "sha256": "67b4bae45cdfed7cfd5cc19fca48772f247a519b75d7f17524141e36750f9581",
+   "size": 296371
   },
   {
    "path": "assets/l7design/assets/index-G6hYEKYP.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "420699220a70c596714c3a5539a3d42ac3e405b42d91d4d11348118df8c56ad8",
+   "sha256": "5cbaf3660b52c359101a675c51c5b2f3109772a3b364f8ba678b93cbb266171e",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "66d3806e3596624a0bd2a4508b8e16fffeea288656b5742c8fc0d0cd264d7bb5",
+   "sha256": "1f863ef25ac30104decbdcbcde789c196f1841d8608cecf7912340bf8fe5bfe0",
    "size": 301
   },
   {

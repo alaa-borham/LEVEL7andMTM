@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.175
+
+LEVEL7 design: a drag on a curve no longer adds a point by itself; points are added only with ➕ in the curve bar (then a click on the curve adds one there, and it can be dragged at once; right click ends).
+
 LEVEL7 and MTM 0.9.174
 
 LEVEL7 design: the curve end handle under the pointer, and while it is dragged, stands out from the other one (larger, filled red, solid line).
