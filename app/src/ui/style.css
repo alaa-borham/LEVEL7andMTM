@@ -1028,3 +1028,16 @@ body:not(.dark) .ztable .zf input { color: #7a5c00; } body:not(.dark) .ztable th
 .curve-bar.vert input.dim-note { width: 104px; }
 #canvas g.dim-sel line, #canvas g.dim-sel polyline, #canvas g.dim-sel path { stroke-width: 2.4; }
 #canvas g.dim-sel text { font-weight: 700; }
+/* 0.9.172 unit / multiplier buttons in sight; the bars follow the drawing background (readable on dark) */
+.curve-bar .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.curve-bar .seg button { border: 0; border-radius: 0; min-width: 34px; }
+.curve-bar .seg button + button { border-inline-start: 1px solid var(--border); }
+.curve-bar.vert .seg { flex-direction: row; }
+body.canvas-dark .curve-bar { --bar-bg: #23272e; --bar-fg: #eceff3; --bar-line: #4b525d; --bar-field: #2d323a; background: var(--bar-bg); color: var(--bar-fg); border-color: var(--bar-line); }
+body.canvas-light .curve-bar { --bar-bg: #ffffff; --bar-fg: #1f2430; --bar-line: #c9ced6; --bar-field: #f4f5f7; background: var(--bar-bg); color: var(--bar-fg); border-color: var(--bar-line); }
+body:is(.canvas-dark, .canvas-light) .curve-bar :is(button, select, input) { background: var(--bar-field); color: var(--bar-fg); border-color: var(--bar-line); }
+body:is(.canvas-dark, .canvas-light) .curve-bar .seg { border-color: var(--bar-line); }
+body:is(.canvas-dark, .canvas-light) .curve-bar span:not(.bar-grip):not(.seg) { color: color-mix(in srgb, var(--bar-fg) 65%, transparent); }
+body:is(.canvas-dark, .canvas-light) .curve-bar .bar-grip { color: color-mix(in srgb, var(--bar-fg) 70%, transparent); }
+body:is(.canvas-dark, .canvas-light) .curve-bar button.on { border-color: var(--live); background: color-mix(in srgb, var(--live) 30%, var(--bar-field)); }
+body.canvas-dark .curve-bar svg { color: var(--bar-fg); }

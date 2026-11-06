@@ -1376,7 +1376,10 @@ export class App {
       });
       bar.addEventListener("click", (e) => {
         const t = (e.target as HTMLElement).closest<HTMLElement>("[data-da]");
-        if (t?.dataset.da === "flip") edit((d) => (d.flip === "1" ? delete d.flip : (d.flip = "1")));
+        const ub = (e.target as HTMLElement).closest<HTMLElement>("[data-du]"), mb = (e.target as HTMLElement).closest<HTMLElement>("[data-dm]");
+        if (ub) edit((d) => (d.unit = ub.dataset.du as "mm" | "cm" | "in"));
+        else if (mb) edit((d) => (mb.dataset.dm === "1" ? delete d.mult : (d.mult = mb.dataset.dm)));
+        else if (t?.dataset.da === "flip") edit((d) => (d.flip === "1" ? delete d.flip : (d.flip = "1")));
         else if (t?.dataset.da === "edit") this.editStep(this.selectedStep);
       });
     }
@@ -1387,8 +1390,11 @@ export class App {
       `<input data-dk="text" class="dim-note" placeholder="ملاحظة / اسم" value="${esc(s.text ?? "")}" title="نص يُكتب قبل الرقم"/>` +
       `<button data-da="flip" class="${s.flip === "1" ? "on" : ""}" title="الكتابة على الجهة الأخرى من خط البعد">⇵ الكتابة</button>` +
       `<select data-dk="size" title="حجم الكتابة">${opt("", "حجم عادي", s.size ?? "")}${["10", "14", "18", "24", "32"].map((v) => opt(v, `${v} px`, s.size ?? "")).join("")}</select>` +
-      (angle ? "" : `<select data-dk="unit" title="وحدة القياس">${opt("", "وحدة الرسم", s.unit ?? "")}${opt("mm", "مم", s.unit ?? "")}${opt("cm", "سم", s.unit ?? "")}${opt("in", "بوصة", s.unit ?? "")}</select>` +
-        `<select data-dk="mult" title="ضرب القيمة">${["1", "2", "4"].map((v) => opt(v, `×${v}`, s.mult ?? "1")).join("")}</select>`) +
+      // unit and multiplier as buttons in sight (a list hid the inch)
+      (angle
+        ? ""
+        : `<span class="seg" title="وحدة القياس">${(["mm", "cm", "in"] as const).map((u) => `<button data-du="${u}" class="${(s.unit ?? (this.model.unit === "in" ? "in" : "mm")) === u ? "on" : ""}">${u === "mm" ? "مم" : u === "cm" ? "سم" : "بوصة"}</button>`).join("")}</span>` +
+          `<span class="seg" title="ضرب القيمة">${["1", "2", "4"].map((v) => `<button data-dm="${v}" class="${(s.mult ?? "1") === v ? "on" : ""}">×${v}</button>`).join("")}</span>`) +
       `<button data-da="edit" title="كل قيم البعد">✎</button><span>اسحب البعد لتحريكه · رايت كليك للخروج</span>`;
   }
 
@@ -4581,6 +4587,8 @@ export class App {
     this.svg.style.background = c["--canvas"] ?? "";
     // labels, halos and handles on the drawing follow the background's lightness
     const bg = c["--canvas"], sv = this.svg.style;
+    document.body.classList.toggle("canvas-dark", !!bg && luminance(bg) < 0.35);
+    document.body.classList.toggle("canvas-light", !!bg && luminance(bg) >= 0.35);
     if (bg) {
       const dark = luminance(bg) < 0.35;
       sv.setProperty("--bg", bg);
