@@ -1328,6 +1328,7 @@ export class App {
     parts.push(this.inheritSvg());
     parts.push(this.seamLabelsSvg());
     this.renderCurveBar();
+    this.renderDimBar();
     // no letters on the drawing: the name of the element under the pointer only
     // no name under the pointer either (only with "names" switched on): the drawing stays clean
     const under = this.nameHover;
@@ -1345,6 +1346,51 @@ export class App {
   private dimHits: { i: number; pts: Pt[] }[] = [];
   /** The dimension under the pointer (it glows; a press drags it). */
   private dimHover: number | null = null;
+  private dimMoved = false;
+
+  /** Options of the active dimension (as a bar like the curve's): note, text direction and size, unit, ×2 / ×4. */
+  private renderDimBar(): void {
+    const s = this.model.steps[this.selectedStep];
+    let bar = document.querySelector(".curve-bar.dim-bar") as HTMLElement | null;
+    if (!s || s.op !== "dim" || this.tool || this.form) return void bar?.remove();
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "curve-bar dim-bar";
+      setupBar(bar);
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
+      bar.addEventListener("mousedown", (e) => e.stopPropagation());
+      const edit = (f: (d: Extract<Step, { op: "dim" }>) => void) => {
+        const d = this.model.steps[this.selectedStep];
+        if (d?.op !== "dim") return;
+        this.snapshot();
+        f(d);
+        this.changed();
+      };
+      bar.addEventListener("change", (e) => {
+        const t = e.target as HTMLInputElement;
+        const k = t.dataset.dk;
+        if (k === "text") edit((d) => (t.value.trim() ? (d.text = t.value.trim()) : delete d.text));
+        else if (k === "size") edit((d) => (t.value ? (d.size = t.value) : delete d.size));
+        else if (k === "unit") edit((d) => (t.value ? (d.unit = t.value as "mm" | "cm" | "in") : delete d.unit));
+        else if (k === "mult") edit((d) => (t.value !== "1" ? (d.mult = t.value) : delete d.mult));
+      });
+      bar.addEventListener("click", (e) => {
+        const t = (e.target as HTMLElement).closest<HTMLElement>("[data-da]");
+        if (t?.dataset.da === "flip") edit((d) => (d.flip === "1" ? delete d.flip : (d.flip = "1")));
+        else if (t?.dataset.da === "edit") this.editStep(this.selectedStep);
+      });
+    }
+    if (bar.contains(document.activeElement) && document.activeElement?.matches("input")) return; // typing a note
+    const opt = (v: string, t: string, cur: string) => `<option value="${v}"${v === cur ? " selected" : ""}>${t}</option>`;
+    const angle = s.kind === "angle";
+    bar.innerHTML = BAR_CHROME + `<b>بُعد</b>` +
+      `<input data-dk="text" class="dim-note" placeholder="ملاحظة / اسم" value="${esc(s.text ?? "")}" title="نص يُكتب قبل الرقم"/>` +
+      `<button data-da="flip" class="${s.flip === "1" ? "on" : ""}" title="الكتابة على الجهة الأخرى من خط البعد">⇵ الكتابة</button>` +
+      `<select data-dk="size" title="حجم الكتابة">${opt("", "حجم عادي", s.size ?? "")}${["10", "14", "18", "24", "32"].map((v) => opt(v, `${v} px`, s.size ?? "")).join("")}</select>` +
+      (angle ? "" : `<select data-dk="unit" title="وحدة القياس">${opt("", "وحدة الرسم", s.unit ?? "")}${opt("mm", "مم", s.unit ?? "")}${opt("cm", "سم", s.unit ?? "")}${opt("in", "بوصة", s.unit ?? "")}</select>` +
+        `<select data-dk="mult" title="ضرب القيمة">${["1", "2", "4"].map((v) => opt(v, `×${v}`, s.mult ?? "1")).join("")}</select>`) +
+      `<button data-da="edit" title="كل قيم البعد">✎</button><span>اسحب البعد لتحريكه · رايت كليك للخروج</span>`;
+  }
 
   private dimSvg(s: Extract<Step, { op: "dim" }>, live = false, dimIndex = -1): string {
     let off = 0;
@@ -1356,6 +1402,7 @@ export class App {
     const P = (r?: PointRef) => (r ? this.pointOf(r) : null);
     const sc = (p: Pt) => this.toScreen(p);
     const cls = live ? "dim live" : "dim";
+    const fs = Number(s.size) > 0 ? ` style="font-size:${Number(s.size)}px"` : "";
     const arrow = (tip: Pt, from: Pt) => {
       const [x, y] = sc(tip), [fx, fy] = sc(from), L = Math.hypot(x - fx, y - fy) || 1, ux = (x - fx) / L, uy = (y - fy) / L;
       return `M${x} ${y} l${(-9 * ux + 3.5 * uy).toFixed(1)} ${(-9 * uy - 3.5 * ux).toFixed(1)} M${x} ${y} l${(-9 * ux - 3.5 * uy).toFixed(1)} ${(-9 * uy + 3.5 * ux).toFixed(1)}`;
@@ -1369,7 +1416,8 @@ export class App {
       const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
       const full = s.text ? `${esc(s.text)} \u2066${label}\u2069` : `\u2066${label}\u2069`;
       // flipped: the value sits on the other side of the dimension line, still readable
-      return `<text class="dim-text" x="${mx}" y="${flip ? my + 15 : my - 5}" transform="rotate(${ang.toFixed(1)} ${mx} ${my})" text-anchor="middle">${full}</text>`;
+      const gap = Number(s.size) > 0 ? Number(s.size) * 0.4 : 5;
+      return `<text class="dim-text" x="${mx}" y="${flip ? my + gap + 10 * (Number(s.size) > 0 ? Number(s.size) / 12 : 1) : my - gap}" transform="rotate(${ang.toFixed(1)} ${mx} ${my})" text-anchor="middle"${fs}>${full}</text>`;
     };
     const hit = (pts: Pt[]) => {
       if (!live && dimIndex >= 0) this.dimHits.push({ i: dimIndex, pts: pts.map(sc) });
@@ -1377,8 +1425,13 @@ export class App {
     const line = (a: Pt, b: Pt, dashed = false) => `<line x1="${sc(a)[0]}" y1="${sc(a)[1]}" x2="${sc(b)[0]}" y2="${sc(b)[1]}"${dashed ? ' stroke-dasharray="4 3"' : ""}/>`;
     const out: string[] = [];
     // values in mm, or in inches when the drawing's unit is inch
-    const inch = this.model.unit === "in";
-    const r1 = (v: number) => (inch ? `${fmt(Math.round((v / 25.4) * 100) / 100)}″` : fmt(Math.round(v * 10) / 10));
+    const unit = s.unit ?? (this.model.unit === "in" ? "in" : "mm"), mult = Number(s.mult) > 0 ? Number(s.mult) : 1;
+    const r1 = (v0: number) => {
+      const v = v0 * mult, x = mult !== 1 ? ` (×${mult})` : "";
+      if (unit === "in") return `${fmt(Math.round((v / 25.4) * 100) / 100)}″${x}`;
+      if (unit === "cm") return `${fmt(Math.round(v) / 10)} cm${x}`;
+      return `${fmt(Math.round(v * 10) / 10)}${x}`;
+    };
     if (s.kind === "aligned" || s.kind === "h" || s.kind === "v") {
       const A = P(s.a), B = P(s.b);
       if (!A || !B) return "";
@@ -1515,7 +1568,7 @@ export class App {
     const out: string[] = [];
     this.dimHits = [];
     this.model.steps.forEach((s, i) => {
-      if (s.op === "dim" && !this.res.stepErrors.has(i)) out.push(this.dimSvg(s, false, i));
+      if (s.op === "dim" && !this.res.stepErrors.has(i)) out.push(i === this.selectedStep ? `<g class="dim-sel">${this.dimSvg(s, false, i)}</g>` : this.dimSvg(s, false, i));
     });
     // the dimension being placed
     const t = this.tool;
@@ -3537,6 +3590,7 @@ export class App {
         if (di !== null) {
           this.snapshot();
           this.dragDim = di;
+          this.dimMoved = false;
           e.preventDefault();
           return;
         }
@@ -3613,6 +3667,8 @@ export class App {
     window.addEventListener("mouseup", (e) => {
       // right click without dragging = confirm the step (as in GRAFIS); dragging pans
       if (this.curveGrab) this.curveGrab = null; // a click on the active curve without dragging: nothing
+      // a click on a dimension (no drag) makes it active: its bar of options shows
+      if (this.dragDim !== null && !this.dimMoved) this.selectedStep = this.dragDim;
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         this.dragHandle = null;
         this.dragPoint = null;
@@ -3672,6 +3728,7 @@ export class App {
         this.insertCurvePoint(g.ci, g.at);
       }
       if (this.dragDim !== null) {
+        this.dimMoved = true;
         const st = this.model.steps[this.dragDim] as Extract<Step, { op: "dim" }>;
         const off = this.dimOffsetAt(st, this.mouse);
         if (off !== null) {

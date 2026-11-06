@@ -50,7 +50,9 @@ export type Step =
   | { op: "pointOffset"; id: number; from: PointRef; dx: string; dy: string }
   /** Dimension (annotation only, creates no geometry): aligned / horizontal / vertical
    * distance between a and b, length of obj, or angle a-b-c; offset places the line. */
-  | { op: "dim"; kind: "aligned" | "h" | "v" | "length" | "angle" | "sum"; a?: PointRef; b?: PointRef; c?: PointRef; obj?: number; objs?: number[]; offset: string; text?: string; flip?: string }
+  | { op: "dim"; kind: "aligned" | "h" | "v" | "length" | "angle" | "sum"; a?: PointRef; b?: PointRef; c?: PointRef; obj?: number; objs?: number[]; offset: string; text?: string; flip?: string;
+      /** Shown value: text size (px), unit (mm / cm / in; default = the drawing's), multiplied (×2, ×4 …). */
+      size?: string; unit?: "mm" | "cm" | "in"; mult?: string }
   | { op: "line"; id: number; p1: PointRef; p2: PointRef }
   | { op: "lineAngle"; id: number; start: PointRef; angle: string; length: string }
   | { op: "parallel"; id: number; of: number; dist: string; side: 1 | -1 }
