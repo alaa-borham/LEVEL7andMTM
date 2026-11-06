@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.181",
- "notes": "Clean seam-allowance corners at tight curve bends; grain line inside the piece; F5 refreshes; curve-end number names its line; other parts' seam allowances shown; notch along an inner line with its own length (mm or X/Z); round corner / chamfer on the cut line; background picture moved / resized by hand or fixed as whole-screen background.",
+ "version": "0.9.182",
+ "notes": "Curve end angle sets the tangent line (no hook, seam allowance parallel below the corner); folded pieces (fold edge on the pieces page, opened out for cutting and export); pieces in GRAFIS colours.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "7b7381905ad2bd4f5f188637e10ac2316749b48d2f10d6b87c2cc037a7e56d32",
-   "size": 147526
+   "sha256": "fbfc0d59018e7c95b4fc57836d98a0079897544c5829483b082358cb4d2bb7bc",
+   "size": 147950
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-C10q4pSb.js",
-   "sha256": "b84f075de2708bba014280c7b2150f15efd5eb4632641c34f8e97d6f88ecf62d",
-   "size": 310590
+   "path": "assets/l7design/assets/index-DalDyc2r.js",
+   "sha256": "d099f7f09fb04786a6e33885ee7b42633a9100510ba1b0e2734d8274313ad58b",
+   "size": 312368
   },
   {
-   "path": "assets/l7design/assets/index-CyXQ0ET0.css",
-   "sha256": "7927a06df1279e062224de205fa2682fc997dcbbe99bb9a98fcfa42dfe310034",
-   "size": 43477
+   "path": "assets/l7design/assets/index-DvXk95pS.css",
+   "sha256": "47fe058c9d3330c516ac6af80584dd358a01ff896f5fa8da664c6396eea3cb3e",
+   "size": 43682
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "b2398497071885505422864dd129ae7a3c1f34924cd25799cee0a849b20535a7",
+   "sha256": "561a3cbb3a1c32de4783f9cfe8225e259f0ce626dfdbdf15a2adfd1e5be32398",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "b24975282df92ca33efbefc462fcd8ad5ebf6c32c80b3b8929ce2e9cdbf665ae",
+   "sha256": "e16b8ec7a87d518291b8de4c78ab7408a3fb79be76d9a0d655fb7395d40e8340",
    "size": 301
   },
   {

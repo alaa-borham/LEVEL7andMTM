@@ -27,7 +27,10 @@ try{
  // separate X and Z lists (the X window is closed again first)
  await f.waitForFunction(()=>!document.querySelector('.panel.open'));
  const tl=await page.locator('[data-l7d-tool="lineAngle"]');await page.locator('[data-l7d-cat="الخطوط"]').click({button:'right'});await tl.click();
- const cb0=await page.locator('#l7-design-frame').boundingBox();await page.mouse.click(cb0.x+cb0.width*0.4,cb0.y+cb0.height*0.5);
+ await f.waitForFunction(()=>window.level7.tool?.key==='lineAngle');
+ // 0.9.182: the click right after the X window closes can be lost (timing in the test runner): click again until it is taken
+ const cb0=await page.locator('#l7-design-frame').boundingBox();
+ for(let k=0;k<4&&!await f.evaluate(()=>window.level7.picks.length>0);k++){await page.mouse.click(cb0.x+cb0.width*0.4,cb0.y+cb0.height*0.5);await f.waitForFunction(()=>window.level7.picks.length>0,null,{timeout:1500}).catch(()=>{});}
  await fr.locator('#tool-box .ref-x').first().waitFor();
  const xs=await fr.locator('#tool-box .ref-x').first().locator('option').allTextContents(),zs=await fr.locator('#tool-box .ref-z').first().locator('option').allTextContents();
  assert(xs.every(o=>!o.startsWith('Z'))&&xs.some(o=>o.startsWith('X1 ='))&&zs.every(o=>!o.startsWith('X'))&&zs.some(o=>o.startsWith('Z1')),JSON.stringify([xs,zs]));

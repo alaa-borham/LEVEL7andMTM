@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.182
+
+LEVEL7 design: a curve end angle sets the tangent line (as GRAFIS), so a curve no longer hooks at its end and the seam allowance runs parallel below the corner; folded pieces (fold edge chosen on the pieces page: no allowance on it, sewing line on the drawn half, fold dash-dotted, cut line and exports opened out); pieces in GRAFIS colours (blue cut line, solid sewing line, red notches, no fill).
+
 LEVEL7 and MTM 0.9.181
 
 LEVEL7 design: clean seam-allowance corners where a curve bends tightly at the corner (no spike); the piece grain line stays inside the piece and gives way to a drawn one; F5 refreshes the screen; the number at a line / curve end names its line («L4 ▸ 1437.3»); the other parts' seam allowances show with them; a notch at the end of an inner line runs on along it, with its own length (mm or X / Z); round corner / chamfer on the cut (outer) line; background pictures moved and resized by hand, or fixed as the background of the whole screen.
