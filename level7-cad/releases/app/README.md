@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.163
+
+LEVEL7 design: nothing on a line or curve reacts until it is double-clicked: no point squares when the pointer passes over a curve, points are dragged and the curve grabbed only on the curve made active by a double-click; a single click makes nothing active (it leaves the active element).
+
 LEVEL7 and MTM 0.9.162
 
 LEVEL7 design: show all parts (as GRAFIS): every part drawn side by side in rows, in solid lines, not on top of each other; the part under the pointer lights up and a click switches to it where it is on the screen; hide all shows the active part alone. The eye of a single part still shows it faded in place behind the active one.
