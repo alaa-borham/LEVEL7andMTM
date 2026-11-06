@@ -137,3 +137,19 @@ describe("cut line corners (as GRAFIS)", () => {
     expect(g.cut.some((p) => Math.hypot(p[0] + 10, p[1] + 10) < 1e-6)).toBe(true);
   });
 });
+
+describe("curve end angle = tangent line (as GRAFIS)", () => {
+  it("an angle pointing away from the curve does not make a hook: the curve leaves towards its points", () => {
+    const m = emptyModel("t");
+    m.steps = [
+      { op: "point", id: 1, x: "853", y: "80" }, { op: "point", id: 2, x: "836", y: "120" }, { op: "point", id: 3, x: "808", y: "250" },
+      // 250° points back up and away; 70° is the same tangent line
+      { op: "curve", id: 4, through: [{ obj: 1 }, { obj: 2 }, { obj: 3 }], startAngle: "250", endAngle: "" },
+      { op: "curve", id: 5, through: [{ obj: 1 }, { obj: 2 }, { obj: 3 }], startAngle: "70", endAngle: "" },
+    ] as Model["steps"];
+    const r = evaluateModel(m);
+    const a = r.objects.get(4)!.pts, b = r.objects.get(5)!.pts;
+    for (const p of a) expect(p[1]).toBeGreaterThanOrEqual(80 - 1e-9);
+    a.forEach((p, k) => expect(Math.hypot(p[0] - b[k][0], p[1] - b[k][1])).toBeLessThan(1e-9));
+  });
+});

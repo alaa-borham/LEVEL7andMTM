@@ -169,8 +169,14 @@ export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null,
   const chord = (i: number): Pt => unit([pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]]);
   // free ends: mirror the neighbouring tangent about the chord (quadratic end condition)
   const freeEnd = (c: Pt, t: Pt): Pt => (n === 2 ? c : unit([2 * c[0] * (c[0] * t[0] + c[1] * t[1]) - t[0], 2 * c[1] * (c[0] * t[0] + c[1] * t[1]) - t[1]]));
-  tan[0] = startDir ? unit(startDir) : freeEnd(chord(0), n > 2 ? tan[1] : chord(0));
-  tan[n - 1] = endDir ? unit(endDir) : freeEnd(chord(n - 2), n > 2 ? tan[n - 2] : chord(n - 2));
+  // a set end angle gives the tangent LINE (as GRAFIS): the curve leaves along it towards its own
+  // points, never backwards (that made a small hook at the end, and a bulge in the seam allowance)
+  const along = (d: Pt, c: Pt): Pt => {
+    const u = unit(d);
+    return u[0] * c[0] + u[1] * c[1] < 0 ? [-u[0], -u[1]] : u;
+  };
+  tan[0] = startDir ? along(startDir, chord(0)) : freeEnd(chord(0), n > 2 ? tan[1] : chord(0));
+  tan[n - 1] = endDir ? along(endDir, chord(n - 2)) : freeEnd(chord(n - 2), n > 2 ? tan[n - 2] : chord(n - 2));
   if (n === 2 && startDir && !endDir) tan[1] = freeEnd(chord(0), tan[0]);
   if (n === 2 && endDir && !startDir) tan[0] = freeEnd(chord(0), tan[1]);
 
