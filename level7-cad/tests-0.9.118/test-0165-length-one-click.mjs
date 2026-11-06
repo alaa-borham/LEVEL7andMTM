@@ -20,6 +20,6 @@ try{
  pass(`one click on the line writes its length (240) at once, on the clicked side (offset ${r.off}); no window, the tool stays`);
  const cm=await f.evaluate(()=>{const o=window.level7.res.objects.get(5);return o.pts[Math.floor(o.pts.length/2)];});await page.mouse.click(...await at(cm[0],cm[1]));
  r=await f.evaluate(()=>window.level7.model.steps.filter(s=>s.op==='dim').map(d=>d.obj));assert.deepEqual(r,[2,5]);pass('a click on the curve writes its length too');
- await page.mouse.click(...await at(400,300),{button:'right'});assert.equal(await f.evaluate(()=>!!window.level7.tool),false);pass('right click ends the tool');
+ await page.mouse.click(...await at(100,-40),{button:'right'});assert.equal(await f.evaluate(()=>!!window.level7.tool),false);pass('right click ends the tool');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

@@ -236,6 +236,7 @@ if (embedded && window.parent !== window) {
         break;
       }
       case "l7:theme": document.body.classList.toggle("dark", (d as { dark?: boolean }).dark === true); break;
+      case "l7:close-top": app.closeTopWindow(); break;
       case "l7:cancel": app.leaveZoom(); app.cancelTool(); break;
       case "l7:json": if (typeof d.text === "string") { const pu = (d as unknown as { purpose?: string }).purpose; if (pu === "library") app.importLibrary(d.text); else if (pu === "mlib") app.importMLib(d.text); } break;
       case "l7:marker": if (typeof d.text === "string") app.isoFromMarker(String(d.name ?? ""), d.text); break;
@@ -248,5 +249,14 @@ if (embedded && window.parent !== window) {
       case "l7:action": if (d.action) run(d.action); break;
     }
   });
+  // a right click anywhere closes the open floating window first (and does nothing else)
+  window.addEventListener(
+    "mousedown",
+    (e) => {
+      if (e.button !== 2 || (e.target as HTMLElement).closest("input, textarea, select")) return;
+      if (app.closeTopWindow()) (e.preventDefault(), e.stopPropagation());
+    },
+    true,
+  );
   post({ type: "l7:ready", tools: TOOLS.map((t) => ({ key: t.key, name: t.name, group: t.group })) });
 }

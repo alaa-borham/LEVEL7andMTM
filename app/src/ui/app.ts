@@ -1836,6 +1836,19 @@ export class App {
     }
   }
 
+  /** The open floating window on top (Visibility, libraries, Z assistant …) is closed, as by its ×.
+   * True when one was closed (a right click anywhere does this first, as GRAFIS). */
+  closeTopWindow(): boolean {
+    const wins = [...document.querySelectorAll<HTMLElement>(".z-assistant")].filter((w) => w.getClientRects().length > 0);
+    if (!wins.length) return false;
+    const z = (w: HTMLElement) => Number(getComputedStyle(w).zIndex) || 0;
+    const top = wins.reduce((a, b) => (z(b) >= z(a) ? b : a));
+    const x = [...top.querySelectorAll<HTMLButtonElement>(".za-head button")].find((b) => b.textContent?.trim() === "×");
+    if (x) x.click();
+    else top.remove();
+    return true;
+  }
+
   /** The name of the element under the pointer (C1, L4 …): off, the user does not want it on the drawing. */
   nameTips = false;
   private curveGrab: { ci: number; x: number; y: number; at: Pt } | null = null;
