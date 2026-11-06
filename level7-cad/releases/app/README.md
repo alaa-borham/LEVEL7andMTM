@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.161
+
+LEVEL7 design: double-click opens the element that glows under the pointer (a point close beside a curve no longer takes it); double-click on a curve shows its handles, points and curve bar (as GRAFIS) instead of a window, and ✎ in the bar opens its values; an inherited element says which part it follows and is edited in.
+
 LEVEL7 and MTM 0.9.160
 
 LEVEL7 design: a part shows only its own drawing; other parts show behind it only when their eye is switched on (or with show all parts), and are hidden again with hide all parts.
