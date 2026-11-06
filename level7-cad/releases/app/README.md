@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.164
+
+LEVEL7 design: the points of the active curve show as small dots; the square shows only on the point under the pointer and while it is dragged.
+
 LEVEL7 and MTM 0.9.163
 
 LEVEL7 design: nothing on a line or curve reacts until it is double-clicked: no point squares when the pointer passes over a curve, points are dragged and the curve grabbed only on the curve made active by a double-click; a single click makes nothing active (it leaves the active element).

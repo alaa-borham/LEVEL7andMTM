@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.163",
- "notes": "لا شيء يتفعّل على الخطوط والكرفات إلا بالدابل كليك",
+ "version": "0.9.164",
+ "notes": "نقاط الكرف المفعّل نقاط صغيرة؛ المربع على النقطة تحت الماوس فقط",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "9df5c7c69d5de1660e1d99bc4832986d2234c2b93bbcc1786661e05e81172f4f",
-   "size": 141555
+   "sha256": "9f4700ebe1eb8ba1bf8dd200a3c2f908d52d0cce2b1ad9c2ce5893149f3f4aaa",
+   "size": 141724
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 40449
   },
   {
-   "path": "assets/l7design/assets/index-Cc69_8BL.js",
-   "sha256": "a3b3d4f7aa044f4211f57dee5dd6a1253ef3c55746ea4dbed3202d32b55991c0",
-   "size": 284261
+   "path": "assets/l7design/assets/index-D9IDJFFJ.js",
+   "sha256": "eebcf400e6387608998548e844ee64fd9b31c4d250aa0c299ba82b85228a26d7",
+   "size": 284632
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "12ae926f5f0541e4555c1fd3675d22c5bbb1961fdbfd4746b6660a58420e02de",
+   "sha256": "7c9a13bc4e1c377322a4a6061c5a469d0d6de31f4b8dcaaf2c19955be4c32852",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "87dff8af3fce15fb0c9952b5dd3c12b252ace4f8279ca3c8551e00fdf80fbb03",
+   "sha256": "9d41b0d24cb41a0346676d4c283c9b85fa59dba0b3b43f3be2341ac0daaa5a0b",
    "size": 301
   },
   {
