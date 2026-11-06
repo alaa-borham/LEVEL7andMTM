@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.174
+
+LEVEL7 design: the curve end handle under the pointer, and while it is dragged, stands out from the other one (larger, filled red, solid line).
+
 LEVEL7 and MTM 0.9.173
 
 LEVEL7 design: the values window of a curve is short again: its direction and strength, plus only the point values set with X / Z or a formula (e.g. "start: distance = Z14"); no plain coordinates of dragged points and no unit / measured-from lists.

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.173",
- "notes": "نافذة الكرف مختصرة: قيم Z فقط",
+ "version": "0.9.174",
+ "notes": "المقبض تحت الماوس أو أثناء السحب مميز عن الآخر",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "b2dd2b20f3fa11edb1828309ddd3d813dd5bd6f82d3f7314d1d2089dba5b95e7",
-   "size": 144643
+   "sha256": "bd2e13f5d5735b0a1856291b894da544f0de92c62ef486d487ad92d43470edff",
+   "size": 144812
   },
   {
    "path": "assets/icon.ico",
@@ -34,9 +34,9 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DtT_tjNO.js",
-   "sha256": "be5b70ec7f79dfe7e29980eb2a87882cdc332076028604fd431a91d1f2aa2f1b",
-   "size": 295502
+   "path": "assets/l7design/assets/index-B-oac_Nt.js",
+   "sha256": "9d0e744f138af4890050115005220e732870bda54da775487ff228cd8763785d",
+   "size": 295940
   },
   {
    "path": "assets/l7design/assets/index-G6hYEKYP.css",
@@ -45,7 +45,7 @@
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "5c6aa72321d80c066b9139b4838d4b58b546b9e4630a317b5713119b08e8319c",
+   "sha256": "420699220a70c596714c3a5539a3d42ac3e405b42d91d4d11348118df8c56ad8",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "7a8e1da677cf0a1065a05a0f50691cc829fbce48817f8cd8c2ad876cccb0208b",
+   "sha256": "66d3806e3596624a0bd2a4508b8e16fffeea288656b5742c8fc0d0cd264d7bb5",
    "size": 301
   },
   {
