@@ -6,11 +6,14 @@ const src=process.env.L7_SRC,mdl=process.env.L7_MDL;const env={...process.env,LO
 const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  const before=await fs.readFile(mdl);
- app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(60000);await page.waitForSelector('#tool-guide');await page.waitForSelector('.l7-design-cat');await page.locator('[data-l7d="close"]').click();await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on')); /* 0.9.148: the program starts in LEVEL7 design; these steps test the MDL workspace */
+ app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(60000);await page.waitForSelector('#tool-guide');await page.waitForSelector('.l7-design-cat');/* 0.9.177: the MDL workspace stays hidden */ /* 0.9.148: the program starts in LEVEL7 design; these steps test the MDL workspace */
  await app.evaluate(({dialog},p)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},mdl);
- await page.locator('.empty-actions [data-action="open"]').click();await page.waitForFunction(()=>window.l7MdlBridge?.available()&&window.l7MdlBridge.parts().length>0,null,{timeout:120000});
+ // GRAFIS → «فتح ملف GRAFIS وتحويله»: the file loads in the background and becomes a LEVEL7 design at once
+ assert.equal(await page.locator('.l7-mdl-menu [data-mdl-act]').count(),1);
+ await page.locator('[data-l7d-mdlbtn]').click();await page.locator('.l7-mdl-menu [data-mdl-act="open"]').click();
+ await page.waitForFunction(()=>window.l7MdlBridge?.available()&&window.l7MdlBridge.parts().length>0,null,{timeout:120000});
  const nParts=await page.evaluate(()=>window.l7MdlBridge.parts().length);
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-from-mdl').click();
+ assert(await page.evaluate(()=>document.body.classList.contains('l7-design-on')),'the MDL workspace never shows');
  await page.waitForSelector('#l7-design:not([hidden])');const f=page.frames().find(x=>x.url().includes('l7design'));
  await f.waitForFunction(()=>window.level7?.model?.parts?.length>1,null,{timeout:120000});
  const r=await f.evaluate(()=>{const a=window.level7;return{parts:a.model.parts.length,objs:a.model.parts.reduce((s,p)=>s+p.steps.length,0),first:a.model.parts[0].name,errors:a.res.stepErrors.size,drawn:a.res.objects.size};});

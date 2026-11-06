@@ -105,7 +105,7 @@ try{
  assert.equal(await page.locator('.l7-design-flyout:not([hidden])').count(),0);assert.equal(await page.locator('[data-l7d-cat="الزوايا"] svg').getAttribute('data-l7-icon'),'cornerRound');pass('choosing a corner tool closes the menu and its strip icon shows that tool');
  await page.keyboard.press('Escape');
  assert.equal(await f.evaluate(()=>document.querySelectorAll('#canvas line[stroke^="var(--grid"]').length),0);assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.panel .tabs')).display==='none'));pass('no grid squares; page tabs only in the command bar');
- await page.locator('[data-l7d="close"]').click();assert(await page.locator('#l7-design').isHidden());await page.waitForSelector('#canvas-empty');pass('closing returns to the MDL workspace');
+ assert(await page.locator('[data-l7d="close"]').isHidden());await page.evaluate(()=>window.l7ShowMdlWorkspace());assert(await page.locator('#l7-design').isHidden());await page.waitForSelector('#canvas-empty');pass('0.9.177: no × to the old MDL workspace (reachable only by the support hook)');
  assert.deepEqual(errors,[]);pass('no page errors');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

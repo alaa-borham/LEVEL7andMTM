@@ -8,14 +8,16 @@ try{
  await page.waitForFunction(()=>{const h=document.querySelector('.l7-design-cat');return h&&h.offsetParent!==null;});
  assert(await page.evaluate(()=>document.body.classList.contains('l7-design-on')));
  pass('the program opens straight into LEVEL7 design (no click)');
- await page.locator('[data-l7d-mdlbtn]').click();await page.locator('.l7-mdl-menu [data-mdl-act="open-parametric-example"]').click();
- await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on'));await page.waitForFunction(()=>/native-xz-parametric-point/.test(document.body.innerText));
- pass('GRAFIS → «مثال X/Z» leaves design mode and opens the MDL example');
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-show').click();await page.waitForFunction(()=>document.body.classList.contains('l7-design-on'));
- await page.locator('[data-l7d-mdlbtn]').click();await page.locator('.l7-mdl-menu [data-mdl-act="workspace"]').click();await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on'));
- pass('File → back to the design, and GRAFIS → «مساحة عمل MDL» shows the MDL workspace');
+ // 0.9.177: the old MDL workspace is hidden: GRAFIS has one command (open a GRAFIS file and convert it), the
+ // MDL-only File commands and the × are gone, and the design stays on
+ await page.locator('[data-l7d-mdlbtn]').click();
+ assert.deepEqual(await page.locator('.l7-mdl-menu [data-mdl-act]').evaluateAll(b=>b.map(x=>x.dataset.mdlAct)),['open']);await page.keyboard.press('Escape');await page.mouse.click(600,500);
+ assert(await page.locator('[data-l7d="close"]').isHidden());
+ assert(await page.evaluate(()=>['new-template','open-parametric-example'].every(a=>[...document.querySelectorAll(`[data-action="${a}"]`)].every(b=>b.hidden))));
+ assert(await page.evaluate(()=>['menu-l7-design-show','menu-l7-design-from-mdl'].every(id=>document.getElementById(id)?.hidden!==false)));
+ assert(await page.evaluate(()=>document.body.classList.contains('l7-design-on')));
+ pass('GRAFIS → one command «فتح ملف GRAFIS وتحويله»; no × and no MDL-only File commands; the design stays on');
  // Export: one button with every export; the size page has no export buttons any more
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-show').click();await page.waitForFunction(()=>document.body.classList.contains('l7-design-on'));
  await page.locator('[data-l7d-expbtn]').click();const ex=await page.locator('.l7-exp-menu [data-l7d-command]').evaluateAll(b=>b.map(x=>x.dataset.l7dCommand));
  assert.deepEqual(ex,['aama','aamaAll','aamaGraded','plt','pltAll','dxf']);await page.keyboard.press('Escape');await page.mouse.click(600,500);
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');

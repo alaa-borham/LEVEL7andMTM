@@ -2,7 +2,7 @@
 // a zero X is listed greyed out with the reason. Usage: L7_SRC=<app dir> xvfb-run -a node test-0118-x-length.mjs
 import path from'node:path';import fs from'node:fs/promises';import os from'node:os';import{_electron}from'file:///opt/node-tools/node_modules/playwright/index.mjs';
 const src=process.env.L7_SRC||'/home/user/work/dev';const env={...process.env,LOCALAPPDATA:await fs.mkdtemp(path.join(os.tmpdir(),'rx-'))};delete env.ELECTRON_RUN_AS_NODE;
-const app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');await page.waitForSelector('.l7-design-cat');await page.locator('[data-l7d="close"]').click();await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on')); /* 0.9.148: the program starts in LEVEL7 design; these steps test the MDL workspace */
+const app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');await page.waitForSelector('.l7-design-cat');await page.evaluate(()=>window.l7ShowMdlWorkspace());await page.waitForFunction(()=>!document.body.classList.contains('l7-design-on')); /* 0.9.148: the program starts in LEVEL7 design; these steps test the MDL workspace */
 page.on('pageerror',e=>console.log('ERR',e.message));
 await page.locator('#cad-toolbox [data-action="new-template"]').click();
 await page.locator('#cad-toolbox [data-action="x-values"]').click();
