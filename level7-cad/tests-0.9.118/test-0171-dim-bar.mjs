@@ -18,12 +18,16 @@ try{
  pass('a click on the dimension (without dragging) makes it active and shows its bar');
  const txt=()=>f.evaluate(()=>document.querySelector('#canvas .dim-text')?.textContent.replace(/[⁦-⁩]/g,''));
  await bar.locator('input[data-dk="text"]').fill('الصدر');await bar.locator('input[data-dk="text"]').press('Enter');
- await bar.locator('select[data-dk="unit"]').selectOption('cm');await bar.locator('select[data-dk="mult"]').selectOption('2');await bar.locator('select[data-dk="size"]').selectOption('18');
+ await bar.locator('[data-du="cm"]').click();await bar.locator('[data-dm="2"]').click();await bar.locator('select[data-dk="size"]').selectOption('18');
  let t=await txt();assert.equal(t,'الصدر 46 cm (×2)');
  const fsz=await f.evaluate(()=>getComputedStyle(document.querySelector('#canvas .dim-text')).fontSize);assert.equal(fsz,'18px');
  pass(`note «الصدر», unit cm, ×2, size 18: the dimension reads «${t}» at 18px`);
  await bar.locator('[data-da="flip"]').click();assert.equal(await f.evaluate(()=>window.level7.model.steps[2].flip),'1');pass('⇵ puts the text on the other side');
- await bar.locator('select[data-dk="unit"]').selectOption('in');t=await txt();assert(/″ \(×2\)$/.test(t),t);pass(`inch: «${t}»`);
+ assert.equal(await bar.locator('[data-du="in"]').textContent(),'بوصة');await bar.locator('[data-du="in"]').click();t=await txt();assert(/″ \(×2\)$/.test(t),t);pass(`the inch button is in sight: «${t}»`);
+ await f.evaluate(()=>{localStorage.setItem('level7.colors',JSON.stringify({'--canvas':'#141414'}));window.level7.applyColors();window.level7.render();});
+ const cs=await f.evaluate(()=>{const b=document.querySelector('.curve-bar.dim-bar'),btn=b.querySelector('[data-da="flip"]');return[getComputedStyle(b).backgroundColor,getComputedStyle(btn).color];});
+ assert(cs[0]==='rgb(35, 39, 46)'&&cs[1]==='rgb(236, 239, 243)',JSON.stringify(cs));pass('on a dark drawing the bar is dark with light writing');
+ await f.evaluate(()=>{localStorage.removeItem('level7.colors');window.level7.applyColors();});
  await f.evaluate(()=>window.level7.undo());assert.equal(await f.evaluate(()=>window.level7.model.steps[2].unit),'cm');pass('each option is one undo step');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
