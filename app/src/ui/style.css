@@ -14,7 +14,10 @@
   --grid: #eceef1;
   --grid-major: #dde1e6;
   --piece: #2e7d32;
-  --piece-fill: rgba(46, 125, 50, 0.07);
+  --piece-fill: transparent; /* 0.9.182: pieces as GRAFIS: no fill */
+  --piece-cut: #1e88e5; /* cut line: blue */
+  --piece-sew: #2b2f36; /* sewing line: dark on a light page, white on a dark one */
+  --piece-notch: #e53935; /* notches: red */
   --live: #43a047;
   font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", Arial, sans-serif;
   font-size: 14px;
@@ -531,7 +534,7 @@ input[type="number"] {
 body.embedded .tools,body.embedded .brand,body.embedded .actions{display:none}
 body.embedded .layout{grid-template-columns:1fr 340px}
 /* Dark theme matching the host's professional dark interface. */
-body.dark{--bg:#14181e;--surface:#1c222b;--border:#2e3742;--text:#e4e9f0;--muted:#8d98a7;--accent:#3d9bff;--accent-soft:#1d3550;--line:#e4e9f0;--point:#ff6b6b;--hover:#ffb340;--select:#3d9bff;--grid:#1f262f;--grid-major:#29323d;--piece:#5ccf73;--piece-fill:rgba(92,207,115,.10)}
+body.dark{--bg:#14181e;--surface:#1c222b;--border:#2e3742;--text:#e4e9f0;--muted:#8d98a7;--accent:#3d9bff;--accent-soft:#1d3550;--line:#e4e9f0;--point:#ff6b6b;--hover:#ffb340;--select:#3d9bff;--grid:#1f262f;--grid-major:#29323d;--piece:#5ccf73;--piece-fill:transparent;--piece-sew:#ffffff;--piece-cut:#2fa4dd}
 body.dark{color:var(--text)}
 body.dark input,body.dark select,body.dark textarea,body.dark #canvas{background:#10141a}
 body.dark .size-table th.customer{background:#3a2f17}
@@ -1049,3 +1052,5 @@ body.canvas-dark .curve-bar svg { color: var(--bar-fg); }
 /* 0.9.181: background picture moved / resized by hand */
 #canvas .img-frame { fill: none; stroke: #2fa4dd; stroke-width: 1.5; stroke-dasharray: 6 4; }
 #canvas .img-handle { fill: #fff; stroke: #2fa4dd; stroke-width: 1.5; cursor: nwse-resize; }
+
+body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-light { --piece-sew: #2b2f36; --piece-cut: #1e88e5; }

@@ -31,7 +31,7 @@ import {
   type Part,
 } from "../core/model";
 import { thobeSample } from "../core/sample";
-import type { NotchType, Piece } from "../core/piece";
+import type { NotchType, Piece, PieceGeo } from "../core/piece";
 import { describe, describeMeasure } from "./describe";
 import { autosave, download, downloadBytes, fromGrafis, hasUnsaved, packModel, parseModel, restore, safeFileName, setUnsaved, toDxf, unpackModel } from "./files";
 import { applyFields, pickedId, stepFields, TOOLS, type Field, type Pick, type PickKind, type Tool } from "./tools";
@@ -1319,9 +1319,7 @@ export class App {
       if (this.showPieces) {
         const sp = (pts: Pt[]) => pts.map((p) => this.toScreen([p[0] + ox, p[1] + oy]).map((v) => v.toFixed(1)).join(",")).join(" ");
         for (const pg of g.pieces.values()) {
-          parts.push(`<polygon class="ghost-piece" points="${sp(pg.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="1.6"/>`);
-          parts.push(`<polygon class="ghost-piece" points="${sp(pg.sew)}" fill="none" stroke="var(--piece)" stroke-width="1" stroke-dasharray="6 4"/>`);
-          for (const n of pg.notches) for (const sh of n.shape) parts.push(`<polyline class="ghost-piece" points="${sp(sh)}" fill="none" stroke="var(--piece)" stroke-width="1.8"/>`);
+          parts.push(this.pieceSvg(pg, sp, true));
         }
       }
     });
@@ -2248,9 +2246,7 @@ export class App {
     for (const pc of this.model.pieces ?? []) {
       const g = this.res.pieces.get(pc.id);
       if (!g) continue;
-      out.push(`<polygon points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece)" stroke-width="2"/>`);
-      out.push(`<polygon points="${pts(g.sew)}" fill="none" stroke="var(--piece)" stroke-width="1.2" stroke-dasharray="6 4"/>`);
-      for (const n of g.notches) for (const sh of n.shape) out.push(`<polyline points="${pts(sh)}" fill="none" stroke="var(--piece)" stroke-width="2.2"/>`);
+      out.push(this.pieceSvg(g, pts, false));
       const c = this.toScreen(g.centre);
       out.push(`<text class="piece-label" x="${c[0] + 8}" y="${c[1]}">${esc(pc.name)} (${pc.quantity})</text>`);
       // a grain line drawn with the grain tool inside the piece replaces the automatic one
@@ -2262,6 +2258,17 @@ export class App {
       out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="var(--piece)" stroke-width="1.4"/>`);
       out.push(head(b, ang), head(a, ang + Math.PI));
     }
+    return out.join("");
+  }
+
+  /** One piece as GRAFIS draws it: cut line in blue, sewing line, red notches; a folded piece shows
+   * its sewing line on the drawn half only, the fold line dash-dotted and the cut line opened out. */
+  private pieceSvg(g: PieceGeo, pts: (p: Pt[]) => string, ghost: boolean): string {
+    const cls = ghost ? ' class="ghost-piece"' : "";
+    const out = [`<polygon${cls} points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece-cut)" stroke-width="${ghost ? 1.6 : 2}"/>`];
+    out.push(`<polygon${cls} points="${pts(g.fold ? g.fold.halfSew : g.sew)}" fill="none" stroke="var(--piece-sew)" stroke-width="${ghost ? 1 : 1.3}"/>`);
+    if (g.fold) out.push(`<polyline${cls} points="${pts(g.fold.line)}" fill="none" stroke="var(--piece-cut)" stroke-width="1.3" stroke-dasharray="14 4 2 4"/>`);
+    for (const n of g.notches) for (const sh of n.shape) out.push(`<polyline${cls} points="${pts(sh)}" fill="none" stroke="var(--piece-notch)" stroke-width="${ghost ? 1.8 : 2.2}"/>`);
     return out.join("");
   }
 
@@ -5082,6 +5089,7 @@ export class App {
               <label>العدد <input data-pf="quantity" type="number" lang="en" dir="ltr" min="1" value="${pc.quantity}"/></label>
               <label>القماش <input data-pf="fabric" value="${esc(pc.fabric)}"/></label>
               <label>خط النسيج ° <input class="expr" data-pf="grain" value="${esc(pc.grain)}"/></label>
+              <label title="القطعة نصف تُفتح حول هذا الحد (بلا حاشية عليه)، وتُقص وتُصدَّر كاملة">خط الطي <select data-pfold><option value="">— بدون —</option>${pc.edges.map((id) => `<option value="${id}" ${pc.fold === id ? "selected" : ""}>${nm(id)}</option>`).join("")}</select></label>
             </div>
             <table class="grid"><thead><tr><th>الحد</th><th>حاشية الخياطة مم</th><th title="غير متوازية: القيمة عند نهاية الحد (فارغ = متوازية)">عند النهاية</th></tr></thead><tbody>
               ${pc.edges.map((id, k) => `<tr><td class="id">${nm(id)}</td><td><input class="expr" data-seam="${k}" value="${esc(pc.seam[k] ?? "0")}"/></td><td><input class="expr" data-seam-end="${k}" placeholder="—" value="${esc(pc.seamEnd?.[k] ?? "")}"/></td></tr>`).join("")}
@@ -5138,6 +5146,13 @@ export class App {
         ),
       );
       card.querySelectorAll("input").forEach((inp) => inp.addEventListener("change", () => ((snapped = false), this.renderPieces())));
+      card.querySelector<HTMLSelectElement>("[data-pfold]")?.addEventListener("change", (e) => {
+        const v = (e.target as HTMLSelectElement).value;
+        this.snapshot();
+        if (v) pc.fold = Number(v);
+        else delete pc.fold;
+        this.changed();
+      });
       card.querySelector("[data-pdel]")?.addEventListener("click", () => {
         if (!confirm(`حذف القطعة «${pc.name}»؟`)) return;
         this.snapshot();

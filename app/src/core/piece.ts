@@ -19,6 +19,9 @@ export interface Piece {
   notchTypes?: NotchType[];
   /** Notch length per notch (mm or a formula with X / Z); empty = the standard length. */
   notchLen?: string[];
+  /** Fold line (as GRAFIS mirrored piece): the id of the edge the piece is mirrored about; no seam
+   * allowance on it, and the piece is cut / exported unfolded (both halves). */
+  fold?: number;
   /** Cut line corners (as GRAFIS): key "a,b" = the two edge ids (smaller first) meeting there. */
   cutCorners?: Record<string, { kind: "round" | "chamfer"; size: string }>;
   grain: string; // grain line angle in degrees (90 = vertical)
@@ -44,6 +47,8 @@ export interface PieceGeo {
   notches: Notch[];
   grain: [Pt, Pt];
   centre: Pt;
+  /** Folded piece: the fold line, and the half drawn with its sewing line (sew / cut are then unfolded). */
+  fold?: { line: [Pt, Pt]; halfSew: Pt[]; halfCut: Pt[] };
   /** Corners of the cut line between two edges: where they are and their key (see Piece.cutCorners). */
   cutCornerAt?: { pt: Pt; key: string }[];
   error?: string;
@@ -284,7 +289,9 @@ export function buildPiece(inp: PieceInput): PieceGeo {
   const { sew, parts, order } = outline(inp.edges);
   // allowance follows the parts (outline() may have reversed the order)
   // each part: allowance at its start and end (an unparallel one turns with the part's direction)
+  const foldK = inp.piece.fold !== undefined ? inp.piece.edges.indexOf(inp.piece.fold) : -1;
   const allowance = order.map((k, i): [number, number] => {
+    if (k === foldK) return [0, 0]; // the fold: no seam allowance
     const a = inp.allowance[k], b = inp.allowanceEnd?.[k];
     if (b === undefined || b === a) return [a, a];
     const e = inp.edges[k], p = parts[i];
@@ -336,7 +343,52 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     [centre[0] + Math.cos(ang) * half, centre[1] + Math.sin(ang) * half],
   ];
   const cutCornerAt = cl.corners.flatMap((pt, i) => (pt ? [{ pt, key: keyAt(i) }] : []));
-  return { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre, cutCornerAt };
+  const geo: PieceGeo = { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre, cutCornerAt };
+  return foldK >= 0 ? unfold(geo, order.indexOf(foldK), inp.grainAngle) : geo;
+}
+
+/** The piece opened out about its fold edge (index fi in the outline order): the other half is the
+ * mirror image; corners on the fold disappear (the cut line runs straight across). */
+function unfold(g: PieceGeo, fi: number, grainAngle: number): PieceGeo {
+  const n = g.edges.length, fe = g.edges[fi], A = fe[0], B = fe[fe.length - 1];
+  const d: Pt = [B[0] - A[0], B[1] - A[1]], L2 = d[0] * d[0] + d[1] * d[1] || 1;
+  const m = (p: Pt): Pt => {
+    const t = ((p[0] - A[0]) * d[0] + (p[1] - A[1]) * d[1]) / L2, fx = A[0] + t * d[0], fy = A[1] + t * d[1];
+    return [2 * fx - p[0], 2 * fy - p[1]];
+  };
+  const others = (list: Pt[][]) => Array.from({ length: n - 1 }, (_, k) => list[(fi + 1 + k) % n]);
+  // one half: from the fold's end round to its start; the other: the same mirrored, run backwards
+  const halfEdges = others(g.cutEdges), mirEdges = halfEdges.map((e) => e.map(m).reverse()).reverse();
+  const join = (list: Pt[][]) => {
+    const out: Pt[] = [];
+    for (const e of list) out.push(...(out.length && dist(out[out.length - 1], e[0]) < 1e-6 ? e.slice(1) : e));
+    if (out.length > 1 && dist(out[0], out[out.length - 1]) < 1e-6) out.pop();
+    return out;
+  };
+  const sewHalf = others(g.edges);
+  const sew = join([...sewHalf, ...sewHalf.map((e) => e.map(m).reverse()).reverse()]);
+  const cut = join([...halfEdges, ...mirEdges]);
+  const onFold = (p: Pt) => Math.abs((p[0] - A[0]) * d[1] - (p[1] - A[1]) * d[0]) / Math.sqrt(L2) < 1e-3;
+  const notches = [...g.notches, ...g.notches.filter((x) => !onFold(x.at)).map((x) => ({ ...x, at: m(x.at), to: m(x.to), shape: x.shape.map((s) => s.map(m)) }))];
+  const centre = centroid(sew);
+  const ang = (grainAngle * Math.PI) / 180;
+  const along = sew.map((p) => (p[0] - centre[0]) * Math.cos(ang) + (p[1] - centre[1]) * Math.sin(ang));
+  const half = 0.35 * (Math.max(...along) - Math.min(...along));
+  const grain: [Pt, Pt] = [
+    [centre[0] - Math.cos(ang) * half, centre[1] - Math.sin(ang) * half],
+    [centre[0] + Math.cos(ang) * half, centre[1] + Math.sin(ang) * half],
+  ];
+  return {
+    ...g,
+    sew,
+    cut,
+    cutEdges: [...halfEdges, ...mirEdges],
+    notches,
+    centre,
+    grain,
+    cutCornerAt: g.cutCornerAt?.filter((c) => !onFold(c.pt)),
+    fold: { line: [A, B], halfSew: g.sew, halfCut: g.cut },
+  };
 }
 
 function nearestPart(parts: Pt[][], x: Pt): number {

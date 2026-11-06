@@ -153,3 +153,25 @@ describe("curve end angle = tangent line (as GRAFIS)", () => {
     a.forEach((p, k) => expect(Math.hypot(p[0] - b[k][0], p[1] - b[k][1])).toBeLessThan(1e-9));
   });
 });
+
+describe("fold (mirrored piece, as GRAFIS)", () => {
+  it("no allowance on the fold; cut and sewing line opened out about it, notches mirrored too", () => {
+    const m = rect(["10", "10", "10", "10"]);
+    m.pieces![0].fold = 6; // the right edge x = 100
+    m.pieces![0].notches = [{ obj: 1 }];
+    const g = evaluateModel(m).pieces.get(1)!;
+    const xs = g.cut.map((p) => p[0]), ys = g.cut.map((p) => p[1]);
+    expect(Math.min(...xs)).toBeCloseTo(-10);
+    expect(Math.max(...xs)).toBeCloseTo(210);
+    expect(Math.min(...ys)).toBeCloseTo(-10);
+    expect(Math.max(...ys)).toBeCloseTo(210);
+    // nothing of the cut line stands on the fold (it runs straight across)
+    expect(g.cut.some((p) => Math.abs(p[0] - 100) < 1e-6 && p[1] > -9 && p[1] < 209)).toBe(false);
+    expect(Math.max(...g.sew.map((p) => p[0]))).toBeCloseTo(200);
+    expect(g.fold!.line.map((p) => p[0])).toEqual([100, 100]);
+    expect(Math.max(...g.fold!.halfCut.map((p) => p[0]))).toBeCloseTo(100); // the half: no allowance on the fold
+    expect(g.notches.length).toBe(2);
+    expect(g.notches[1].at[0]).toBeCloseTo(200 - g.notches[0].at[0]);
+    expect(g.centre[0]).toBeCloseTo(100);
+  });
+});
