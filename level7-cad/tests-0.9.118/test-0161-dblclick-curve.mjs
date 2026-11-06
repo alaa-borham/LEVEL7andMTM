@@ -22,8 +22,9 @@ try{
  await fr.locator('.curve-bar [data-cedit]').click();await fr.locator('#tool-box input[data-key="startAngle"]').waitFor();pass('✎ in the curve bar opens its values (directions, strength)');
  await fr.locator('#tool-box [data-cancel]').click();
  // inherited curve in a new part
- await f.evaluate(()=>{const a=window.level7;a.addPart();a.snapshot();a.model.steps.push({op:'inherit',part:1,items:[{src:3,dst:a.model.nextId}]});a.model.nextId++;a.changed();});
- await page.mouse.move(box.x+cx,box.y+cy);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+cx,box.y+cy);
+ await f.evaluate(()=>{const a=window.level7;a.addPart();a.snapshot();a.model.steps.push({op:'inherit',part:1,items:[{src:3,dst:a.model.nextId}]});a.model.nextId++;a.changed();a.fit();});
+ const [ix,iy]=await f.evaluate(()=>{const a=window.level7,s=a.model.steps.at(-1),o=a.res.objects.get(s.items[0].dst);return a.toScreen(o.pts[Math.floor(o.pts.length/2)]);});
+ await page.mouse.move(box.x+ix,box.y+iy);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+ix,box.y+iy);
  await f.waitForFunction(()=>/موروث من البارت 001/.test(document.querySelector('#toast')?.textContent||''));pass('an inherited curve says it follows part 001 and is edited there');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
