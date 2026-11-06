@@ -4184,7 +4184,16 @@ export class App {
     });
     this.openForm({
       title: `تعديل الخطوة ${i + 1}`,
-      fields: [...own, ...ends.flatMap(([tag, label, j]) => stepFields(this.model.steps[j]).map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${label}: ${f.label}` })))],
+      // for a curve only what was set with X / Z or a formula (kept short: no plain coordinates of dragged
+      // points, no unit / measured-from lists); a line shows its start / end in full
+      fields: [
+        ...own,
+        ...ends.flatMap(([tag, label, j]) =>
+          stepFields(this.model.steps[j])
+            .filter((f) => s.op !== "curve" || (!f.options && !/^-?\d+(\.\d+)?$/.test(f.value.trim())))
+            .map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${s.op === "curve" ? label.replace(" على الخط", "") : label}: ${f.label}` })),
+        ),
+      ],
       onOk: (v) => {
         this.snapshot();
         const own: Record<string, string> = {}, of: Record<string, Record<string, string>> = {};

@@ -14,9 +14,11 @@ try{
    {op:'point',id:4,x:'200',y:'-50'},{op:'curve',id:5,through:[{obj:3},{obj:4}],startAngle:'93',endAngle:'178',startRel:2}];m.names={2:'L14'};m.nextId=6;a.selectedStep=4;a.changed();a.fit();});
  await fr.locator('.curve-bar [data-cedit]').click();const tb=fr.locator('#tool-box');await tb.waitFor();
  const labels=await tb.locator('.field > span').allTextContents();
- assert(labels.some(l=>/البداية على الخط: المسافة/.test(l))&&labels.some(l=>/النهاية: /.test(l))&&labels.some(l=>/اتجاه البداية.*\(من L14\)/.test(l)),labels.join('|'));
+ // 0.9.173: only what was set with X / Z / a formula: the start distance Z14; no plain end coordinates, no unit / measured-from
+ assert(labels.some(l=>/^البداية: المسافة/.test(l))&&labels.some(l=>/اتجاه البداية.*\(من L14\)/.test(l)),labels.join('|'));
  assert.equal(await tb.locator('input[data-key="p0:dist"]').inputValue(),'Z14');
- pass('✎ of the curve shows its start on the line (distance Z14), its end point (x / y) and «اتجاه البداية (من L14)»');
+ const keys=await tb.locator('[data-key]').evaluateAll(es=>es.map(e=>e.dataset.key));assert.deepEqual(keys,['startAngle','endAngle','startTension','endTension','p0:dist']);
+ pass(`✎ of the curve is short: its 4 values and «البداية: المسافة = Z14» only (${keys.length} fields; the end with plain x / y is left out)`);
  await tb.locator('input[data-key="p0:dist"]').fill('Z15');await tb.locator('[data-ok]').click();
  const r=await f.evaluate(()=>{const a=window.level7;return{d:a.model.steps[2].dist,y:Math.round(a.res.objects.get(5).pts[0][1])};});
  assert(r.d==='Z15'&&r.y===70,JSON.stringify(r));pass('changing it to Z15 moves the curve start to 70 on the line');
