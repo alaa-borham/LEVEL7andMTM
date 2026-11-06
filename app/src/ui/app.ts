@@ -4158,21 +4158,32 @@ export class App {
     this.render();
     // a line's start (and end) point made for it, a point on a line or a free point, is edited here
     // too: e.g. how far down the line starts on the line it was drawn from
-    const pointStep = (r?: PointRef) => (r && r.end === undefined ? this.model.steps.findIndex((t, k) => k < i && (t.op === "pointOn" || t.op === "point") && t.id === r.obj) : -1);
-    const ends: ["s" | "e", string, number][] = [];
+    const pointStep = (r?: PointRef) => (r && r.end === undefined ? this.model.steps.findIndex((t, k) => k < i && (t.op === "pointOn" || t.op === "point" || t.op === "pointOffset") && t.id === r.obj) : -1);
+    const ends: [string, string, number][] = [];
     const st0 = s as { op: string; start?: PointRef; p1?: PointRef; p2?: PointRef };
-    for (const [tag, label, r] of [["s", "البداية", st0.op === "lineAngle" ? st0.start : st0.op === "line" ? st0.p1 : undefined], ["e", "النهاية", st0.op === "line" ? st0.p2 : undefined]] as ["s" | "e", string, PointRef | undefined][]) {
+    // a curve: the points it passes through (where the Z values it was drawn with are)
+    const refs: [string, string, PointRef | undefined][] =
+      s.op === "curve"
+        ? s.through.map((r, k, all): [string, string, PointRef | undefined] => [`p${k}`, k === 0 ? "البداية" : k === all.length - 1 ? "النهاية" : `النقطة ${k + 1}`, r])
+        : [["s", "البداية", st0.op === "lineAngle" ? st0.start : st0.op === "line" ? st0.p1 : undefined], ["e", "النهاية", st0.op === "line" ? st0.p2 : undefined]];
+    for (const [tag, label, r] of refs) {
       const j = pointStep(r);
       if (j >= 0) ends.push([tag, label + (this.model.steps[j].op === "pointOn" ? " على الخط" : ""), j]);
     }
+    // a curve end measured from a line says which line
+    const own = stepFields(s).map((f) => {
+      if (s.op !== "curve") return f;
+      const rel = f.key === "startAngle" ? s.startRel : f.key === "endAngle" ? s.endRel : undefined;
+      return rel !== undefined ? { ...f, label: `${f.label} (من ${this.model.names[rel] ?? "الخط"})` } : f;
+    });
     this.openForm({
       title: `تعديل الخطوة ${i + 1}`,
-      fields: [...stepFields(s), ...ends.flatMap(([tag, label, j]) => stepFields(this.model.steps[j]).map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${label}: ${f.label}` })))],
+      fields: [...own, ...ends.flatMap(([tag, label, j]) => stepFields(this.model.steps[j]).map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${label}: ${f.label}` })))],
       onOk: (v) => {
         this.snapshot();
         const own: Record<string, string> = {}, of: Record<string, Record<string, string>> = {};
         for (const [k, val] of Object.entries(v)) {
-          const m = /^(s|e):(.+)$/.exec(k);
+          const m = /^(s|e|p\d+):(.+)$/.exec(k);
           if (m) (of[m[1]] ??= {})[m[2]] = val;
           else own[k] = val;
         }
