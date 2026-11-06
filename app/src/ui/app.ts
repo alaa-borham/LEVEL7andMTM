@@ -166,6 +166,7 @@ const SEAM_ICON = {
   none: cbSvg('<path d="M8 3v18" stroke="currentColor"/><path d="M13 9l6 6M19 9l-6 6" stroke="#e53935"/>'),
 };
 const CB_ICON = {
+  add: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><circle cx="11.5" cy="12.5" r="2.2" fill="#2fa4dd" stroke="none"/><path d="M18 14v7M14.5 17.5h7" stroke="#2e9e4f" stroke-width="2.2"/>'),
   bind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M15.5 8.5l-4 4M17 3.5l3.5 3.5" stroke="currentColor"/><circle cx="11.5" cy="12.5" r="2.2" fill="#e53935" stroke="none"/>'),
   unbind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M17 3.5l3.5 3.5" stroke="currentColor"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/><circle cx="11.5" cy="12.5" r="2" fill="currentColor" stroke="none"/>'),
   del: cbSvg('<path d="M3 19C8 18 13 14 18 5" stroke="#2fa4dd"/><circle cx="10" cy="14.5" r="2.4" fill="currentColor" stroke="none"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
@@ -1769,7 +1770,7 @@ export class App {
   }
 
   // ---- curve bar (as GRAFIS, shown while a curve is selected): bind / unbind / delete a point, angle on a line
-  curveMode: "bind" | "unbind" | "del" | "rel" | null = null;
+  curveMode: "add" | "bind" | "unbind" | "del" | "rel" | null = null;
 
   private selectedCurve(): Extract<Step, { op: "curve" }> | null {
     const s = this.model.steps[this.selectedStep];
@@ -1849,13 +1850,14 @@ export class App {
     }
     const b = (m: string, icon: string, tip: string) => `<button data-cm="${m}" class="${this.curveMode === m ? "on" : ""}" title="${tip}">${icon}</button>`;
     const say: Record<string, string> = {
+      add: "انقر على المنحنى حيث تريد نقطة جديدة (واسحبها مباشرة إن أردت) · كليك يمين للإنهاء",
       bind: "انقر نقطة أو طرف خط أو مكاناً على خط: يمر المنحنى به ويبقى مثبتاً عليه",
       unbind: "انقر نقطة مثبتة على المنحنى: تصير نقطة حرة في مكانها",
       del: "انقر نقطة داخل المنحنى لحذفها منه",
       rel: "انقر الخط الذي تُقاس منه زاوية طرف المنحنى (مثلاً 90° عمودي عليه)",
     };
     bar.innerHTML = BAR_CHROME + `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
-      b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
+      b("add", CB_ICON.add, "إضافة نقطة على المنحنى") + b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
       b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") +
       `<button data-cedit="1" title="كتابة قيم المنحنى: الاتجاهات والشدة">✎</button>` + styleCtl +
       `<span>${this.curveMode ? say[this.curveMode] : "اسحب المقابض أو النقاط · رايت كليك للخروج"}</span>`;
@@ -1906,6 +1908,12 @@ export class App {
         return false;
       }
     });
+    if (this.curveMode === "add") {
+      const ci0 = this.curveAtScreen(sx, sy);
+      if (ci0 !== ci) return this.toast("انقر على المنحنى نفسه");
+      this.insertCurvePoint(ci, this.toWorld(sx, sy)); // and it can be dragged at once
+      return;
+    }
     if (this.curveMode === "bind") {
       const hp = this.hit("point", sx, sy);
       let ref: PointRef | null = hp?.kind === "point" && hp.ref.obj !== c.id && !c.through.some((r) => r.obj === hp.ref.obj && r.end === hp.ref.end) ? hp.ref : null;
@@ -3619,15 +3627,7 @@ export class App {
           e.preventDefault();
           return;
         }
-        // pressing on the curve itself (not on a point): dragging adds a point there and moves it (as GRAFIS)
-        if (!this.tool && !this.form) {
-          const ci = this.curveAtScreen(sx, sy);
-          if (ci >= 0) {
-            this.curveGrab = { ci, x: sx, y: sy, at: this.toWorld(sx, sy) };
-            e.preventDefault();
-            return;
-          }
-        }
+        // pressing on the curve itself adds nothing (0.9.175): points are added only with ➕ in the curve bar
       }
       if (this.form?.live?.submit) {
         this.form.live.submit();

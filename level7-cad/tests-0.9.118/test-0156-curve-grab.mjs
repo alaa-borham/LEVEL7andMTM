@@ -17,13 +17,17 @@ try{
  await page.mouse.click(box.x+px,box.y+py);assert.equal(await f.evaluate(()=>window.level7.selectedStep),-1);
  await page.mouse.move(box.x+px,box.y+py);await page.waitForTimeout(150);await page.mouse.dblclick(box.x+px,box.y+py);
  assert.equal(await f.evaluate(()=>window.level7.selectedStep),2);pass('a single click makes nothing active; a double-click on the curve shows its handles');
- // 2) dragging the curve adds a point there and moves it
+ // 2) 0.9.175: dragging on the curve by itself adds nothing
  const before=await f.evaluate(()=>window.level7.res.objects.get(3).pts.map(p=>p.join()).join(';'));
+ await page.mouse.move(box.x+px,box.y+py);await page.mouse.down();await page.mouse.move(box.x+px-50,box.y+py-40,{steps:6});await page.mouse.up();
+ assert.equal(await f.evaluate(()=>window.level7.model.steps.find(s=>s.op==='curve').through.length),2);pass('a drag on the curve without ➕ adds no point');
+ // ➕ in the curve bar, then press on the curve and drag: a point is added there and moves
+ await page.frameLocator('#l7-design-frame').locator('.curve-bar [data-cm="add"]').click();
  await page.mouse.move(box.x+px,box.y+py);await page.mouse.down();await page.mouse.move(box.x+px-50,box.y+py-40,{steps:6});await page.mouse.up();
  const r=await f.evaluate(()=>{const a=window.level7,c=a.model.steps.find(s=>s.op==='curve');return{n:c.through.length,steps:a.model.steps.length,sel:a.selectedStep,pts:a.res.objects.get(3).pts.map(p=>p.join()).join(';'),mid:a.pointOf(c.through[1])};});
  assert(r.n===3&&r.steps===4&&r.pts!==before,JSON.stringify(r));
  const want=await f.evaluate(([x,y])=>window.level7.toWorld(x,y),[px-50,py-40]);assert(Math.hypot(r.mid[0]-want[0],r.mid[1]-want[1])<2,JSON.stringify([r.mid,want]));
- pass(`dragging the curve adds a point (through ${r.n} points) and the curve follows it`);
+ pass(`with ➕ a press on the curve adds a point (through ${r.n} points) and dragging it moves the curve`);
  // 3) one Ctrl+Z takes the added point away
  await f.evaluate(()=>window.level7.undo());assert.equal(await f.evaluate(()=>window.level7.model.steps.find(s=>s.op==='curve').through.length),2);pass('one Ctrl+Z removes the added point');
  // 4) right click (no drag) leaves the curve editing
