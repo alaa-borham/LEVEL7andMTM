@@ -26,4 +26,4 @@ console.log('OPTIONS',await page.evaluate(()=>[...document.querySelectorAll('#li
 console.log(await page.evaluate(()=>[...document.querySelectorAll('[data-tool-category-panel="points"] button')].filter(b=>b.offsetParent).map(b=>(b.dataset.action||b.dataset.pointsMenuOption||'')+'|'+b.title+'|'+b.disabled).join('\n')));
 const opts=await page.evaluate(()=>[...document.querySelectorAll('#line10-length-source option')].map(o=>o.textContent+(o.disabled?' [disabled]':'')));
 const want=(process.env.X_VALUE||'1500')==='0'?'X1 = 0 · أدخل قيمة أكبر من صفر [disabled]':'X1 = 1500 mm';
-await app.close();if(!opts.includes(want)){console.error('FAIL',opts);process.exit(1);}console.log('PASS Line 10 length list shows',want);
+await app.close();if(!opts.includes(want)){console.error('FAIL',opts);process.exit(1);}console.log('PASS Line 10 length list shows',want);process.exit(0); // nothing may keep node waiting after the app closed
