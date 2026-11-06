@@ -13,7 +13,7 @@ try{
  await page.locator('[data-l7d-mdlbtn]').click();
  assert.deepEqual(await page.locator('.l7-mdl-menu [data-mdl-act]').evaluateAll(b=>b.map(x=>x.dataset.mdlAct)),['open']);await page.keyboard.press('Escape');await page.mouse.click(600,500);
  assert(await page.locator('[data-l7d="close"]').isHidden());
- assert(await page.evaluate(()=>['new-template','open-parametric-example'].every(a=>[...document.querySelectorAll(`[data-action="${a}"]`)].every(b=>b.hidden))));
+ assert(await page.evaluate(()=>['new-template','open-parametric-example'].every(a=>[...document.querySelectorAll(`[data-action="${a}"]`)].filter(b=>!b.closest('#cad-toolbox')).every(b=>b.hidden))));
  assert(await page.evaluate(()=>['menu-l7-design-show','menu-l7-design-from-mdl'].every(id=>document.getElementById(id)?.hidden!==false)));
  assert(await page.evaluate(()=>document.body.classList.contains('l7-design-on')));
  pass('GRAFIS → one command «فتح ملف GRAFIS وتحويله»; no × and no MDL-only File commands; the design stays on');

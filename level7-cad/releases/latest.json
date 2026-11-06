@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.176",
- "notes": "النافذتان معاً مع تصغير؛ Ctrl+Z بكل اللغات؛ أزرار الوحدة دائماً؛ الحواشي والنوتش يبدآن القطعة؛ خط النسيج مثل GRAFIS؛ بلا أسنان في الحاشية",
+ "version": "0.9.177",
+ "notes": "إخفاء شاشة MDL القديمة؛ فتح ملف GRAFIS يحوّله مباشرة إلى تصميم LEVEL7",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "1548af2103e8976de134bfdbce7d89e53694f538f21c17d6cb6492f4d581b8be",
-   "size": 145795
+   "sha256": "dd0d62eb56d0166b9a6b0331ab89d3bd18dfcade2a81648aa8b475c6c2dfe3cf",
+   "size": 146097
   },
   {
    "path": "assets/icon.ico",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "0861b44104d640b86568eecf24708cece4a358cae7bf575c2fa4807153f19f01",
+   "sha256": "f17f774b0227b54f786bb4cd9f2eefb14ede661329dfaf7c1a9388861054fe92",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "c9c3c41eb8954ec26dfd98223767fa76c42c464fc1a2c1aabdac6656c0a42d68",
-   "size": 46600
+   "sha256": "75d2e35a2ee1195fd7c281f225cd4adf92077d917b0727c774bf32c49e06efb4",
+   "size": 47510
   },
   {
    "path": "src/l7-icons.js",

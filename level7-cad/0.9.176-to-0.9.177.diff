@@ -1,0 +1,74 @@
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/README.md releases/app/README.md
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/README.md	2026-11-06 17:25:17.677138083 +0000
++++ releases/app/README.md	2026-11-06 17:25:17.774814675 +0000
+@@ -1,3 +1,7 @@
++LEVEL7 and MTM 0.9.177
++
++The old MDL workspace is hidden: no × to it, and the MDL-only commands (new MDL from template, X/Z example, show design, convert) are gone. Opening a GRAFIS file (GRAFIS button or File → Open) loads it in the background and converts its parts straight into a LEVEL7 design.
++
+ LEVEL7 and MTM 0.9.176
+ 
+ LEVEL7 design: double-click on a curve shows its bar and handles together with its values window, which minimizes to its title (remembered) and follows handle drags; Ctrl+Z / Ctrl+Y / Ctrl+S and the other letter shortcuts work with any keyboard language (Arabic too); the dimension bar keeps its unit (mm / cm / inch) and ×1 / ×2 / ×4 buttons when it stands vertical; the values window is above the tool bars; the strip icon's tip names the tool it shows; seam allowance and notch in a part with no piece start «piece from outline» and come back after it; grain line as GRAFIS: start point, direction in 90° steps (Shift: any angle) and length, one arrowhead; no teeth on the seam allowance where a curve meets a line.
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/package.json releases/app/package.json
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/package.json	2026-11-06 17:25:17.678069494 +0000
++++ releases/app/package.json	2026-11-06 17:25:17.777760325 +0000
+@@ -1,6 +1,6 @@
+ {
+   "name": "level7-cad",
+-  "version": "0.9.176",
++  "version": "0.9.177",
+   "description": "Native MDL editor and temporary pattern measurement tools",
+   "type": "module",
+   "main": "desktop/main.cjs",
+diff -ruN /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/src/l7-design-mode.js releases/app/src/l7-design-mode.js
+--- /tmp/claude-0/-home-user-LEVEL7andMTM/c4125a32-2434-596b-9055-b1bb217e7a7b/scratchpad/app-176/src/l7-design-mode.js	2026-11-06 17:25:17.679153828 +0000
++++ releases/app/src/l7-design-mode.js	2026-11-06 17:25:17.781829120 +0000
+@@ -142,18 +142,14 @@
+   // 0.9.148: the program starts in LEVEL7 design; the GRAFIS (MDL) commands are kept in one
+   // button here (open / new MDL, the X/Z example, the MDL workspace). Each leaves design mode.
+   const mdlBox = document.createElement('div'); mdlBox.className = 'palette-group l7-design-mdl';
+-  mdlBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-mdl-btn" data-l7d-mdlbtn title="ملفات GRAFIS (MDL): فتح، جديد، مثال X/Z، مساحة MDL" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 3h10l4 4v14H5zM14 3v5h5M8 13h8M8 17h5"/></svg><small>GRAFIS</small></button><div class="l7-size-menu l7-mdl-menu" role="menu" hidden><header>ملفات GRAFIS (MDL)</header>'
+-    + '<button type="button" role="menuitem" data-mdl-act="open">فتح ملف GRAFIS (MDL)…</button>'
+-    + '<button type="button" role="menuitem" data-mdl-act="new-template">ملف MDL جديد (القالب)</button>'
+-    + '<button type="button" role="menuitem" data-mdl-act="open-parametric-example">مثال X/Z (ملف تجريبي)</button>'
+-    + '<button type="button" role="menuitem" data-mdl-act="workspace">مساحة عمل MDL (إغلاق التصميم)</button></div>';
++  mdlBox.innerHTML = '<button type="button" class="palette-command l7d-command l7-mdl-btn" data-l7d-mdlbtn title="فتح ملف GRAFIS (MDL) وتحويله إلى تصميم LEVEL7" aria-haspopup="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 3h10l4 4v14H5zM14 3v5h5M8 13h8M8 17h5"/></svg><small>GRAFIS</small></button><div class="l7-size-menu l7-mdl-menu" role="menu" hidden><header>ملفات GRAFIS (MDL)</header>'
++    + '<button type="button" role="menuitem" data-mdl-act="open">فتح ملف GRAFIS (MDL) وتحويله إلى تصميم LEVEL7…</button></div>';
+   barBox.append(mdlBox);
+   const mdlMenu = mdlBox.querySelector('.l7-mdl-menu');
+   mdlBox.querySelector('[data-l7d-mdlbtn]').addEventListener('click', () => { mdlMenu.hidden = !mdlMenu.hidden; });
+   mdlMenu.addEventListener('click', e => {
+     const act = e.target.closest('[data-mdl-act]')?.dataset.mdlAct; if (!act) return;
+-    mdlMenu.hidden = true; close();
+-    if (act === 'workspace') return;
++    mdlMenu.hidden = true; // 0.9.177: the MDL workspace stays hidden; the file is opened and converted
+     // the program's own command (same checks and dialogs as its File menu)
+     const b = document.createElement('button'); b.type = 'button'; b.dataset.action = act; b.hidden = true; document.body.append(b); b.click(); b.remove();
+   });
+@@ -437,6 +433,24 @@
+   const openPassed = d => { if (d && typeof d.text === 'string') { open(); send({ type: 'l7:open', text: d.text, name: String(d.name || '') }); status('تم فتح ' + (d.name || '')); } };
+   if (desktop?.takeOpenDesign) void desktop.takeOpenDesign().then(openPassed).catch(() => {});
+   desktop?.onOpenDesign?.(openPassed);
+-  // opening or creating an MDL from the program's menus shows the MDL workspace
+-  document.addEventListener('click', e => { if (!host.hidden && e.target.closest?.('[data-action="open"],[data-action="open-any"],[data-action="new-template"],[data-action="open-parametric-example"]')) close(); }, true);
++  // 0.9.177: the old MDL workspace is hidden. Opening a GRAFIS file (GRAFIS button, File → Open) loads it in
++  // the background and converts its parts straight into a LEVEL7 design; the MDL-only commands are hidden.
++  let watch = 0;
++  const convertWhenLoaded = () => {
++    const b = window.l7MdlBridge, sig = () => (b?.available() ? `${b.filename()}|${b.parts().length}` : '');
++    const before = sig(), until = Date.now() + 180000;
++    clearInterval(watch);
++    status('اختر ملف GRAFIS (MDL)… يُحوّل إلى تصميم LEVEL7 بعد فتحه');
++    watch = setInterval(() => {
++      const now = sig();
++      if (now && now !== before && b.parts().length) { clearInterval(watch); convertMdl(); }
++      else if (Date.now() > until) clearInterval(watch);
++    }, 400);
++  };
++  document.addEventListener('click', e => { if (!host.hidden && e.target.closest?.('[data-action="open"],[data-action="open-any"]')) convertWhenLoaded(); }, true);
++  for (const b of document.querySelectorAll('[data-action="new-template"],[data-action="open-parametric-example"]')) if (!b.closest('#cad-toolbox')) b.hidden = true; // the hidden workspace keeps its own
++  for (const id of ['menu-l7-design-show', 'menu-l7-design-from-mdl']) { const b = document.getElementById(id); if (b) b.hidden = true; }
++  const xb = host.querySelector('.l7-design-close'); if (xb) { xb.hidden = true; xb.style.display = 'none'; }
++  // kept for support and the program's own tests only: shows the old MDL workspace
++  window.l7ShowMdlWorkspace = close;
+ }

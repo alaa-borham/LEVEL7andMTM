@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.177
+
+The old MDL workspace is hidden: no × to it, and the MDL-only commands (new MDL from template, X/Z example, show design, convert) are gone. Opening a GRAFIS file (GRAFIS button or File → Open) loads it in the background and converts its parts straight into a LEVEL7 design.
+
 LEVEL7 and MTM 0.9.176
 
 LEVEL7 design: double-click on a curve shows its bar and handles together with its values window, which minimizes to its title (remembered) and follows handle drags; Ctrl+Z / Ctrl+Y / Ctrl+S and the other letter shortcuts work with any keyboard language (Arabic too); the dimension bar keeps its unit (mm / cm / inch) and ×1 / ×2 / ×4 buttons when it stands vertical; the values window is above the tool bars; the strip icon's tip names the tool it shows; seam allowance and notch in a part with no piece start «piece from outline» and come back after it; grain line as GRAFIS: start point, direction in 90° steps (Shift: any angle) and length, one arrowhead; no teeth on the seam allowance where a curve meets a line.
