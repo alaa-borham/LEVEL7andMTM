@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.168
+
+LEVEL7 design: a dark or light drawing background turns the line, curve and point colours that would not show on it readable, and the labels on the drawing follow it; corner (sharp / round / chamfer) where one line runs past the corner and the other stops short of it: one is cut back and the other extended to their meeting point, where it used to fail; a clear message when the chosen ends never meet.
+
 LEVEL7 and MTM 0.9.167
 
 LEVEL7 design: the tool bars (curve, seam allowance, inherit) are moved anywhere on the drawing by their grip and turned vertical / horizontal with ⇅ (remembered; double-click on the grip puts them back); with no tool open, the dimension under the pointer glows itself (not the drawing line beside it), the cursor shows it can be moved, and a press drags it.

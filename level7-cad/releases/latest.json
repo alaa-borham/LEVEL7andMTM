@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.167",
- "notes": "تحريك الشريط وقلبه أفقي/رأسي؛ البعد تحت الماوس يتوهج ويُسحب",
+ "version": "0.9.168",
+ "notes": "الخلفية الداكنة تجعل الألوان مقروءة؛ الزاوية تقص خطاً وتمد الآخر",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "0c28697bbae7aa29a46ba421200bfa5a10b0b010359a06efab3eca93ab089793",
-   "size": 142843
+   "sha256": "ddf2e42e522b85cd4f4a1258f3f0d096a6eb1ad3ad01beced2ae8ceb0d6f31be",
+   "size": 143272
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-CfeJI4Bu.js",
+   "sha256": "a22c77789473fe0f878a40b37c0fe6b07acffe79caddf98b6303bdc5b9f9ec5a",
+   "size": 289682
+  },
+  {
    "path": "assets/l7design/assets/index-CqiS1ROc.css",
    "sha256": "d0cad9052fd1b8944b8961cd7a2c3d318962d4be7fe785c3c5a5c5154437a73c",
    "size": 40963
   },
   {
-   "path": "assets/l7design/assets/index-sKz-HRVc.js",
-   "sha256": "6e445e4051f14943a96a865dce6541db03a7784a43fd5b2678628f2ba4a8144c",
-   "size": 288294
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "da8fcb2225373edf993ab6c90486b731f988bd14b7bdae576dda9d2274f397fd",
+   "sha256": "f4e9793c1a54055fe5b772bd9361b05bd029b680ea3bb28e31c0b6afcf61de2f",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "8157ee00811518488ccd746e3716eb91df8e1f39f62466a7e34eeebb71d86c2d",
+   "sha256": "756171ee9046497c14bee0d7a854771ff43c3e630db33389b686a9172eb4d662",
    "size": 301
   },
   {
