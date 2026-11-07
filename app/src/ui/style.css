@@ -1068,3 +1068,6 @@ body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-lig
 #canvas .notch-hover { stroke: var(--hover, #ff8f00); stroke-width: 5; stroke-linecap: round; } /* 0.9.186: a notch under the pointer with a mirror tool */
 #canvas .err-edge { stroke: #e53935; stroke-width: 5; stroke-linecap: round; opacity: .85; } /* 0.9.187: the edges of a piece named by a test-run error */
 #canvas .curve-dir { stroke: #f08c00; stroke-width: 1.5; stroke-dasharray: 5 4; } #canvas .curve-dir.live { stroke: var(--text); opacity: .8; } /* 0.9.189: curve direction at a point */
+
+/* 0.9.191: the piece under the pointer while mirroring (its outer cut line glows) */
+#canvas .piece-hover { fill: rgba(255, 166, 0, .10); stroke: #ffa600; stroke-width: 3.5; pointer-events: none; }

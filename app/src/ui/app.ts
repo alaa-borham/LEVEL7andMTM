@@ -417,6 +417,8 @@ export class App {
   private selMode: "single" | "frameAll" | "frameLines" | "frameCross" | "framePoints" | "notches" | "piece" = "single";
   /** The notch under the pointer while a mirror tool collects (it lights up: it can be clicked). */
   private notchHover: { piece: number; k: number } | null = null;
+  /** The piece that lights up under the pointer while a mirror tool collects (its cut line, or inside it in «piece» mode). */
+  private pieceHover: number | null = null;
   private selCopy = true;
   private selFrame: Pt | null = null;
 
@@ -428,16 +430,16 @@ export class App {
     }
     if (mode === "single") {
       const id = h ? pickedId(h) : null;
-      if (id === null || (h?.kind === "point" && h.ref.end)) return this.toast("انقر عنصراً أو نوتشاً، أو اختر طريقة تحديد أخرى من الشريط");
+      // 0.9.191: the outer (cut) line of a piece is not a drawn element: a click on it takes the whole piece
+      const onCut = id === null ? this.pieceAt(sx, sy, false) : null;
+      if (onCut) return this.mirrorPiece(onCut);
+      if (id === null || (h?.kind === "point" && h.ref.end)) return this.toast("انقر عنصراً أو نوتشاً أو الخط الخارجي لقطعة، أو اختر طريقة تحديد أخرى من الشريط");
       return this.mirrorBatch([id], []);
     }
     if (mode === "piece") {
-      const pc = (this.model.pieces ?? []).find((p) => {
-        const g = this.res.pieces.get(p.id);
-        return g && insidePoly(w, g.cut);
-      });
-      if (!pc) return this.toast("انقر داخل قطعة");
-      return this.mirrorBatch([...pc.edges], pc.notches.map((_, k) => ({ piece: pc.id, k })));
+      const pc = this.pieceAt(sx, sy, true);
+      if (!pc) return this.toast("انقر داخل قطعة أو على خطها الخارجي");
+      return this.mirrorPiece(pc);
     }
     if (!this.selFrame) {
       this.selFrame = w;
@@ -470,6 +472,88 @@ export class App {
       return this.render();
     }
     this.mirrorBatch(ids, notches);
+  }
+
+  /** The piece whose outer (cut) line is under the pointer (within 8 px, no drawn element closer), or with
+   * `inside` also the piece the pointer is inside. */
+  private pieceAt(sx: number, sy: number, inside: boolean): Piece | null {
+    const w = this.toWorld(sx, sy);
+    let best: { pc: Piece; d: number } | null = null;
+    for (const pc of this.model.pieces ?? []) {
+      const g = this.res.pieces.get(pc.id);
+      if (!g || g.error || g.cut.length < 3) continue;
+      const d = closestOnPolyline([...g.cut, g.cut[0]], w).d * this.scale;
+      if (d <= 8 && (!best || d < best.d)) best = { pc, d };
+    }
+    if (best) return best.pc;
+    if (!inside) return null;
+    return (this.model.pieces ?? []).find((p) => { const g = this.res.pieces.get(p.id); return !!g && !g.error && insidePoly(w, g.cut); }) ?? null;
+  }
+
+  /** Mirror a whole piece (as GRAFIS): its edges and notches; a copy is a new piece with the same seam
+   * allowances, notches, corners and fold, its grain line mirrored too; «move» moves the piece itself. */
+  private mirrorPiece(pc: Piece): void {
+    const t = this.tool, values = this.instantValues;
+    if (!t?.build || !values) return;
+    let step: Step;
+    try {
+      step = t.build({ model: this.model, res: this.res, picks: this.picks, extra: [] }, values); // the axis only
+    } catch (e) {
+      return this.toast((e as Error).message);
+    }
+    if (step.op !== "mirror") return;
+    // the axis direction, for the grain line
+    let ax: Pt | null = null;
+    try {
+      const a = step.axisPts ? [this.pointOf(step.axisPts[0]), this.pointOf(step.axisPts[1])] : step.axis !== undefined ? ((o) => o && [o.pts[0], o.pts[o.pts.length - 1]])(this.res.objects.get(step.axis)) : null;
+      if (a) ax = [a[1][0] - a[0][0], a[1][1] - a[0][1]];
+      else if (step.axisAngle !== undefined) { const r = (Number(step.axisAngle) * Math.PI) / 180; ax = [Math.cos(r), Math.sin(r)]; }
+    } catch {
+      ax = null;
+    }
+    const g0 = Number(pc.grain), grain = ax && pc.grain.trim() !== "" && Number.isFinite(g0)
+      ? String(Math.round(((((2 * Math.atan2(ax[1], ax[0]) * 180) / Math.PI - g0) % 360) + 360) % 360 * 10) / 10)
+      : pc.grain;
+    this.snapshot();
+    const copy = this.selCopy, map = new Map<number, number>(), items: { src: number; dst?: number }[] = [];
+    const add = (src: number) => {
+      if (map.has(src)) return map.get(src)!;
+      const o = this.res.objects.get(src), nm = this.model.names[src];
+      const dst = copy ? newId(this.model, o?.kind === "point" ? "point" : nm?.startsWith("C") ? "curve" : "line") : src;
+      map.set(src, dst);
+      items.push(copy ? { src, dst } : { src });
+      return dst;
+    };
+    pc.edges.forEach(add);
+    // notches: a notch at an edge's end follows the mirrored edge; one at its own point gets that point mirrored
+    const notches: PointRef[] = pc.notches.map((r) => {
+      const o = this.res.objects.get(r.obj);
+      if (r.end !== undefined && map.has(r.obj)) return { obj: map.get(r.obj)!, end: r.end };
+      if (o?.kind === "point") return { obj: add(r.obj) };
+      // the end of a line that is not an edge: a point there is mirrored
+      const pid = newId(this.model, "point");
+      this.model.steps.push({ op: "pointOn", id: pid, on: r.obj, dist: "0", unit: "mm", from: r.end === "end" ? "end" : "start" } as Step);
+      return { obj: add(pid) };
+    });
+    step.items = items;
+    this.model.steps.push(step);
+    if (copy) {
+      const id = (this.model.pieces ?? []).reduce((a, p) => Math.max(a, p.id), 0) + 1;
+      const corners = pc.cutCorners
+        ? Object.fromEntries(Object.entries(pc.cutCorners).map(([k, v]) => [k.split(",").map((e) => map.get(Number(e)) ?? Number(e)).sort((a, b) => a - b).join(","), { ...v, ...(v.on !== undefined ? { on: map.get(v.on) ?? v.on } : {}) }]))
+        : undefined;
+      const np: Piece = JSON.parse(JSON.stringify(pc));
+      Object.assign(np, { id, name: `${pc.name} (معكوسة)`, edges: pc.edges.map((e) => map.get(e)!), notches, grain });
+      if (pc.fold !== undefined) np.fold = map.get(pc.fold) ?? pc.fold;
+      if (corners) np.cutCorners = corners;
+      this.model.pieces!.push(np);
+    } else {
+      pc.notches = notches;
+      pc.grain = grain;
+    }
+    this.changed();
+    this.toast(`${copy ? "نُسخت" : "نُقلت"} القطعة «${pc.name}» بالانعكاس مع مسافة الخياطة والنوتشات · انقر التالي أو كليك يمين للإنهاء`);
+    this.render();
   }
 
   /** One mirror step for all the chosen elements (copies get new names), then the notches. */
@@ -1586,6 +1670,10 @@ export class App {
     parts.push(this.seamLabelsSvg());
     parts.push(this.imgEditSvg());
     parts.push(this.selFrameSvg());
+    if (this.pieceHover !== null) {
+      const g = this.res.pieces.get(this.pieceHover);
+      if (g) parts.push(`<polygon class="piece-hover" points="${g.cut.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}"/>`);
+    }
     if (this.notchHover) {
       const g = this.res.pieces.get(this.notchHover.piece), n = g?.notches[this.notchHover.k];
       if (n) for (const sh of n.shape) parts.push(`<polyline class="notch-hover" points="${sh.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
@@ -4429,12 +4517,15 @@ export class App {
       if (this.dirPick) return void this.render(); // the direction being set follows the pointer
       if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
         const nh = this.selMode === "single" || this.selMode === "notches" ? this.notchNear(sx, sy) : null;
-        if (JSON.stringify(nh) !== JSON.stringify(this.notchHover)) {
+        // the whole piece lights up on its outer (cut) line, or anywhere inside it in «piece» mode
+        const ph = nh ? null : this.selMode === "piece" ? this.pieceAt(sx, sy, true)?.id ?? null : this.selMode === "single" && !this.nearest(sx, sy) ? this.pieceAt(sx, sy, false)?.id ?? null : null;
+        if (JSON.stringify(nh) !== JSON.stringify(this.notchHover) || ph !== this.pieceHover) {
           this.notchHover = nh;
+          this.pieceHover = ph;
           this.render();
         }
-        if (nh || this.selMode === "notches") return;
-      } else if (this.notchHover) this.notchHover = null;
+        if (nh || ph !== null || this.selMode === "notches" || this.selMode === "piece") return;
+      } else if (this.notchHover || this.pieceHover !== null) (this.notchHover = null), (this.pieceHover = null);
       if (this.seamTool) {
         const h = this.seamEdgeAt(sx, sy);
         if (JSON.stringify(h) !== JSON.stringify(this.seamHover)) {

@@ -51,8 +51,10 @@ try{
  pass('mirror bar «الخطوط داخل إطار»: a frame round the left edge copies only that line to the other side');
  await sb.locator('[data-sel="piece"]').click();const nBefore=await f.evaluate(()=>window.level7.model.pieces[0].notches.length);
  await page.mouse.click(...await at(50,60));
- await f.waitForFunction(n=>{const s=window.level7.model.steps.filter(x=>x.op==='mirror'&&x.items.length===4);return s.length===1&&window.level7.model.pieces[0].notches.length===2*n;},nBefore);
- pass(`mirror bar «قطعة كاملة»: a click in the piece copies its 4 edges and its ${nBefore} notches`);
+ // 0.9.191: the copy is a whole new piece (its edges, notches, seam allowance); the first piece stays as it was
+ await f.waitForFunction(n=>{const ps=window.level7.model.pieces;return ps.length===2&&ps[1].edges.length===4&&ps[1].notches.length===n&&ps[0].notches.length===n&&window.level7.res.pieces.get(ps[1].id)?.cut?.length>3;},nBefore);
+ pass(`mirror bar «قطعة كاملة»: a click in the piece copies it as a new piece (4 edges, its ${nBefore} notches, its seam allowance)`);
+ await f.evaluate(()=>{const a=window.level7;a.model.pieces.pop();a.changed();});
  await sb.locator('[data-sel="copy"]').click();assert((await sb.locator('[data-sel="copy"]').textContent()).includes('نقل'));
  await sb.locator('[data-sel="single"]').click();const before=await f.evaluate(()=>window.level7.model.steps.length);
  await page.mouse.click(...await at(200,150));
