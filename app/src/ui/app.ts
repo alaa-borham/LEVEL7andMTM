@@ -432,7 +432,7 @@ export class App {
     if (mode === "single") {
       const id = h ? pickedId(h) : null;
       // 0.9.191: the outer (cut) line of a piece is not a drawn element: a click on it takes the whole piece
-      const onCut = id === null ? this.pieceAt(sx, sy, false) : null;
+      const onCut = id === null || this.onCutFirst(sx, sy) ? this.pieceAt(sx, sy, false) : null;
       if (onCut) return this.mirrorPiece(onCut);
       if (id === null || (h?.kind === "point" && h.ref.end)) return this.toast("انقر عنصراً أو نوتشاً أو الخط الخارجي لقطعة، أو اختر طريقة تحديد أخرى من الشريط");
       return this.mirrorBatch([id], []);
@@ -1275,6 +1275,21 @@ export class App {
     return b && b.d <= maxPx ? { pc: b.pc, k: b.k } : null;
   }
 
+  /** 0.9.198: the pointer is on a piece's cut line (within 8 px) and nearer to it than to any drawn line or
+   * point (at a small zoom the sewing line lies within the 30 px pick distance: the cut line still wins). */
+  private onCutFirst(sx: number, sy: number): boolean {
+    const w = this.toWorld(sx, sy);
+    let dCut = Infinity;
+    for (const g of this.res.pieces.values()) if (!g.error && g.cut.length > 2) dCut = Math.min(dCut, closestOnPolyline([...g.cut, g.cut[0]], w).d);
+    if (dCut * this.scale > 8) return false;
+    for (const o of this.res.objects.values()) {
+      if (o.kind === "point" && !this.vis.points) continue;
+      const d = o.kind === "point" ? dist(o.pts[0], w) : closestOnPolyline(o.pts, w).d;
+      if (d < dCut) return false;
+    }
+    return true;
+  }
+
   /** The cut line of one edge (for its glow under the pointer). */
   private cutEdgePts(pi: number, k: number): Pt[] {
     const pc = (this.model.pieces ?? [])[pi], g = pc && this.res.pieces.get(pc.id);
@@ -1297,8 +1312,9 @@ export class App {
       });
     });
     const b = best as { pc: number; k: number; d: number } | null;
-    // 0.9.195: also by its cut line (the outer line), as GRAFIS
-    return b ? { pc: b.pc, k: b.k } : this.cutEdgeAt(sx, sy, 10);
+    // 0.9.195: also by its cut line (the outer line), as GRAFIS; 0.9.198: the nearer of the two
+    if (this.onCutFirst(sx, sy) || !b) return this.cutEdgeAt(sx, sy, 10) ?? (b && { pc: b.pc, k: b.k });
+    return { pc: b.pc, k: b.k };
   }
 
   private seamValue(src: string): string | null {
@@ -1742,11 +1758,15 @@ export class App {
     });
     if (this.showNest) parts.push(this.nestSvg());
     if (this.showPieces) parts.push(this.piecesSvg());
+    // 0.9.198 (as GRAFIS): the drawn line of a piece edge that has a seam allowance is dotted (the outer line
+    // is the cut line); a style chosen for the line stays
+    const sewn = this.showPieces ? this.sewnEdges() : new Set<number>();
     for (const o of this.res.objects.values()) {
       if (o.kind !== "line") continue;
       const pts = o.pts.map((p) => this.toScreen(p).map((v) => v.toFixed(1)).join(",")).join(" ");
       const w = highlight.has(o.id) ? 2.5 : 1.4, sty = this.lineStyle(o.id);
-      const dash = sty.dash ? ` stroke-dasharray="${LINE_DASHES[sty.dash]}"${sty.dash === "dotted" ? ' stroke-linecap="round"' : ""}` : "";
+      const dk = sty.dash ?? (sewn.has(o.id) ? "dotted" : undefined);
+      const dash = dk ? ` stroke-dasharray="${LINE_DASHES[dk]}"${dk === "dotted" ? ' stroke-linecap="round"' : ""}` : "";
       const col = sty.color ?? lineColor(o);
       parts.push(`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${sty.color && highlight.has(o.id) ? 3 : w}"${dash}/>`);
       if (this.showNames) {
@@ -2857,6 +2877,19 @@ export class App {
 
   private showPieces = true;
 
+  /** The drawn lines that are edges of a piece with a seam allowance on them (drawn dotted). */
+  private sewnEdges(): Set<number> {
+    const out = new Set<number>();
+    for (const pc of this.model.pieces ?? []) {
+      const g = this.res.pieces.get(pc.id);
+      if (!g || g.error) continue;
+      g.order.forEach((k, i) => {
+        if ((g.allow?.[i] ?? 0) > 0 && pc.edges[k] !== undefined && pc.edges[k] !== pc.fold) out.add(pc.edges[k]);
+      });
+    }
+    return out;
+  }
+
   private piecesSvg(): string {
     const out: string[] = [];
     const pts = (p: Pt[]) => p.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ");
@@ -2885,7 +2918,15 @@ export class App {
   private pieceSvg(g: PieceGeo, pts: (p: Pt[]) => string, ghost: boolean): string {
     const cls = ghost ? ' class="ghost-piece"' : "";
     const out = [`<polygon${cls} points="${pts(g.cut)}" fill="var(--piece-fill)" stroke="var(--piece-cut)" stroke-width="${ghost ? 1.6 : 2}"/>`];
-    out.push(`<polygon${cls} points="${pts(g.fold ? g.fold.halfSew : g.sew)}" fill="none" stroke="var(--piece-sew)" stroke-width="${ghost ? 1 : 1.3}"/>`);
+    if (g.fold || !g.allow || g.edges.length !== g.allow.length)
+      out.push(`<polygon${cls} points="${pts(g.fold ? g.fold.halfSew : g.sew)}" fill="none" stroke="var(--piece-sew)" stroke-width="${ghost ? 1 : 1.3}"/>`);
+    else
+      // 0.9.198: dotted where there is a seam allowance (the cut line is the outer line), solid where none
+      g.edges.forEach((e, i) => {
+        if (e.length < 2) return;
+        const dotted = (g.allow![i] ?? 0) > 0;
+        out.push(`<polyline${cls} points="${pts(e)}" fill="none" stroke="var(--piece-sew)" stroke-width="${ghost ? 1 : 1.3}"${dotted ? ` stroke-dasharray="${LINE_DASHES.dotted}" stroke-linecap="round"` : ""}/>`);
+      });
     if (g.fold) out.push(`<polyline${cls} points="${pts(g.fold.line)}" fill="none" stroke="var(--piece-cut)" stroke-width="1.3" stroke-dasharray="14 4 2 4"/>`);
     for (const n of g.notches) for (const sh of n.shape) out.push(`<polyline${cls} points="${pts(sh)}" fill="none" stroke="var(--piece-notch)" stroke-width="${ghost ? 1.8 : 2.2}"/>`);
     return out.join("");
@@ -4658,7 +4699,7 @@ export class App {
       if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
         const nh = this.selMode === "single" || this.selMode === "notches" ? this.notchNear(sx, sy) : null;
         // the whole piece lights up on its outer (cut) line, or anywhere inside it in «piece» mode
-        const ph = nh ? null : this.selMode === "piece" ? this.pieceAt(sx, sy, true)?.id ?? null : this.selMode === "single" && !this.nearest(sx, sy) ? this.pieceAt(sx, sy, false)?.id ?? null : null;
+        const ph = nh ? null : this.selMode === "piece" ? this.pieceAt(sx, sy, true)?.id ?? null : this.selMode === "single" && (!this.nearest(sx, sy) || this.onCutFirst(sx, sy)) ? this.pieceAt(sx, sy, false)?.id ?? null : null;
         if (JSON.stringify(nh) !== JSON.stringify(this.notchHover) || ph !== this.pieceHover) {
           this.notchHover = nh;
           this.pieceHover = ph;
@@ -4797,8 +4838,7 @@ export class App {
         const cutOk = dh === null && !this.seamTool && (!this.tool || !CUT_LINE_GROUPS.includes(this.tool.group));
         let ch = cutOk ? this.cutEdgeAt(sx, sy, 8) : null;
         if (ch && near) {
-          const pts = this.cutEdgePts(ch.pc, ch.k), dCut = pts.length > 1 ? closestOnPolyline(pts, this.mouse).d : Infinity, dNear = dist(near.at, this.mouse);
-          if (dCut < dNear) near = null;
+          if (this.onCutFirst(sx, sy)) near = null;
           else ch = null;
         }
         const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5)) || dh !== this.dimHover;
