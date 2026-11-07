@@ -740,7 +740,7 @@ export function stepFields(s: Step): Field[] {
         { key: "from", label: "تُقاس من", value: s.from, options: [["start", "بداية الخط"], ["end", "نهاية الخط"]] },
       ];
     case "pointMove":
-      return [{ key: "dist", label: "المسافة", value: s.dist }];
+      return [{ key: "dist", label: s.slide ? "مقدار الإزاحة على الخط" : "المسافة", value: s.dist }];
     case "dim":
       return [
         ...(s.kind === "angle" ? [] : [{ key: "offset", label: "إزاحة خط البعد", value: s.offset }]),

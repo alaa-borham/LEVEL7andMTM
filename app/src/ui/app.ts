@@ -1945,7 +1945,7 @@ export class App {
     });
   }
 
-  private dragPoint: { step: number; mode: "xy" | "offset" | "on"; base: Pt } | null = null;
+  private dragPoint: { step: number; mode: "xy" | "offset" | "on" | "slide"; base: Pt; cands?: number[] } | null = null;
   /** The curve point last dragged (curve id, index): its own fields show in the curve's values window. */
   private cpEdit: { ci: number | undefined; k: number } | null = null;
   private dragDim: number | null = null;
@@ -1986,18 +1986,47 @@ export class App {
     const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
     const ref = curve.through[k];
     const plain = (v: string) => /^-?\d+(\.\d+)?$/.test(v.trim());
-    const si = ref.end ? -1 : this.model.steps.findIndex((t) => (t.op === "point" || t.op === "pointOffset") && t.id === ref.obj);
+    const si = ref.end ? -1 : this.model.steps.findIndex((t) => (t.op === "point" || t.op === "pointOffset" || t.op === "pointMove") && t.id === ref.obj);
     const st = this.model.steps[si];
     this.snapshot();
+    // a point already moved along a line (an earlier drag): it goes on sliding on that line, its distance follows
+    if (!free && st?.op === "pointMove" && st.slide && plain(st.dist)) return void (this.dragPoint = { step: si, mode: "slide", base: this.pointOf(st.from) });
     if (st?.op === "point" && plain(st.x) && plain(st.y)) return void (this.dragPoint = { step: si, mode: "xy", base: [0, 0] });
-    if (st?.op === "pointOffset" && plain(st.dx) && plain(st.dy)) return void (this.dragPoint = { step: si, mode: "offset", base: this.pointOf(st.from) });
+    // the lines a point lies on (made before step `before`): it slides along them
+    const linesAt = (p: Pt, before: number) => [...this.res.objects.values()].filter((o) => o.kind === "line" && o.step < before && o.pts.length > 1 && closestOnPolyline(o.pts, p).d < 0.05).map((o) => o.id);
+    if (st?.op === "pointOffset" && plain(st.dx) && plain(st.dy)) {
+      // an offset (س / ص) made by an earlier drag from a point that lies on a line: from now on it slides on that line
+      const b = this.pointOf(st.from), on = free ? [] : linesAt(b, si);
+      if (on.length) {
+        // it starts where it is now, brought onto the line
+        const L = this.res.objects.get(on[0]) as { pts: Pt[] }, now = this.pointOf(ref);
+        const d0 = closestOnPolyline(L.pts, now).s - closestOnPolyline(L.pts, b).s;
+        this.model.steps[si] = { op: "pointMove", id: st.id, from: st.from, along: on[0], dist: String(Math.round(d0 * 10) / 10), slide: true };
+        this.evaluate();
+        return void (this.dragPoint = { step: si, mode: "slide", base: b, cands: on.length > 1 ? on : undefined });
+      }
+      return void (this.dragPoint = { step: si, mode: "offset", base: b });
+    }
     // 0.9.189 (as GRAFIS): a point that sits on a line slides along that line; its distance follows
     const so = ref.end ? -1 : this.model.steps.findIndex((t) => t.op === "pointOn" && t.id === ref.obj);
     const sOn = this.model.steps[so];
     // (Alt: moved freely off the line, as before: an offset point tied to it)
     if (!free && sOn?.op === "pointOn" && plain(sOn.dist)) return void (this.dragPoint = { step: so, mode: "on", base: [0, 0] });
-    // tied point: put an offset point between it and the curve, just before the curve
     const id = newId(this.model, "point");
+    // 0.9.191 (as GRAFIS): a tied point that lies on a line (an intersection, a line end, a point at a formula
+    // distance …) slides along that line, also on its extension: one value, how far it moved on the line.
+    // On several lines, the one the drag goes along is taken once the pointer has moved a little.
+    const at = this.pointOf(ref);
+    const cands = free ? [] : linesAt(at, ci);
+    if (cands.length) {
+      this.model.steps.splice(ci, 0, { op: "pointMove", id, from: { ...ref }, along: cands[0], dist: "0", slide: true });
+      curve.through[k] = { obj: id };
+      this.selectedStep = ci + 1;
+      this.evaluate();
+      this.dragPoint = { step: ci, mode: "slide", base: at, cands: cands.length > 1 ? cands : undefined };
+      return;
+    }
+    // tied point on no line (or Alt): put an offset point between it and the curve, just before the curve
     this.model.steps.splice(ci, 0, { op: "pointOffset", id, from: { ...ref }, dx: "0", dy: "0" });
     curve.through[k] = { obj: id };
     this.selectedStep = ci + 1;
@@ -2469,12 +2498,12 @@ export class App {
           : `<circle class="curve-dot" cx="${p.s[0]}" cy="${p.s[1]}" r="3" fill="#2fa4dd"/>`,
       );
     // a point sliding along its line shows its distance on that line (as GRAFIS)
-    const dp = this.dragPoint, ts = dp?.mode === "on" ? this.model.steps[dp.step] : undefined;
-    if (ts?.op === "pointOn") {
+    const dp = this.dragPoint, ts = dp?.mode === "on" || dp?.mode === "slide" ? this.model.steps[dp.step] : undefined;
+    if (ts?.op === "pointOn" || ts?.op === "pointMove") {
       const o = this.res.objects.get(ts.id);
       if (o) {
         const [x, y] = this.toScreen(o.pts[0]);
-        out.push(`<text class="live-label" x="${x + 10}" y="${y - 10}" direction="ltr">\u2066${ts.dist}${ts.unit === "%" ? "%" : " mm"}\u2069</text>`);
+        out.push(`<text class="live-label" x="${x + 10}" y="${y - 10}" direction="ltr">\u2066${ts.dist}${ts.op === "pointOn" && ts.unit === "%" ? "%" : " mm"}\u2069</text>`);
       }
     }
     // no standing length label on the curve (the length is in Info / the dimension tools)
@@ -4375,6 +4404,30 @@ export class App {
           }
         }
         else if (t.op === "pointOffset") (t.dx = r(this.mouse[0] - this.dragPoint.base[0])), (t.dy = r(this.mouse[1] - this.dragPoint.base[1]));
+        else if (t.op === "pointMove" && t.slide) {
+          const dp = this.dragPoint, b = dp.base, mv: Pt = [this.mouse[0] - b[0], this.mouse[1] - b[1]], ml = Math.hypot(mv[0], mv[1]);
+          // on several lines: the one most in the direction of the drag
+          if (dp.cands && ml > 1.5) {
+            let best = -1;
+            for (const c of dp.cands) {
+              const o = this.res.objects.get(c);
+              if (!o) continue;
+              const dir = directionAt(o.pts, closestOnPolyline(o.pts, b).s), al = Math.abs(dir[0] * mv[0] + dir[1] * mv[1]) / ml;
+              if (al > best) (best = al), (t.along = c);
+            }
+            dp.cands = undefined;
+          }
+          const L = this.res.objects.get(t.along);
+          if (L) {
+            const s0 = closestOnPolyline(L.pts, b).s, len = polyLen(L.pts);
+            // past the ends: on the line's extension (the distance along the end direction)
+            let s = closestOnPolyline(L.pts, this.mouse).s;
+            const ext = (end: number, from: Pt, dir: Pt, sign: number) => end + sign * ((this.mouse[0] - from[0]) * dir[0] + (this.mouse[1] - from[1]) * dir[1]);
+            if (s <= 1e-6) s = Math.min(0, ext(0, L.pts[0], directionAt(L.pts, 0), 1));
+            else if (s >= len - 1e-6) s = Math.max(len, ext(len, L.pts[L.pts.length - 1], directionAt(L.pts, len), 1));
+            t.dist = r(s - s0);
+          }
+        }
         this.evaluate();
         this.render();
         return;
@@ -4802,7 +4855,7 @@ export class App {
     this.render();
     // a line's start (and end) point made for it, a point on a line or a free point, is edited here
     // too: e.g. how far down the line starts on the line it was drawn from
-    const pointStep = (r?: PointRef) => (r && r.end === undefined ? this.model.steps.findIndex((t, k) => k < i && (t.op === "pointOn" || t.op === "point" || t.op === "pointOffset") && t.id === r.obj) : -1);
+    const pointStep = (r?: PointRef) => (r && r.end === undefined ? this.model.steps.findIndex((t, k) => k < i && (t.op === "pointOn" || t.op === "point" || t.op === "pointOffset" || t.op === "pointMove") && t.id === r.obj) : -1);
     const ends: [string, string, number][] = [];
     const st0 = s as { op: string; start?: PointRef; p1?: PointRef; p2?: PointRef };
     // a curve: the points it passes through (where the Z values it was drawn with are)
@@ -5952,7 +6005,7 @@ export class App {
       .join("");
     // a tick above every size: switched-off sizes stay out of the marker and the all-size exports
     const tick = (i: number) => `<label class="sz-on" title="مفعّل: يدخل في التعشيق والتصدير لكل المقاسات"><input type="checkbox" data-son="${i}"${sizeActive(this.model, i) ? " checked" : ""}/></label>`;
-    const head = sizes.map((sz, i) => `<th class="sz${sz.off ? " sz-off" : ""}" title="${sz.kind === "customer" ? "زبون" : "مقاس"}"><button class="sz-del" data-sdel-x="${i}" title="حذف هذا العمود (${esc(sz.name)})">✕</button>${tick(i)}${esc(sz.name)}</th>`).join("");
+    const head = sizes.map((sz, i) => `<th class="sz${sz.off ? " sz-off" : ""}" title="${sz.kind === "customer" ? "زبون" : "مقاس"}"><button class="sz-del" data-sdel-x="${i}" title="حذف هذا العمود (${esc(sz.name)})" aria-label="حذف"></button>${tick(i)}${esc(sz.name)}</th>`).join("");
     box.innerHTML = `<div class="xgrid">
       <div class="xg-bar"><button data-add class="xg-add" title="إضافة قياس X">⊕</button><button data-xa="del" class="xg-del" title="حذف القياس المحدد"${this.xSel < 0 ? " disabled" : ""}>✕</button>
         <button data-xa="mlib" class="xg-lib" title="مكتبة القياسات: اختر جدول قياسات محفوظ لموديل، أو احفظ هذا الجدول فيها">📚 مكتبة القياسات</button>

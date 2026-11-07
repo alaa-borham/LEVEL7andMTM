@@ -45,7 +45,9 @@ export type Step =
   | { op: "point"; id: number; x: string; y: string }
   | { op: "pointOn"; id: number; on: number; dist: string; unit: "mm" | "%"; from: "start" | "end" }
   | { op: "intersect"; id: number; a: number; b: number; near: Pt }
-  | { op: "pointMove"; id: number; from: PointRef; along: number; dist: string }
+  /** A point moved `dist` from another one in the direction of a line; with `slide` it moves along the
+   * line itself (on its extension past the ends), from where the point lies on it. */
+  | { op: "pointMove"; id: number; from: PointRef; along: number; dist: string; slide?: boolean }
   /** A point at a fixed offset (dx, dy) from another point; stays linked to it. */
   | { op: "pointOffset"; id: number; from: PointRef; dx: string; dy: string }
   /** Dimension (annotation only, creates no geometry): aligned / horizontal / vertical
@@ -357,10 +359,13 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           break;
         }
         case "pointMove": {
-          const p = pointOf(s.from);
-          const [ux, uy] = directionAt(needLine(s.along).pts, 0);
+          const p = pointOf(s.from), pts = needLine(s.along).pts;
           const d = vars.eval(s.dist);
-          put(s.id, "point", [[p[0] + ux * d, p[1] + uy * d]], i);
+          if (s.slide) put(s.id, "point", [pointAlong(pts, closestOnPolyline(pts, p).s + d)], i);
+          else {
+            const [ux, uy] = directionAt(pts, 0);
+            put(s.id, "point", [[p[0] + ux * d, p[1] + uy * d]], i);
+          }
           break;
         }
         case "dim": {
