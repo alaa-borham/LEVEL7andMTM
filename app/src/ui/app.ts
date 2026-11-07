@@ -175,6 +175,9 @@ const CB_ICON = {
   undir: cbSvg('<path d="M3 19C8 18 12 13 15 6" stroke="#2fa4dd"/><path d="M4 16L14 12" stroke="currentColor" stroke-dasharray="3 2"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
 };
 
+/** The drawing tool groups: a double-click on a piece's cut line opens the seam allowance bar while they are on. */
+const DRAW_GROUPS = ["النقاط", "الخطوط", "المنحنيات", "الأبعاد", "النصوص", "القياس من الرسم"];
+
 interface FormState {
   title: string;
   /** The values window of an existing step (double-click / ✎): its handles, points and bar stay usable. */
@@ -321,6 +324,9 @@ export class App {
     this.toast(this.gradeView === "stack" ? "المقاسات فوق بعض (Stack)" : this.gradeView === "side" ? "المقاسات جنباً إلى جنب" : "عرض المقاس الحالي فقط");
   }
   private nest: { name: string; color: string; res: EvalResult }[] = [];
+  /** The drawing as it was before the first click of a possible double-click (with a drawing tool on, the
+   * clicks act at once: a double-click on a piece's cut line takes them back). */
+  private preDbl: { pack: string; undo: number; res: EvalResult } | null = null;
 
   private nestResults() {
     const out: { name: string; color: string; res: EvalResult }[] = [];
@@ -4163,12 +4169,27 @@ export class App {
         return;
       }
       // 0.9.189 (as GRAFIS): a double-click on a piece's outer (cut) line opens the seam allowance bar
-      if (!this.tool && !this.seamTool) {
-        const w = this.toWorld(e.clientX - r.left, e.clientY - r.top);
-        const onCut = [...this.res.pieces.values()].some((g) => closestOnPolyline([...g.cut, g.cut[0]], w).d * this.scale <= 8);
-        const nl = this.nearest(e.clientX - r.left, e.clientY - r.top);
-        const lineD = nl ? dist(nl.at, w) * this.scale : Infinity;
+      // 0.9.191: also while a drawing tool is active (as GRAFIS, tools stay on while working): its clicks on the
+      // cut line are dropped; the piece tools (seams, corners, notches …) keep their own clicks there
+      // judged on the drawing as it was before the two clicks
+      const pre = this.preDbl;
+      this.preDbl = null;
+      if ((pre || !this.tool) && !this.seamTool) {
+        const w = this.toWorld(e.clientX - r.left, e.clientY - r.top), R = pre ? pre.res : this.res;
+        const onCut = [...R.pieces.values()].some((g) => closestOnPolyline([...g.cut, g.cut[0]], w).d * this.scale <= 8);
+        let lineD = Infinity;
+        for (const o of R.objects.values()) {
+          if (o.kind === "point" && !this.vis.points) continue;
+          lineD = Math.min(lineD, (o.kind === "point" ? dist(o.pts[0], w) : closestOnPolyline(o.pts, w).d) * this.scale);
+        }
         if (onCut && lineD > 4) {
+          if (pre) {
+            // what the tool's clicks did (a point made, a window, a line confirmed) is taken back
+            this.cancelTool();
+            this.model = unpackModel(pre.pack, this.blobs, this.model);
+            this.undoStack.length = Math.min(this.undoStack.length, pre.undo);
+            this.changed();
+          }
           this.startSeamTool();
           return this.toast("مسافة الخياطة: اختر النوع والقيمة من الشريط ثم انقر حدود القطعة · كليك يمين للإنهاء");
         }
@@ -4207,6 +4228,7 @@ export class App {
     });
     svg.addEventListener("mousedown", (e) => {
       svg.focus();
+      if (e.button === 0 && e.detail === 1) this.preDbl = this.tool && DRAW_GROUPS.includes(this.tool.group) ? { pack: this.pack(), undo: this.undoStack.length, res: this.res } : null;
       if (this.zoomMode && (e.button === 0 || e.button === 2)) {
         const rz = svg.getBoundingClientRect();
         this.zoomAt(e.clientX - rz.left, e.clientY - rz.top, e.button === 0 ? 1.6 : 1 / 1.6);
