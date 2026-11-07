@@ -10,7 +10,8 @@ try{
  const n=()=>f.evaluate(()=>window.level7.model.steps.length);
  assert(await fr.locator('.hist-bar [data-h="redo"]').isHidden());
  // five steps, each its own undo entry
- await page.locator('[data-l7d-cat="النقاط"]').click();const box=await fr.locator('#canvas').boundingBox();
+ await page.locator('[data-l7d-cat="النقاط"]').click();await f.waitForFunction(()=>!!window.level7.tool); // the group button starts the tool by a message
+ const box=await fr.locator('#canvas').boundingBox();
  for(let k=0;k<5;k++){await page.mouse.click(box.x+200+k*60,box.y+200);await fr.locator('#tool-box [data-ok]').click();}
  assert.equal(await n(),5);await page.keyboard.press('Escape');
  assert.equal(await fr.locator('.hist-bar [data-h="undo"] b').textContent(),'6');assert(await fr.locator('.hist-bar [data-h="redo"]').isHidden());

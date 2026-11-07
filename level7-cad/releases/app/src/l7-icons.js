@@ -74,6 +74,7 @@ const I = {
   delTextFrame: `${FRAME}<path class="k" d="M6.5 6.5h6M9.5 6.5v6"/>${X}`,
   delSymbolsFrame: `${FRAME}<circle class="f" cx="9.5" cy="9" r="3.5"/>${X}`,
   delStitchesFrame: `${FRAME}<path class="st" d="M5 7.5h9M5 11.5h9"/>${X}`,
+  delGrain: `<path class="b" d="M9 3v13M6 6l3-3 3 3M6 13l3 3 3-3"/>${X}`,
   delNotchesFrame: `${FRAME}<path class="k" d="M5 6h9"/><path class="x" d="M9.5 6v5"/>${X}`,
   delPointsFrame: `${FRAME}${P(6.5, 11, 1.6)}${P(9.5, 7, 1.6)}${P(13, 10.5, 1.6)}${X}`,
   delLinesFrame: `${FRAME}<path class="k" d="M5 12.5L14 5.5"/>${X}`,

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.182",
- "notes": "Curve end angle sets the tangent line (no hook, seam allowance parallel below the corner); folded pieces (fold edge on the pieces page, opened out for cutting and export); pieces in GRAFIS colours.",
+ "version": "0.9.183",
+ "notes": "Clean cut-line corner where a curve bends tighter than the seam allowance; delete grain line; mirror notches; GRAFIS-style mirror bar (selection modes, copy/move).",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "fbfc0d59018e7c95b4fc57836d98a0079897544c5829483b082358cb4d2bb7bc",
-   "size": 147950
+   "sha256": "eec8c2e2f21b21d78e676f8ca71f7df4fc5973974d737ae0e776f5afb98211bf",
+   "size": 148385
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DalDyc2r.js",
-   "sha256": "d099f7f09fb04786a6e33885ee7b42633a9100510ba1b0e2734d8274313ad58b",
-   "size": 312368
+   "path": "assets/l7design/assets/index-C1ysGjfQ.js",
+   "sha256": "3bb7bdcbced3f73c71942be4791b8f99fd2fee615d4a1c16355fe7e1abfc163d",
+   "size": 321732
   },
   {
-   "path": "assets/l7design/assets/index-DvXk95pS.css",
-   "sha256": "47fe058c9d3330c516ac6af80584dd358a01ff896f5fa8da664c6396eea3cb3e",
-   "size": 43682
+   "path": "assets/l7design/assets/index-CC3uKszp.css",
+   "sha256": "c670ef38359f893f7e4089304fe0a9855402c65343bea6ebc88ea9810c55a192",
+   "size": 43928
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "561a3cbb3a1c32de4783f9cfe8225e259f0ce626dfdbdf15a2adfd1e5be32398",
+   "sha256": "fba19154caa7902ca1116f25e0629270ef53505739313ee1f067504cd48e5897",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "e16b8ec7a87d518291b8de4c78ab7408a3fb79be76d9a0d655fb7395d40e8340",
+   "sha256": "6474529a67ce261d3a6c0109f399d0e4d04a05009b9c30fe6db3d6aa69d0ce32",
    "size": 301
   },
   {
@@ -370,13 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "966caf01ae672ba10030b3235964ced5bbcb56fd1b80d6520d175f6c1cebd001",
-   "size": 47434
+   "sha256": "fd1581ddea59de0544d4040f9ad805d826b0519e0c4b07f8e2ca6945f68ed77e",
+   "size": 47539
   },
   {
    "path": "src/l7-icons.js",
-   "sha256": "6f003c5406f6d0d271bd88199e9a587d0c71ffbfdb363bcbac0a1a3917918350",
-   "size": 8364
+   "sha256": "2edf46a23b18bf75245308b4680cb2d53e98c5c85c2e7812aade4695e587e44a",
+   "size": 8438
   },
   {
    "path": "src/line-transform-ui.js",

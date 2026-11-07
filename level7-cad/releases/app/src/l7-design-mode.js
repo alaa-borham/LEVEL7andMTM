@@ -20,7 +20,7 @@ const GLYPH = {
   dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimLengthQuick: 'length', dimAngle: 'threeAngle',
   stitchLock: 'stitchLock', stitchDouble: 'stitchDouble', stitchZigzag: 'stitchZigzag', stitchDeco: 'stitchDeco', stitchGather: 'stitchGather',
   grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
-  textCreate: 'textCreate', delText: 'delFrame', delTextFrame: 'delFrame', delSymbolsFrame: 'delFrame', delStitchesFrame: 'delFrame', delNotchesFrame: 'delFrame',
+  textCreate: 'textCreate', delText: 'delFrame', delTextFrame: 'delFrame', delSymbolsFrame: 'delFrame', delStitchesFrame: 'delFrame', delNotchesFrame: 'delFrame', delGrain: 'delGrain',
   delPoints: 'delPoints', delLines: 'delLines', delPointsFrame: 'delFrame', delLinesFrame: 'delFrame', delAllFrame: 'delFrame',
   convertNotch: 'convertNotch',   inheritBlock: 'library', saveBlock: 'folder', inheritObjects: 'insertLines', inheritPart: 'insertPart', mirrorCopy: 'mirror', mirrorMove: 'linkedReflection', mirrorPts: 'mirrorPts', mirrorDir: 'mirrorDir', scalePts: 'scalePts', scaleDir: 'scaleDir', curve: 'curve10', piece: 'seam', seamAllowance: 'seam',
   notch: 'symbols', measureDist: 'distance', measureLength: 'length'
@@ -29,7 +29,7 @@ const HINT = {
   convertNotch: 'انقر النوتش في القطعة ثم اختر شكله: شق I أو T أو V أو مربع. يُرسم ويُقص بالبلوتر بهذا الشكل.',
   inheritBlock: 'يفتح مكتبة القوالب: اختر قالباً فيُدرج كبارت جديد، وتُضاف قيم X/Z التي يحتاجها.', saveBlock: 'يحفظ البارت النشط في مكتبة القوالب على هذا الجهاز، لتستخدمه في أي تصميم.',
   textCreate: 'انقر موضع النص ثم اكتبه وحدد ارتفاعه وزاويته. اكتب {X1} أو {Z3} ليظهر الرقم الحالي. دابل كليك على النص لتعديله.',
-  delText: 'انقر النص المراد حذفه.', delTextFrame: 'انقر ركني إطار: تُحذف النصوص التي تقع داخله.', delSymbolsFrame: 'انقر ركني إطار: تُحذف الأزرار والثقوب والعلامات وخطوط النسيج داخله.', delStitchesFrame: 'انقر ركني إطار: تُحذف الغرز على الخطوط الواقعة داخله.', delNotchesFrame: 'انقر ركني إطار: تُحذف نوتشات القطع داخله.',
+  delText: 'انقر النص المراد حذفه.', delTextFrame: 'انقر ركني إطار: تُحذف النصوص التي تقع داخله.', delSymbolsFrame: 'انقر ركني إطار: تُحذف الأزرار والثقوب والعلامات وخطوط النسيج داخله.', delStitchesFrame: 'انقر ركني إطار: تُحذف الغرز على الخطوط الواقعة داخله.', delNotchesFrame: 'انقر ركني إطار: تُحذف نوتشات القطع داخله.', delGrain: 'انقر خط اتجاه القماش (خط النسيج) لحذفه.',
   stitchLock: 'انقر الخط أو المنحنى في الجهة التي تريد الغرزة فيها، ثم اكتب بعدها عن الحافة.', stitchDouble: 'انقر الخط أو المنحنى في جهة الغرزة المزدوجة، ثم اكتب البعد.', stitchZigzag: 'انقر الخط أو المنحنى في جهة غرزة الزجزاج، ثم اكتب البعد.', stitchDeco: 'انقر الخط أو المنحنى في جهة الغرز الزخرفية، ثم اكتب البعد.', stitchGather: 'انقر الخط أو المنحنى في جهة الكشكشة، ثم اكتب البعد.',
   grainLine: 'انقر بداية خط النسيج ثم نهايته.', symButton: 'انقر موضع الزر ثم اكتب قطره.', symDrill: 'انقر موضع الثقب ثم اكتب قطره.', symCross: 'انقر موضع العلامة.',
   delPoints: 'انقر النقاط واحدة واحدة ثم Enter أو كليك يمين؛ ما يعتمد عليها يُسأل عنه قبل الحذف.', delLines: 'انقر الخطوط والمنحنيات ثم Enter أو كليك يمين.',

@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.183
+
+LEVEL7 design: the cut line no longer kinks below a corner where a curve bends tighter than the seam allowance (the folded-back bit is cleaned off before the corner is found); «حذف خط اتجاه القماش» in the delete menu; the mirror tools mirror notches too and show a GRAFIS-style bar (single elements, points and lines / lines / lines through / points in a frame, a whole piece; copy or move).
+
 LEVEL7 and MTM 0.9.182
 
 LEVEL7 design: a curve end angle sets the tangent line (as GRAFIS), so a curve no longer hooks at its end and the seam allowance runs parallel below the corner; folded pieces (fold edge chosen on the pieces page: no allowance on it, sewing line on the drawn half, fold dash-dotted, cut line and exports opened out); pieces in GRAFIS colours (blue cut line, solid sewing line, red notches, no fill).
