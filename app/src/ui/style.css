@@ -1071,3 +1071,6 @@ body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-lig
 
 /* 0.9.191: the piece under the pointer while mirroring (its outer cut line glows) */
 #canvas .piece-hover { fill: rgba(255, 166, 0, .10); stroke: #ffa600; stroke-width: 3.5; pointer-events: none; }
+
+/* 0.9.195: the cut line of the edge under the pointer (a double-click edits its seam allowance) */
+#canvas .cut-hover { stroke: var(--near); stroke-width: 5; opacity: .55; pointer-events: none; }

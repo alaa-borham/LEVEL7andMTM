@@ -175,8 +175,9 @@ const CB_ICON = {
   undir: cbSvg('<path d="M3 19C8 18 12 13 15 6" stroke="#2fa4dd"/><path d="M4 16L14 12" stroke="currentColor" stroke-dasharray="3 2"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
 };
 
-/** The drawing tool groups: a double-click on a piece's cut line opens the seam allowance bar while they are on. */
-const DRAW_GROUPS = ["النقاط", "الخطوط", "المنحنيات", "الأبعاد", "النصوص", "القياس من الرسم"];
+/** Tool groups whose clicks act on a piece's cut line (pieces, cut corners, notches / grain, mirroring a
+ * whole piece): with any other tool on, a double-click on the cut line edits the seam allowance (0.9.195). */
+const CUT_LINE_GROUPS = ["القطع", "الزوايا", "العلامات", "التحويلات"];
 
 interface FormState {
   title: string;
@@ -1170,6 +1171,64 @@ export class App {
       `<button data-sall="1" title="القيمة القياسية على كل حواف كل القطع">⬚ الكل</button><span>انقر حافة القطعة · كليك يمين للإنهاء</span><button data-send="1">إنهاء</button>`;
   }
 
+  /** The piece edge whose cut line (with the seam allowance) is under the pointer: piece index and edge
+   * index in Piece.edges. A folded piece (its cut line is unfolded) takes the nearest sewing edge. */
+  private cutEdgeAt(sx: number, sy: number, maxPx = 60): { pc: number; k: number } | null {
+    const w = this.toWorld(sx, sy);
+    let best: { pc: number; k: number; d: number } | null = null;
+    (this.model.pieces ?? []).forEach((pc, pi) => {
+      const g = this.res.pieces.get(pc.id);
+      if (!g || g.error) return;
+      const lines = g.cutEdges.length === g.edges.length ? g.cutEdges : g.edges;
+      lines.forEach((e, i) => {
+        if (e.length < 2) return;
+        const d = closestOnPolyline(e, w).d * this.scale;
+        if (!best || d < best.d) best = { pc: pi, k: g.order[i], d };
+      });
+    });
+    const b = best as { pc: number; k: number; d: number } | null;
+    return b && b.d <= maxPx ? { pc: b.pc, k: b.k } : null;
+  }
+
+  /** The cut line of one edge (for its glow under the pointer). */
+  private cutEdgePts(pi: number, k: number): Pt[] {
+    const pc = (this.model.pieces ?? [])[pi], g = pc && this.res.pieces.get(pc.id);
+    if (!g) return [];
+    const i = g.order.indexOf(k);
+    return i < 0 ? [] : (g.cutEdges.length === g.edges.length ? g.cutEdges : g.edges)[i] ?? [];
+  }
+  /** The edge whose cut line is under the pointer (0.9.195: it glows, as the drawn lines do; a double-click edits it). */
+  private cutHover: { pc: number; k: number } | null = null;
+
+  /** The values window of one edge's seam allowance (opened by a double-click on its cut line): its value,
+   * or start / end values when unparallel; X / Z and formulas as everywhere. */
+  private editEdgeSeam(pi: number, k: number): void {
+    const pc = (this.model.pieces ?? [])[pi];
+    if (!pc) return;
+    const name = this.model.names[pc.edges[k]] ?? `الحافة ${k + 1}`, end = pc.seamEnd?.[k]?.trim() ?? "";
+    this.seamHover = { pc: pi, k };
+    this.render();
+    this.openForm({
+      title: `مسافة خياطة ${name} (قطعة «${pc.name}»)`,
+      fields: end
+        ? [{ key: "a", label: "عند بداية الحافة", value: pc.seam[k] ?? "0" }, { key: "b", label: "عند نهايتها", value: end }]
+        : [{ key: "a", label: "مسافة الخياطة مم", value: pc.seam[k] ?? "0" }],
+      onOk: (v) => {
+        const a = this.seamValue(v.a?.trim() || "0"), b = end ? this.seamValue(v.b?.trim() || "0") : "";
+        if (a === null || b === null) return;
+        this.snapshot();
+        pc.seam[k] = a;
+        if (pc.seamEnd) {
+          while (pc.seamEnd.length < pc.edges.length) pc.seamEnd.push("");
+          pc.seamEnd[k] = b;
+          if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
+        }
+        this.changed();
+        this.toast(`مسافة خياطة ${name}: ${end ? `${a} / ${b}` : a} · دابل كليك على حافة أخرى، أو انقر الحواف بالشريط`);
+      },
+    });
+  }
+
   /** The piece edge under the pointer: piece index and edge index in Piece.edges. */
   private seamEdgeAt(sx: number, sy: number): { pc: number; k: number } | null {
     const w = this.toWorld(sx, sy);
@@ -1182,7 +1241,8 @@ export class App {
       });
     });
     const b = best as { pc: number; k: number; d: number } | null;
-    return b && { pc: b.pc, k: b.k };
+    // 0.9.195: also by its cut line (the outer line), as GRAFIS
+    return b ? { pc: b.pc, k: b.k } : this.cutEdgeAt(sx, sy, 10);
   }
 
   private seamValue(src: string): string | null {
@@ -1644,6 +1704,10 @@ export class App {
     // picks already made by the current tool
     for (const p of [...this.picks, ...this.extra]) parts.push(this.markSvg(p, "var(--select)"));
     if (this.near && !this.pan) parts.push(this.nearSvg(this.near));
+    if (this.cutHover && !this.near && !this.pan) {
+      const e = this.cutEdgePts(this.cutHover.pc, this.cutHover.k);
+      if (e.length > 1) parts.push(`<polyline class="cut-hover" points="${e.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"><title>دابل كليك: تحرير مسافة الخياطة</title></polyline>`);
+    }
     // the curve under the pointer shows the points it passes through (drag one to reshape it, as GRAFIS)
     if (this.hover) parts.push(this.markSvg(this.hover, "var(--hover)"));
     parts.push(this.vis.dims ? this.dimsSvg() + this.ghostDimsSvg() : "");
@@ -4264,7 +4328,7 @@ export class App {
       // judged on the drawing as it was before the two clicks
       const pre = this.preDbl;
       this.preDbl = null;
-      if ((pre || !this.tool) && !this.seamTool) {
+      if (pre || !this.tool) {
         const w = this.toWorld(e.clientX - r.left, e.clientY - r.top), R = pre ? pre.res : this.res;
         const onCut = [...R.pieces.values()].some((g) => closestOnPolyline([...g.cut, g.cut[0]], w).d * this.scale <= 8);
         let lineD = Infinity;
@@ -4280,7 +4344,10 @@ export class App {
             this.undoStack.length = Math.min(this.undoStack.length, pre.undo);
             this.changed();
           }
-          this.startSeamTool();
+          if (!this.seamTool) this.startSeamTool();
+          // 0.9.195 (as GRAFIS): the edge double-clicked opens its own value at once
+          const ed = this.cutEdgeAt(e.clientX - r.left, e.clientY - r.top);
+          if (ed) return this.editEdgeSeam(ed.pc, ed.k);
           return this.toast("مسافة الخياطة: اختر النوع والقيمة من الشريط ثم انقر حدود القطعة · كليك يمين للإنهاء");
         }
       }
@@ -4318,7 +4385,7 @@ export class App {
     });
     svg.addEventListener("mousedown", (e) => {
       svg.focus();
-      if (e.button === 0 && e.detail === 1) this.preDbl = this.tool && DRAW_GROUPS.includes(this.tool.group) ? { pack: this.pack(), undo: this.undoStack.length, res: this.res } : null;
+      if (e.button === 0 && e.detail === 1) this.preDbl = this.tool && !CUT_LINE_GROUPS.includes(this.tool.group) ? { pack: this.pack(), undo: this.undoStack.length, res: this.res } : null;
       if (this.zoomMode && (e.button === 0 || e.button === 2)) {
         const rz = svg.getBoundingClientRect();
         this.zoomAt(e.clientX - rz.left, e.clientY - rz.top, e.button === 0 ? 1.6 : 1 / 1.6);
@@ -4657,7 +4724,13 @@ export class App {
         const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5)) || dh !== this.dimHover;
         this.near = near;
         this.dimHover = dh;
-        svg.style.cursor = dh !== null ? "move" : "";
+        // the cut line of a piece glows under the pointer when nothing drawn is there (a double-click edits it)
+        const ch = !near && dh === null && !this.seamTool && (!this.tool || !CUT_LINE_GROUPS.includes(this.tool.group)) ? this.cutEdgeAt(sx, sy, 8) : null;
+        if (JSON.stringify(ch) !== JSON.stringify(this.cutHover)) {
+          this.cutHover = ch;
+          this.render();
+        }
+        svg.style.cursor = dh !== null ? "move" : ch ? "pointer" : "";
         if (id !== this.nameHover || moved) {
           this.nameHover = id;
           this.render();
