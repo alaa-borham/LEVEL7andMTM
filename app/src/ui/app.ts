@@ -5775,6 +5775,9 @@ export class App {
       inp.addEventListener("change", () => (snapped = false));
       inp.addEventListener("focus", () => {
         const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
+        // 0.9.184: selected at once too: keys already waiting (typed while a big drawing was redrawn) then
+        // replace the 0 instead of going in front of it (1500 typed gave 15000)
+        inp.select();
         setTimeout(() => inp.value === v0 && inp.select(), 0);
         // the mouse-up of the click that focused the field would put the caret back where it was pressed
         inp.addEventListener("mouseup", (e) => inp.value === v0 && (e.preventDefault(), inp.select()), { once: true });
@@ -6087,6 +6090,9 @@ export class App {
       // a field opens with its text selected, so typing replaces the old value (0)
       inp.addEventListener("focus", () => {
         const v0 = inp.value; // selected only if nothing was typed yet (fast typing keeps its first digit)
+        // 0.9.184: selected at once too: keys already waiting (typed while a big drawing was redrawn) then
+        // replace the 0 instead of going in front of it (1500 typed gave 15000)
+        inp.select();
         setTimeout(() => inp.value === v0 && inp.select(), 0);
         // the mouse-up of the click that focused the field would put the caret back where it was pressed
         inp.addEventListener("mouseup", (e) => inp.value === v0 && (e.preventDefault(), inp.select()), { once: true });
