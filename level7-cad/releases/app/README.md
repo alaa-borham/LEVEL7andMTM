@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.196
+
+LEVEL7 design: the cut line is taken by the pointer at any zoom (it wins over a farther sewing line within the pick distance); a double-click on an inherited piece edge opens its seam allowance.
+
 LEVEL7 and MTM 0.9.195
 
 LEVEL7 design: the cut line of the edge under the pointer glows; a double-click on it opens that edge's seam allowance value at once (with any tool that does not use the cut line); the seam allowance bar takes an edge by its cut line too.
