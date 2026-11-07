@@ -115,7 +115,7 @@ export function outline(edges: Pt[][], order?: number[]): { sew: Pt[]; parts: Pt
   const parts = edges.map((e, i) => {
     const s0 = j[(i - 1 + n) % n].sb; // where the previous edge meets this one
     const s1 = j[i].sa; // where this edge meets the next one
-    if (n === 2 && Math.abs(s0 - s1) < 1e-9) throw new Error("الحدود لا تكوّن شكلاً مغلقاً");
+    if (n === 2 && Math.abs(s0 - s1) < 1e-9) throw new Error("حدودها خطّان فقط لا يكوّنان شكلاً مغلقاً: القطعة تحتاج ثلاثة حدود على الأقل تلتقي أطرافها (إن لم تكن مقصودة فاحذفها من صفحة القطع)");
     const part = s0 <= s1 ? subPolyline(e, s0, s1) : subPolyline(e, s1, s0).reverse();
     // snap ends exactly onto the junction points so the outline closes
     part[0] = j[(i - 1 + n) % n].pt;

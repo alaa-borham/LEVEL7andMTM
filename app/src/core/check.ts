@@ -51,7 +51,7 @@ export function pieceWarnings(r: EvalResult, pieces: Piece[], steps: Model["step
       const inA = unit(pointAlong(A, dA, true), A[A.length - 1]), outB = unit(B[0], pointAlong(B, dB));
       const inner = deg([-inA[0], -inA[1]], outB);
       if (inner < 20) {
-        warnings.push(`قطعة «${pc.name}»: الزاوية بين ${name(idOf(i))} و${name(idOf((i + 1) % n))} ضيقة جداً (${Math.round(inner)}°)، فلا يمكن أن تكون الحاشية نظيفة عندها. غيّر زاوية طرف الكرف أو اتجاه الخط.`);
+        warnings.push(`القطعة «${pc.name}»: الزاوية بين ${name(idOf(i))} و${name(idOf((i + 1) % n))} ضيقة جداً (${Math.round(inner)}°)، فلا يمكن أن تكون الحاشية نظيفة عندها. غيّر زاوية طرف الكرف أو اتجاه الخط.`);
         refs.push({ at: A[A.length - 1] });
         where.push(A[A.length - 1]);
       }
@@ -69,7 +69,7 @@ export function pieceWarnings(r: EvalResult, pieces: Piece[], steps: Model["step
         // cut side is on the right of travel; at the start the stretch is walked backwards)
         const cross = before[0] * last[1] - before[1] * last[0], towardCut = end ? cross < 0 : cross > 0;
         if (turn > 24 && towardCut) {
-          warnings.push(`قطعة «${pc.name}»: طرف ${name(id)} ينحني ${Math.round(turn)}° في آخر ${Math.round(h)} مم، أحدّ من مسافة الخياطة (${Math.round(a)} مم)، فتظهر الحاشية غير نظيفة عند الزاوية. ارفع شدة طرف الكرف أو اجعل زاويته على الخط المجاور (مثلاً 90°).`);
+          warnings.push(`القطعة «${pc.name}»: طرف ${name(id)} ينحني ${Math.round(turn)}° في آخر ${Math.round(h)} مم، أحدّ من مسافة الخياطة (${Math.round(a)} مم)، فتظهر الحاشية غير نظيفة عند الزاوية. ارفع شدة طرف الكرف أو اجعل زاويته على الخط المجاور (مثلاً 90°).`);
           const si = stepOf(id);
           // the place itself (the bending end); the step too when it makes this curve alone (an inherit or
           // mirror step can bring several elements: its middle may be an empty spot)
@@ -100,7 +100,7 @@ export function checkParts(model: Model, o: { all: boolean; grade: boolean }): C
       const errors = [
         ...[...r.stepErrors].map(([si, msg]) => `خطوة ${si + 1}: ${msg}`),
         ...zs.map(([id, msg]) => `Z${id}: ${msg}`),
-        ...[...r.pieceErrors].map(([id, msg]) => `قطعة ${pieces.find((pc) => pc.id === id)?.name ?? id}: ${msg}`),
+        ...[...r.pieceErrors].map(([id, msg]) => `القطعة «${pieces.find((pc) => pc.id === id)?.name ?? id}»: ${msg}`),
       ];
       const refs = [...[...r.stepErrors.keys()].map((step) => ({ step })), ...zs.map(([z]) => ({ z })), ...[...r.pieceErrors.keys()].map((piece) => ({ piece }))];
       const w = i === sizes[0] ? pieceWarnings(r, pieces, steps, names) : { warnings: [], refs: [], where: [] };
