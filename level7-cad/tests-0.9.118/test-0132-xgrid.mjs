@@ -5,7 +5,7 @@ const src=process.env.L7_SRC;const env={...process.env,LOCALAPPDATA:await fs.mkd
 const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
+ await page.waitForSelector('.l7-design-cat');{const f0=page.frames().find(x=>x.url().includes('l7design'));await f0.waitForFunction(()=>!!window.level7);await f0.evaluate(()=>{window.level7.model.__old=1;});await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await f0.waitForFunction(()=>!window.level7.model.__old);} // «new design» reaches the drawing by a message: wait for it before filling the modelawait page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');
  await f.evaluate(()=>{const a=window.level7,m=a.model;m.measurements.push({id:1,name:'front length',value:1500,code:'FL'},{id:2,name:'bottom girth',value:1450},{id:3,name:'hip',value:1140});m.sizes=[{name:'_KO176',step:1,values:{}}];a.changed();});
  await page.locator('[data-l7d-command="tab-x"]').click();await fr.locator('.xgrid').waitFor();

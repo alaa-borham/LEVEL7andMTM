@@ -8,7 +8,7 @@ const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');
  page.on('dialog',d=>/استرجاع|حفظ التصميم/.test(d.message())?d.dismiss():d.accept()); // library questions yes; old unsaved work no
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
+ await page.waitForSelector('.l7-design-cat');{const f0=page.frames().find(x=>x.url().includes('l7design'));await f0.waitForFunction(()=>!!window.level7);await f0.evaluate(()=>{window.level7.model.__old=1;});await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await f0.waitForFunction(()=>!window.level7.model.__old);} // «new design» reaches the drawing by a message: wait for it before filling the modelawait page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
  await f.evaluate(()=>localStorage.removeItem('level7.mlib')); // the library of earlier runs
  const strip=await page.evaluate(()=>[...document.querySelectorAll('.l7-design-cat')].every(b=>b.querySelector('svg.l7i'))&&getComputedStyle(document.querySelector('.l7-design-cat')).backgroundColor);
@@ -53,7 +53,7 @@ try{
  await page.locator('[data-l7d-command="tab-x"]').isVisible();await fr.locator('[data-xa="mlib"]').first().click();
  const ml=fr.locator('.mlib-win');await ml.waitFor();await ml.locator('[data-ml="name"]').fill('thobe ALAA');await ml.locator('[data-ml="save"]').click();
  await f.waitForFunction(()=>JSON.parse(localStorage.getItem('level7.mlib')||'[]').length===1);await ml.locator('[data-ml="close"]').click();
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();
+ await page.waitForSelector('.l7-design-cat');{const f0=page.frames().find(x=>x.url().includes('l7design'));await f0.waitForFunction(()=>!!window.level7);await f0.evaluate(()=>{window.level7.model.__old=1;});await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await f0.waitForFunction(()=>!window.level7.model.__old);} // «new design» reaches the drawing by a message: wait for it before filling the model
  await ml.waitFor();await ml.locator('li[data-id] [data-ml="use"]').click();
  await f.waitForFunction(()=>window.level7.model.measurements.length===2&&window.level7.model.mlibFrom?.name==='thobe ALAA');
  await f.evaluate(()=>{const a=window.level7;a.model.measurements[0].value=999;a.changed();});

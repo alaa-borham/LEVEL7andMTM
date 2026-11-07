@@ -5,7 +5,7 @@ const src=process.env.L7_SRC;const env={...process.env,LOCALAPPDATA:await fs.mkd
 let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox','--lang=ar',src],env});const page=await app.firstWindow();await page.waitForSelector('#tool-guide');
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
+ await page.waitForSelector('.l7-design-cat');{const f0=page.frames().find(x=>x.url().includes('l7design'));await f0.waitForFunction(()=>!!window.level7);await f0.evaluate(()=>{window.level7.model.__old=1;});await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await f0.waitForFunction(()=>!window.level7.model.__old);} // «new design» reaches the drawing by a message: wait for it before filling the modelawait page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design'));
  await f.evaluate(()=>{const a=window.level7;a.model.measurements.push({id:1,name:'',value:480},{id:2,name:'',value:50});a.changed();});
  await page.locator('[data-l7d-command="tab-x"]').click();await f.waitForFunction(()=>document.querySelector('.panel.open'));

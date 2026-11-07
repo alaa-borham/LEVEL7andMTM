@@ -7,7 +7,7 @@ const src=process.env.L7_SRC;const env={...process.env,LOCALAPPDATA:await fs.mkd
 const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
+ await page.waitForSelector('.l7-design-cat');{const f0=page.frames().find(x=>x.url().includes('l7design'));await f0.waitForFunction(()=>!!window.level7);await f0.evaluate(()=>{window.level7.model.__old=1;});await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await f0.waitForFunction(()=>!window.level7.model.__old);} // «new design» reaches the drawing by a message: wait for it before filling the modelawait page.waitForSelector('.l7-design-cat');
  const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
  assert(await f.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).display==='none'&&getComputedStyle(document.querySelector('footer.status')).display==='none'&&!document.querySelector('#coords').offsetParent));
  await f.evaluate(()=>{const a=window.level7;a.model.sizes=[{name:'L',step:1,values:{}}];a.changed();});
