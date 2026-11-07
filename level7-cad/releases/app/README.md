@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.190
+
+LEVEL7 design: Ctrl+S saves the design back to its own file without asking; «حفظ التصميم باسم…» (File menu, Ctrl+Shift+S) asks where; a new design asks on its first save.
+
 LEVEL7 and MTM 0.9.189
 
 LEVEL7 design: curve direction set / deleted at any of its points; a curve point on a line slides along it (Alt: free); after a drag the point's own value / X / Z fields; double-click on a piece's cut line opens the seam allowance bar; one fixed icon per tool group; inheriting no longer stops at a line already inherited lying on top.

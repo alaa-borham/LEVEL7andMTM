@@ -47,6 +47,9 @@ if (process.platform === 'win32') app.setAppUserModelId('LEVEL7CAD');
 
 let mainWindow = null;
 let operationBusy = false;
+// 0.9.190: the file the open design came from (opened, saved or saved as): Ctrl+S writes it again without
+// asking; «Save as» asks and remembers the new place; a new design forgets it
+let designPath = null;
 
 function inside(root, file) {
   const relative = path.relative(root, file);
@@ -283,7 +286,9 @@ function registerIpc() {
     const selected = result.filePaths[0];
     if (design && !['.level7', '.json'].includes(path.extname(selected).toLowerCase())) throw new Error('افتح ملف تصميم LEVEL7 بامتداد ‎.level7 (أو ‎.level7.json القديم).');
     if (!['.json', '.dxf', '.csv', '.mas', ...(design ? ['.level7'] : [])].includes(path.extname(selected).toLowerCase())) throw new Error('Supported imports: JSON, DXF, CSV, and MAS.');
-    return { text: await readBounded(selected), name: path.basename(selected) };
+    const opened = { text: await readBounded(selected), name: path.basename(selected) };
+    if (design) designPath = path.extname(selected).toLowerCase() === '.level7' ? selected : null;
+    return opened;
   });
 
   registerOperation('pattern:copy-text', async options => {
@@ -297,11 +302,18 @@ function registerIpc() {
     if (!Object.hasOwn(FORMATS, options?.kind) || options?.kind === 'mdl') throw new Error('Unsupported text export kind.');
     const text = textPayload(options?.text, 'Export');
     if (format.base64 && !/^[A-Za-z0-9+/]*={0,2}$/.test(text)) throw new Error('Invalid binary export.');
+    // Ctrl+S on a design that has its file: written there again, no dialog
+    if (options?.kind === 'design' && options?.inPlace === true && designPath && await fsp.stat(designPath).then(st => st.isFile(), () => false)) {
+      await atomicWrite(designPath, text);
+      return { saved: true, name: path.basename(designPath), inPlace: true };
+    }
     const destination = await chooseSave(options?.filename, format);
     if (!destination) return null;
     await atomicWrite(destination, format.base64 ? Buffer.from(text, 'base64') : text);
+    if (options?.kind === 'design') designPath = destination;
     return { saved: true, name: path.basename(destination) };
   });
+  registerOperation('pattern:forget-design', async () => { designPath = null; return { forgotten: true }; });
 
   registerOperation('pattern:print-pdf', async options => {
     const html = textPayload(options?.html, 'Print document');
@@ -460,7 +472,9 @@ function designArg(argv) {
 }
 let pendingDesign = designArg(process.argv);
 async function designPayload(file) {
-  return { name: path.basename(file), text: await readBounded(file) };
+  const d = { name: path.basename(file), text: await readBounded(file) };
+  designPath = path.extname(file).toLowerCase() === '.level7' ? file : null;
+  return d;
 }
 if (app.isPackaged && !app.requestSingleInstanceLock()) app.quit();
 else app.on('second-instance', (_event, argv) => {

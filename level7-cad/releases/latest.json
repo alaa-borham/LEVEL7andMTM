@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.189",
- "notes": "Curve direction at any point; curve point slides along its line; dragged point value / X / Z; double-click cut line → seam allowance; fixed group icons; inherit fix.",
+ "version": "0.9.190",
+ "notes": "Ctrl+S saves the design in place; Save As (File menu, Ctrl+Shift+S) asks where; a new design asks on its first save",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "c8f5115efddcb4fe337c63035e65435b616e220c15620e48ec8c413f3577862a",
-   "size": 150108
+   "sha256": "077306e5101c605d53407eca9467f310b5dbc4104d7bd74304095e7cc29b0590",
+   "size": 150322
   },
   {
    "path": "assets/icon.ico",
@@ -39,19 +39,19 @@
    "size": 44299
   },
   {
-   "path": "assets/l7design/assets/index-DBBVjUeb.js",
-   "sha256": "9444de41d2547275dfcdc7f5a0cbc95739e84dfe54ddd79f774e122caab38b3d",
-   "size": 334551
+   "path": "assets/l7design/assets/index-Dub4w0dp.js",
+   "sha256": "71a82b705487b3f1b7e5fb88c3d14c1b0ce8c901017b7811251488bf4a1c0b96",
+   "size": 334823
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "f962a90a726d28c92f54726feb931f6362e6dc0c29968ca887d6b287ea01d42a",
+   "sha256": "3d1c2f303411b97c00e034136a0fce6f505718677b79ec49ceb33d6b146c9609",
    "size": 3594
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "8db9137c0ba2c25cddc4557738abe46c209077bd758bd7c7804db1f2a46913ad",
-   "size": 28342
+   "sha256": "53f521c460a3e1f0f62f238485595c27917a3f2bd7fb7428c1df22ddb2582e2a",
+   "size": 29294
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -60,8 +60,8 @@
   },
   {
    "path": "desktop/preload.cjs",
-   "sha256": "757db3d74c8582abba559524c48193845075f5434b589af25844496f752be924",
-   "size": 2973
+   "sha256": "f040f0e2e1d4a2fecf99dcef83e7eddb8f25308500340eadc436657e77b89890",
+   "size": 3080
   },
   {
    "path": "desktop/remote-update.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "55cad3f29ca5cf4fe4cb1f41bcef7e3181827895e180b6fc24ea62b3b2b2a941",
+   "sha256": "df1ce89aff20ceea3c11a44dc8a5f10b0bb7fcf3e8030eeeb949b0c0ba3fc66b",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "8cb50078ce97a60b4223e4e5e38e0eb4db1b12b1c55e599b778b8ae9032928d4",
-   "size": 48208
+   "sha256": "356ea5d152668e949a81c552ced20f62661c8552dc75e1f140202993654a7ad6",
+   "size": 48770
   },
   {
    "path": "src/l7-icons.js",

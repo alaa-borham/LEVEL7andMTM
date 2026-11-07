@@ -77,6 +77,7 @@ function shortcut(e, typing) {
   const k = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && !e.altKey && e.code === 'Digit6') return e.shiftKey ? 'testAll' : 'gradeAll';
   if (!typing && !ctrl && !e.altKey && e.code === 'Space') return 'zoomMode'; // as GRAFIS: zoom mode
+  if (ctrl && e.shiftKey && !e.altKey && k === 's') return 'saveAs'; // 0.9.190: save as (asks where)
   if (ctrl && !e.shiftKey && !e.altKey) return { s: 'save', n: 'new', o: 'open', e: 'aama', g: 'tab-sizes', t: 'tab-partlist' }[k] || (!typing && { z: 'undo', y: 'redo', x: 'tab-x' }[k]) || null;
   if (e.key === 'F4') return 'dup';
   if (e.key === 'F7') return 'dims';
@@ -325,12 +326,13 @@ export function installDesignMode() {
       open(); send({ type: 'l7:open', text: file.text, name: file.name }); status('تم فتح ' + file.name);
     } catch (e) { status('تعذر فتح الملف: ' + e.message); }
   };
-  const saveFromEngine = async ({ name, text }) => {
+  const saveFromEngine = async ({ name, text, saveAs }) => {
     const kind = KIND(String(name || ''));
     if (!kind || typeof text !== 'string') return;
     if (!desktop?.saveFile) { status('الحفظ متاح في نسخة سطح المكتب فقط.'); return; }
     try {
-      const r = await desktop.saveFile({ text, filename: name, kind });
+      // 0.9.190: Ctrl+S writes a design back to its own file (no dialog); «Save as» asks where
+      const r = await desktop.saveFile({ text, filename: name, kind, inPlace: kind === 'design' && saveAs !== true });
       if (r?.saved) { status('تم الحفظ: ' + r.name); if (kind === 'design') send({ type: 'l7:saved', name: r.name }); }
     } catch (e) { status('تعذر الحفظ: ' + e.message); }
   };
@@ -344,6 +346,7 @@ export function installDesignMode() {
       for (const m of queue.splice(0)) frame.contentWindow.postMessage(m, '*');
     } else if (d.type === 'l7:tool-state') { active = typeof d.tool === 'string' ? d.tool : null; markActive(); }
     else if (d.type === 'l7:download') void saveFromEngine(d);
+    else if (d.type === 'l7:design-new') void desktop?.forgetDesign?.(); // a new design has no file yet
     else if (d.type === 'l7:context') showCat(null);
     else if (d.type === 'l7:sizes' && Array.isArray(d.sizes)) {
       sizeState = { sizes: d.sizes.map(z => ({ value: Number(z.value), name: String(z.name) })), active: Number(d.active), unit: d.unit === 'in' ? 'in' : 'mm' };
@@ -382,7 +385,7 @@ export function installDesignMode() {
       } catch (e) { status('تعذر فتح الملف: ' + e.message); }
     })();
     else if (d.type === 'l7:panel') markTab(Array.isArray(d.tabs) ? d.tabs.filter(t => typeof t === 'string').map(t => 'tab-' + t) : typeof d.tab === 'string' ? ['tab-' + d.tab] : []);
-    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || d.action === 'zoomMode' || d.action === 'refresh' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
+    else if (d.type === 'l7:shortcut' && typeof d.action === 'string' && (d.action === 'imgtoggle' || d.action === 'zoomMode' || d.action === 'refresh' || d.action === 'saveAs' || barBox.querySelector(`[data-l7d-command="${CSS.escape(d.action)}"]`))) run(d.action);
   });
   host.addEventListener('click', e => {
     const tool = e.target.closest('[data-l7d-tool]'), cmd = e.target.closest('[data-l7d-command]'), cat = e.target.closest('[data-l7d-cat]');
@@ -424,6 +427,7 @@ export function installDesignMode() {
   const item = (id, text, run) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.textContent = text; b.addEventListener('click', () => { fileMenu.open = false; run(); }); popup.insertBefore(b, anchor); };
   item('menu-l7-design-new', 'تصميم LEVEL7 جديد · New LEVEL7 design', () => { open(); send({ type: 'l7:new' }); status('تصميم جديد'); });
   item('menu-l7-design-open', 'فتح تصميم LEVEL7… · Open LEVEL7 design', () => void openDesign());
+  item('menu-l7-design-save-as', 'حفظ التصميم باسم… · Save LEVEL7 design as (Ctrl+Shift+S)', () => { open(); send({ type: 'l7:action', action: 'saveAs' }); });
   item('menu-l7-design-show', 'العودة إلى التصميم المفتوح · Show LEVEL7 design', () => open());
   item('menu-l7-design-from-mdl', 'تحويل بارتات MDL المفتوحة إلى تصميم LEVEL7 · Convert MDL parts', () => convertMdl());
   // Empty canvas: a direct entry next to Open MDL.

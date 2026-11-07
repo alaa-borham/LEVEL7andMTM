@@ -39,8 +39,10 @@ contextBridge.exposeInMainWorld('desktop', Object.freeze({
   saveFile: options => ipcRenderer.invoke('pattern:save-file', {
     text: options?.text,
     filename: options?.filename,
-    kind: options?.kind
+    kind: options?.kind,
+    inPlace: options?.inPlace === true
   }),
+  forgetDesign: () => ipcRenderer.invoke('pattern:forget-design'),
   printPdf: options => ipcRenderer.invoke('pattern:print-pdf', {
     html: options?.html,
     filename: options?.filename
