@@ -406,15 +406,19 @@ export class App {
   }
 
   // ---- mirror bar (as GRAFIS): selection mode and copy / move, shown as soon as a mirror tool is chosen
-  private selMode: "single" | "frameAll" | "frameLines" | "frameCross" | "framePoints" | "piece" = "single";
+  private selMode: "single" | "frameAll" | "frameLines" | "frameCross" | "framePoints" | "notches" | "piece" = "single";
+  /** The notch under the pointer while a mirror tool collects (it lights up: it can be clicked). */
+  private notchHover: { piece: number; k: number } | null = null;
   private selCopy = true;
   private selFrame: Pt | null = null;
 
   private mirrorClick(sx: number, sy: number, h: Pick | null): void {
     const w = this.toWorld(sx, sy), mode = this.selMode;
-    if (mode === "single") {
+    if (mode === "single" || mode === "notches") {
       const nn = this.notchNear(sx, sy);
       if (nn) return this.mirrorNotch(nn.piece, nn.k);
+    }
+    if (mode === "single") {
       const id = h ? pickedId(h) : null;
       if (id === null || (h?.kind === "point" && h.ref.end)) return this.toast("انقر عنصراً أو نوتشاً، أو اختر طريقة تحديد أخرى من الشريط");
       return this.mirrorBatch([id], []);
@@ -437,14 +441,22 @@ export class App {
     const x0 = Math.min(a[0], w[0]), x1 = Math.max(a[0], w[0]), y0 = Math.min(a[1], w[1]), y1 = Math.max(a[1], w[1]);
     const inside = (p: Pt) => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1;
     const ids: number[] = [];
-    for (const o of this.res.objects.values()) {
+    if (mode !== "notches")
+      for (const o of this.res.objects.values()) {
       if (this.res.stepErrors.has(o.step)) continue;
       const all = o.pts.every(inside), some = o.pts.some(inside);
       if (o.kind === "point" ? (mode === "frameAll" || mode === "framePoints") && all : mode === "frameAll" || mode === "frameLines" ? all : mode === "frameCross" && some) ids.push(o.id);
     }
+    // a notch is in the frame when its point on the sewing line or its mark on the cut line is
     const notches: { piece: number; k: number }[] = [];
     if (mode !== "frameLines" && mode !== "frameCross")
-      for (const pc of this.model.pieces ?? []) pc.notches.forEach((r, k) => inside(this.pointOf(r)) && notches.push({ piece: pc.id, k }));
+      for (const pc of this.model.pieces ?? []) {
+        const g = this.res.pieces.get(pc.id);
+        pc.notches.forEach((r, k) => {
+          const n = g?.notches[k];
+          if (inside(this.pointOf(r)) || (n && (inside(n.at) || inside(n.to)))) notches.push({ piece: pc.id, k });
+        });
+      }
     if (!ids.length && !notches.length) {
       this.toast("لا يوجد ما يُعكس داخل الإطار");
       return this.render();
@@ -485,6 +497,7 @@ export class App {
     ["frameLines", "تحديد الخطوط داخل إطار", '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 2"/><path d="M7 6v8M13 6v8"/>'],
     ["frameCross", "تحديد الخطوط التي تمر بالإطار", '<rect x="5" y="5" width="10" height="10" stroke-dasharray="2 2"/><path d="M2 16L18 4"/>'],
     ["framePoints", "تحديد النقاط داخل إطار", '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 2"/><circle cx="7" cy="8" r="1.3"/><circle cx="12" cy="6" r="1.3"/><circle cx="10" cy="13" r="1.3"/>'],
+    ["notches", "النوتشات فقط: انقر نوتشاً، أو ارسم إطاراً حول عدة نوتشات", '<path d="M3 16h14"/><path d="M7 16v-6M13 16v-6" stroke-width="2.4"/>'],
     ["piece", "قطعة كاملة: حدودها ونوتشاتها", '<path d="M5 3h7l3 4v10H5z"/>'],
   ];
 
@@ -1553,6 +1566,10 @@ export class App {
     parts.push(this.seamLabelsSvg());
     parts.push(this.imgEditSvg());
     parts.push(this.selFrameSvg());
+    if (this.notchHover) {
+      const g = this.res.pieces.get(this.notchHover.piece), n = g?.notches[this.notchHover.k];
+      if (n) for (const sh of n.shape) parts.push(`<polyline class="notch-hover" points="${sh.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+    }
     this.renderSelBar();
     this.renderCurveBar();
     this.renderDimBar();
@@ -4155,6 +4172,14 @@ export class App {
       this.mouse = this.toWorld(sx, sy);
       if (this.imgDrag) return void this.imgEditMove(this.mouse);
       if (this.selFrame) return void this.render(); // the mirror bar's frame follows the pointer
+      if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
+        const nh = this.selMode === "single" || this.selMode === "notches" ? this.notchNear(sx, sy) : null;
+        if (JSON.stringify(nh) !== JSON.stringify(this.notchHover)) {
+          this.notchHover = nh;
+          this.render();
+        }
+        if (nh || this.selMode === "notches") return;
+      } else if (this.notchHover) this.notchHover = null;
       if (this.seamTool) {
         const h = this.seamEdgeAt(sx, sy);
         if (JSON.stringify(h) !== JSON.stringify(this.seamHover)) {

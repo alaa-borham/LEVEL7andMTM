@@ -44,7 +44,7 @@ try{
  assert(Math.abs(nn.g.at[0]+10)<1e-6&&Math.abs(nn.g.at[1]-100)<1e-6&&nn.g.type==='t'&&nn.pc.notchLen[1]==='8'&&nn.lines===5,JSON.stringify(nn));
  pass('mirror (copy) about the middle line: a click on the notch puts a T notch, 8 mm, at the same place on the other side; no line is copied');
  // the mirror bar (as GRAFIS): shown with the tool; frame of lines; a whole piece; copy / move
- const sb=fr.locator('.sel-bar');await sb.waitFor();assert.equal(await sb.locator('button[data-sel]').count(),7);
+ const sb=fr.locator('.sel-bar');await sb.waitFor();assert.equal(await sb.locator('button[data-sel]').count(),8);
  await sb.locator('[data-sel="frameLines"]').click();
  await page.mouse.click(...await at(-5,-5));await page.mouse.click(...await at(5,305));
  await f.waitForFunction(()=>{const s=window.level7.model.steps.at(-1);return s.op==='mirror'&&s.items.length===1&&s.items[0].src===8&&!!s.items[0].dst;});
@@ -58,5 +58,18 @@ try{
  await page.mouse.click(...await at(200,150));
  await f.waitForFunction(b=>{const s=window.level7.model.steps.at(-1);return window.level7.model.steps.length===b+1&&s.op==='mirror'&&s.items.length===1&&s.items[0].src===6&&!s.items[0].dst;},before);
  pass('mirror bar «نقل» + «عناصر مفردة»: a click moves that line (no copy)');
+ // 0.9.186: a notch lights up under the pointer; «النوتشات فقط» + a frame round the red marks (on the cut line)
+ await sb.locator('[data-sel="copy"]').click();await sb.locator('[data-sel="notches"]').click();
+ const nm=await f.evaluate(()=>{const n=window.level7.res.pieces.get(1).notches[0];return{at:n.at,to:n.to};});
+ const mid=[(nm.at[0]+nm.to[0])/2,(nm.at[1]+nm.to[1])/2];
+ await page.mouse.move(...await at(mid[0],mid[1]),{steps:3});await f.waitForFunction(()=>!!document.querySelector('#canvas .notch-hover'));
+ pass('a notch under the pointer lights up while a mirror tool is on');
+ const n1=await f.evaluate(()=>window.level7.model.pieces[0].notches.length);
+ // a frame round the red mark only (its point on the sewing line stays outside the frame)
+ const x0=Math.min(nm.at[0],nm.to[0])-0.5,x1=Math.max(nm.at[0],nm.to[0])+0.5,y0=Math.min(nm.at[1],nm.to[1])-0.5,y1=Math.max(nm.at[1],nm.to[1])+0.5;
+ await page.mouse.click(...await at(x0,y0-3));await page.mouse.click(...await at(x1,y1+3));
+ await f.waitForFunction(n=>window.level7.model.pieces[0].notches.length>n,n1);
+ const added=await f.evaluate(n=>window.level7.model.pieces[0].notches.length-n,n1);
+ pass(`«النوتشات فقط»: a frame round the red marks on the cut line copies ${added} notch(es) to the other side`);
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
