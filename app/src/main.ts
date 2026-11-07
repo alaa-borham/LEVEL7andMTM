@@ -11,6 +11,7 @@ function shortcut(e: KeyboardEvent, typing: boolean): string | null {
   if (ctrl && !e.altKey && e.code === "Digit6") return e.shiftKey ? "testAll" : "gradeAll";
   // Space (not while typing): zoom mode, as GRAFIS
   if (!typing && !ctrl && !e.altKey && e.code === "Space") return "zoomMode";
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === "KeyS") return "saveAs"; // 0.9.190: save as
   if (ctrl && !e.shiftKey && !e.altKey) {
     const map: Record<string, string> = { s: "save", n: "new", o: "open", e: "aama", g: "tab-sizes", t: "tab-partlist" };
     if (map[k]) return map[k];
@@ -208,6 +209,7 @@ if (embedded && window.parent !== window) {
     else if (action === "marker") app.exportMarker();
     else if (action === "gradeview") app.cycleGradeView();
     else if (action === "refresh") app.refreshView();
+    else if (action === "saveAs") app.saveAs();
     else if (action === "zoomMode") app.toggleZoomMode();
     else if (action === "aamaAll") app.exportAllSizes("aama");
     else if (action === "pltAll") app.exportAllSizes("plt");

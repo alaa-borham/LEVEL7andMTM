@@ -128,10 +128,10 @@ export function downloadBytes(name: string, bytes: Uint8Array, type: string): vo
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function download(name: string, text: string, type: string): void {
-  // Inside LEVEL7 and MTM the host program saves through its own file dialog.
+export function download(name: string, text: string, type: string, saveAs = false): void {
+  // Inside LEVEL7 and MTM the host program saves: a design back to its own file (Ctrl+S), or where asked
   if (document.body.classList.contains("embedded") && window.parent !== window) {
-    window.parent.postMessage({ type: "l7:download", name, text, mime: type }, "*");
+    window.parent.postMessage({ type: "l7:download", name, text, mime: type, saveAs }, "*");
     return;
   }
   const url = URL.createObjectURL(new Blob([text], { type }));

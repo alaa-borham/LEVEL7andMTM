@@ -1369,6 +1369,8 @@ export class App {
   newDesign(): void {
     if (!this.keepOrSave()) return;
     this.load(emptyModel());
+    // a new design has no file yet: its first Ctrl+S asks where (0.9.190)
+    if (document.body.classList.contains("embedded") && window.parent !== window) window.parent.postMessage({ type: "l7:design-new" }, "*");
     setUnsaved((this.unsaved = false));
     // a new model starts by choosing its measurements from the library (when there is one)
     if (this.mlib().length) this.openMLib();
@@ -4615,11 +4617,16 @@ export class App {
     setUnsaved((this.unsaved = false));
   }
 
-  private save(): void {
+  private save(saveAs = false): void {
     this.syncPart();
     // inside LEVEL7 and MTM the file is written by the program, which confirms with l7:saved
     if (!(document.body.classList.contains("embedded") && window.parent !== window)) this.markSaved();
-    download(`${safeFileName(this.model.name)}.level7`, JSON.stringify(this.model, null, 1), "application/json");
+    download(`${safeFileName(this.model.name)}.level7`, JSON.stringify(this.model, null, 1), "application/json", saveAs);
+  }
+
+  /** Save as (Ctrl+Shift+S): always asks where; Ctrl+S writes the design back to its own file. */
+  saveAs(): void {
+    this.save(true);
   }
 
   private importGrafis(text: string): void {
