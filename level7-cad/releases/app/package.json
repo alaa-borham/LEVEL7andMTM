@@ -1,6 +1,6 @@
 {
   "name": "level7-cad",
-  "version": "0.9.194",
+  "version": "0.9.195",
   "description": "Native MDL editor and temporary pattern measurement tools",
   "type": "module",
   "main": "desktop/main.cjs",

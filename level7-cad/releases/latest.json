@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.194",
- "notes": "Curve start and end points can be dragged (an end on a line slides along it)",
+ "version": "0.9.195",
+ "notes": "The cut line glows under the pointer; a double-click on it opens that edge's seam allowance value at once",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "9fb4ab52d4d1d6c2ee1b3e3788c8c73d3a96c99a49cf530b146c11670c45ba72",
-   "size": 151542
+   "sha256": "eeb7210841338b46789e998f7acff7e6fbb9617ce50f786cbce1b0be75b6f089",
+   "size": 151806
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-BkdDGHEW.css",
-   "sha256": "bfa9279bca263515783d26a0efc0c880cd28f88c1142d87b5b2b154b24791956",
-   "size": 44820
+   "path": "assets/l7design/assets/index-qCJx2Z1_.css",
+   "sha256": "ceac64e8bd8f60b1dc1e9c15b97fe77e27912fb87f10d4fedd01187b2d2fa552",
+   "size": 44905
   },
   {
-   "path": "assets/l7design/assets/index-nOcD37k5.js",
-   "sha256": "a107bc18a70d964bea6be5cb451163036f0105730f0233d45b1ccff53f0f2617",
-   "size": 342111
+   "path": "assets/l7design/assets/index-r-U0H3rF.js",
+   "sha256": "b85af83276e65c4d65f4cb95d1e34f4f9d3ed63601af9a8a1e1fa7d270a6969e",
+   "size": 344305
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "ffc126bba3cbb8ecbfdb4dc1f5d6b0258dead87974724b6b89dd1f6d453b17ac",
+   "sha256": "d09da1008e8333dd4d5efa047d60d3f63ca65813ac00c8cf4e8c73fc97c66b26",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "2699c3d886311c579f899a61ee17d9438389a3383e3bf507b2c67b0034adb767",
+   "sha256": "3e1edfad03cf525b06baf45a4c33b73ad42f1e8962f41165b6bf049623ae5bee",
    "size": 301
   },
   {

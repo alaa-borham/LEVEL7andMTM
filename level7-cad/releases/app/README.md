@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.195
+
+LEVEL7 design: the cut line of the edge under the pointer glows; a double-click on it opens that edge's seam allowance value at once (with any tool that does not use the cut line); the seam allowance bar takes an edge by its cut line too.
+
 LEVEL7 and MTM 0.9.194
 
 LEVEL7 design: the start and end points of an active curve are dragged too (an end on a line slides along it, one value); development data follows LOCALAPPDATA when given (tests no longer share a restored design).
