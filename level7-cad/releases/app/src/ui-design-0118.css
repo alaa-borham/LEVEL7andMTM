@@ -208,3 +208,12 @@ body.ui-dark .l7-run-menu button svg{color:#4aa8ff}
 .l7-run-menu kbd{margin-inline-start:auto;font:11px Consolas,monospace;color:#8a9aab;direction:ltr}
 .l7-design-mdl{position:relative}.l7-mdl-menu{min-width:230px}
 .l7-design-export{position:relative}.l7-exp-menu{min-width:260px}.l7-exp-menu kbd{margin-inline-start:auto;font:11px Consolas,monospace;color:#8a9aab;direction:ltr}.l7-exp-menu button{display:flex;align-items:center;gap:8px}
+
+/* 0.9.193: these styles were written into the HTML (style="…"), which the window's security policy
+   (style-src 'self') blocks; they live here now, as strong as before (an inline style beat any rule) */
+#original-join-settings label.oj-check{display:flex !important;align-items:center !important;gap:6px !important}
+#original-join-settings input.oj-box{width:15px !important;height:15px !important;min-height:15px !important;padding:0 !important}
+#original-insert-settings [data-insert-objects]{max-height:180px !important;overflow:auto !important}
+#part-operation-dialog #part-operation-name{width:100% !important;margin:8px 0 !important}
+.points-menu-number .gtp-up{color:#17a4df !important}
+svg .blue.gtp-dot{fill:#29a4dc !important}

@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.192",
- "notes": "Graded AAMA export works with the base size switched off; full review of all tools on a real design",
+ "version": "0.9.193",
+ "notes": "MTM screens: styles blocked by the window security policy moved to the stylesheet (no more CSP warnings)",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "8d8836521f5a8f67d1e498a4913e67eda8c4c4020e7699b8147a767a755a76ee",
-   "size": 151156
+   "sha256": "373a27f71f070a81f8db421b4d4ea1cad8bd38850e493b6c7081c031a17203f0",
+   "size": 151303
   },
   {
    "path": "assets/icon.ico",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "339fe1f896f8a2a6a700dfe3b8fc4825dd8e9626f8be00bd147ba96b8027492f",
+   "sha256": "c8842c9f71ad041a9d6150d1bff0e69137d4c3fa8f3963817a01530b69dd691c",
    "size": 301
   },
   {
@@ -300,8 +300,8 @@
   },
   {
    "path": "src/grouped-tool-palette.js",
-   "sha256": "3e6fca14fab061b31fe28987124eeb36744937310765299601f7359e9b81bbed",
-   "size": 57247
+   "sha256": "4681c5b7c1bb89e1bfcf27d785ddb4d87833cedc655efe1eb2d1955a7384d3a1",
+   "size": 57227
   },
   {
    "path": "src/history-prefix-preview.js",
@@ -1085,8 +1085,8 @@
   },
   {
    "path": "src/original-insert-ui.js",
-   "sha256": "37004e64222594275ab7c977d7bfdd1aae62b3e7c5d2a0731275de5ff6371055",
-   "size": 16786
+   "sha256": "2122b6754c628dba8b3fd761143104c54869c397f183255eac8eb68e7ee84443",
+   "size": 16715
   },
   {
    "path": "src/original-insert.mjs",
@@ -1110,8 +1110,8 @@
   },
   {
    "path": "src/original-join-ui.js",
-   "sha256": "04303c929dad61479ba12629d0487ceee7fb367f22f484303ce5fd5cbf667adb",
-   "size": 10615
+   "sha256": "ecc7715b641e285ab57f4ed2579d774a11197c3df1a3427ba11b14365242acb4",
+   "size": 10469
   },
   {
    "path": "src/original-length-edit.mjs",
@@ -1390,8 +1390,8 @@
   },
   {
    "path": "src/owned-parts-ui.js",
-   "sha256": "cb05d601eda52492e1f797a0efdced127ef53e343468d737908a920f5ed25ab3",
-   "size": 6565
+   "sha256": "41b1a89070c940c619eb3d8a71fed9112c4fb7282e85be44b3079afafc89cfa2",
+   "size": 6533
   },
   {
    "path": "src/parallel-path-kernel.mjs",
@@ -1510,8 +1510,8 @@
   },
   {
    "path": "src/ui-design-0118.css",
-   "sha256": "b31c6aa24df4a577b1a0318c156a55ce9bb624351a97074c158a399595cf3798",
-   "size": 19735
+   "sha256": "04c0ed7176b5d39338fafee025ce0157dfc582b28c2f58b587172a4d373f7d26",
+   "size": 20477
   },
   {
    "path": "src/ui-guide-0113.js",

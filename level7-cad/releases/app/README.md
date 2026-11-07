@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.193
+
+MTM screens: styles written into the HTML (blocked by the window security policy, with warnings) moved to the stylesheet.
+
 LEVEL7 and MTM 0.9.192
 
 LEVEL7 design: graded AAMA export works when the base size is switched off (the sample is the nearest active size); full review of all tools on a real design.
