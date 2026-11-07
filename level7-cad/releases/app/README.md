@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.186
+
+LEVEL7 design: in the mirror bar a notch lights up under the pointer; new «notches only» mode (click a notch or frame several); the frame modes take a notch by its red mark on the cut line too.
+
 LEVEL7 and MTM 0.9.185
 
 LEVEL7 design: a click on a test-run warning circles the bending curve end itself (an inherited curve no longer centres the view on an empty spot between the elements of its step).
