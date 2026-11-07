@@ -16,7 +16,7 @@ const iconOf = it => (USE_L7_ICONS && l7Icon(it.tool || it.command)) || toolIcon
 const GLYPH = {
   point: 'point', pointOn: 'pointFraction', intersect: 'pointCluster', pointMove: 'vector',
   line: 'line', lineAngle: 'angle', parallel: 'parallel', parallelMany: 'offsetEnds', setLength: 'lengthTo', trim: 'cutEnd',
-  cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer',
+  cornerSharp: 'corners', cornerRound: 'circularCorner', cornerChamfer: 'chamfer', cornerSquare: 'cornerSquare',
   dimSum: 'sum', dimAligned: 'distance', dimH: 'horizontal', dimV: 'vertical', dimLength: 'length', dimLengthQuick: 'length', dimAngle: 'threeAngle',
   stitchLock: 'stitchLock', stitchDouble: 'stitchDouble', stitchZigzag: 'stitchZigzag', stitchDeco: 'stitchDeco', stitchGather: 'stitchGather',
   grainLine: 'grain', symButton: 'symButton', symDrill: 'symDrill', symCross: 'symCross',
@@ -51,6 +51,7 @@ const HINT = {
   dimSum: 'انقر الخطوط والمنحنيات واحداً واحداً، ثم Enter أو كليك يمين؛ يظهر مجموع أطوالها Σ. اسحب أي بُعد لتقريبه أو إبعاده، ودابل كليك عليه لإضافة نص أو قلب اتجاه القيمة.',
   cornerRound: 'انقر الخطين قرب الزاوية (النتيجة تظهر قبل النقرة الثانية)، ثم حرّك الماوس: نصف القطر يتبعه. انقر لتثبيته أو اكتب القيمة.',
   cornerChamfer: 'انقر الخطين قرب الزاوية، ثم حرّك الماوس: مسافة القطع تتبعه. انقر لتثبيتها أو اكتب القيمة.',
+  cornerSquare: 'انقر قرب زاوية خط القص الخارجي (في منطقة مسافة الخياطة)، ثم اختر الحد الذي تكون النهاية قائمة عليه.',
   point: 'انقر على اللوحة لوضع نقطة، ثم عدّل س/ص في المربع.',
   pointOn: 'انقر الخط قرب الطرف الذي تُقاس منه، ثم حرّك الماوس على الخط: النقطة تتبعه والمسافة تظهر. انقر لتثبيتها أو اكتب القيمة.',
   intersect: 'انقر خطين أو منحنيين؛ نقطة التقاطع تظهر قبل النقرة الثانية.',
@@ -64,7 +65,7 @@ const HINT = {
   mirrorMove: 'انقر محور الانعكاس، ثم انقر العناصر واحداً واحداً: تُقلب إلى الجهة الأخرى فوراً. كليك يمين للإنهاء.',
   curve: 'انقر نقاط المنحنى بالترتيب (موجودة أو فارغة)، ثم Enter أو كليك يمين. بعدها اسحب الدائرة الحمراء عند كل طرف لضبط اتجاهه؛ دابل كليك عليها يعيده حراً.',
   piece: 'اختر حدود القطعة بالترتيب ثم Enter.',
-  seamAllowance: 'اختر نوع الحاشية وقيمتها من الشريط: قياسي، مسافة، غير متوازية (القيمة الأولى عند الطرف الأقرب للنقرة)، أو بدون؛ ثم انقر حواف القطع. كليك يمين للإنهاء.',
+  seamAllowance: 'اختر نوع مسافة الخياطة وقيمتها من الشريط: قياسي، مسافة، غير متوازية (القيمة الأولى عند الطرف الأقرب للنقرة)، أو بدون؛ ثم انقر حواف القطع. كليك يمين للإنهاء.',
   notch: 'اختر نقطة على حد القطعة.',
   measureDist: 'اختر نقطتين لقياس المسافة بينهما.',
   measureLength: 'اختر خطاً أو منحنى لقياس طوله.'

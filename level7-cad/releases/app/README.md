@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.188
+
+LEVEL7 design: cut-line corner square to an edge (new tool in the corners group); «مسافة الخياطة» instead of «الحاشية» everywhere; the cut line always keeps the full seam allowance from the sewing line (a broad random check found a case where it did not), with permanent random checks.
+
 LEVEL7 and MTM 0.9.187
 
 LEVEL7 design: a click on a piece error of the test run lights up the piece's own edges in red; the message says clearly which piece and what to do; the piece tool no longer makes a piece whose edges do not close.

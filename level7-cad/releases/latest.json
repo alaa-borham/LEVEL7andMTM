@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.187",
- "notes": "Piece error lights up the piece's edges; clearer message; the piece tool refuses an outline that does not close.",
+ "version": "0.9.188",
+ "notes": "Cut-line corner square to an edge; «مسافة الخياطة» instead of «الحاشية»; the cut line always keeps the full seam allowance.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "8a9b72e63f7c17f14413f46c7853d5c2c7b622014d5aa7523281d35c40ec06e4",
-   "size": 149413
+   "sha256": "8c3466b9d75457ac3c849951d3da2b04fd8997f514618b5c5fd774f9ee2b0958",
+   "size": 149747
   },
   {
    "path": "assets/icon.ico",
@@ -39,13 +39,13 @@
    "size": 44173
   },
   {
-   "path": "assets/l7design/assets/index-MUZiph4b.js",
-   "sha256": "a9946b84620c8db7800625011c23a97fc912fba4981f779372ccf8f00752e287",
-   "size": 325904
+   "path": "assets/l7design/assets/index-rePWc4iM.js",
+   "sha256": "e9a659849b3aadbd7968e6bd4d4bf91fd8a4647d267e3af6e1a9613a5b8166f3",
+   "size": 328890
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "2885ecf4767efaa79f6e0365f746fc19e71b39937166132dff579f5ce272cf3f",
+   "sha256": "69753460950a832e3ad6cbf200f918d2def67e8e83bb98546abda72481dec781",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "3c8229a2d15561ba5947b6d6fbc0493f4e31409aecfb7f5fe24886ff0c153ad0",
+   "sha256": "44223b19698bb8e918935a000acdf07c7b43cac4611a9c73a4a223ecc58f4be0",
    "size": 301
   },
   {
@@ -370,13 +370,13 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "fd1581ddea59de0544d4040f9ad805d826b0519e0c4b07f8e2ca6945f68ed77e",
-   "size": 47539
+   "sha256": "1f0f0425493ac891fad41ce58dd8d5ac709cd68586fddf42f44d5884513d9803",
+   "size": 47778
   },
   {
    "path": "src/l7-icons.js",
-   "sha256": "2edf46a23b18bf75245308b4680cb2d53e98c5c85c2e7812aade4695e587e44a",
-   "size": 8438
+   "sha256": "6ecb57397d0803382b1cca83db87850679f9973dee75f92b6ee1841bd9fb2c2e",
+   "size": 8535
   },
   {
    "path": "src/line-transform-ui.js",

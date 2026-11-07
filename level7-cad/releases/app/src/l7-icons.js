@@ -26,6 +26,7 @@ const I = {
   cornerSharp: `<path class="g" d="M3 7h13M18 21V9"/><path class="b" d="M3 7h15v14"/>${P(18, 7)}`,
   cornerRound: '<path class="g" d="M11 5h8v8"/><path class="k" d="M3 5h8M19 13v8"/><path class="b" d="M11 5a8 8 0 0 1 8 8"/>',
   cornerChamfer: '<path class="g" d="M12 5h7v7"/><path class="k" d="M3 5h9M19 12v9"/><path class="b" d="M12 5l7 7"/>',
+  cornerSquare: '<path class="k" d="M3 9h12M3 9l12-6"/><path class="b" d="M3 17h16v-14l-4 0"/>',
   // transformations
   mirrorCopy: '<path class="g" d="M12 2v20"/><path class="f" d="M4 6l5 3v10l-5-3z"/><path class="b" d="M20 6l-5 3v10l5-3z"/>',
   mirrorMove: '<path class="g" d="M12 2v20M4 6l5 3v10l-5-3z"/><path class="f" d="M20 6l-5 3v10l5-3z"/><path class="o" d="M6 3.5c3-2 9-2 12 0M15.5 2l2.5 1.5-2 2"/>',
