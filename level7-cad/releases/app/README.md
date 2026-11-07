@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.185
+
+LEVEL7 design: a click on a test-run warning circles the bending curve end itself (an inherited curve no longer centres the view on an empty spot between the elements of its step).
+
 LEVEL7 and MTM 0.9.184
 
 LEVEL7 design: the test run also warns (⚠, not an error) where a piece's seam allowance cannot come out clean — a curve end bending tighter than the allowance towards the cut side, or a very narrow corner — and a click shows the curve; the value of a new X / Z row is selected at once, so keys typed during a redraw replace its 0.
