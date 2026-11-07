@@ -1558,7 +1558,12 @@ export class App {
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
     parts.push(this.formulaLabelsSvg());
-    if (this.flash) {
+    for (const id of this.flashIds) {
+      const o = this.res.objects.get(id);
+      if (o?.kind === "line") parts.push(`<polyline class="err-edge" points="${o.pts.map((q) => this.toScreen(q).map((v) => v.toFixed(1)).join(",")).join(" ")}" fill="none"/>`);
+    }
+    // with the piece's edges in red no circle is needed (it fell between them, on another line)
+    if (this.flash && !this.flashIds.size) {
       const [fx, fy] = this.toScreen(this.flash);
       parts.push(`<circle class="err-flash" cx="${fx}" cy="${fy}" r="26" fill="none"/>`);
     }
@@ -2967,6 +2972,8 @@ export class App {
   /** Opened by the program around the engine: the Z table (set from main). */
   showPanel?: (tab: string) => void;
   private flash: Pt | null = null;
+  /** Edges of a piece shown in red for a moment (a click on a piece error of the test run). */
+  private flashIds = new Set<number>();
   private flashTimer = 0;
 
   /** Show where an error of the test run is: its part and size, the step on the drawing (or what it is
@@ -2980,6 +2987,7 @@ export class App {
       return this.toast(`Z${ref.z}: في جدول Z`);
     }
     let pts: Pt[] = [];
+    this.flashIds = new Set<number>();
     if ("at" in ref) {
       // the exact place (a warning): the view centres on it; its curve is shown active when known
       const d = 25;
@@ -2992,6 +3000,8 @@ export class App {
       const pc = this.model.pieces?.find((p) => p.id === ref.piece);
       const g = this.res.pieces.get(ref.piece);
       pts = g ? g.sew : (pc?.edges ?? []).flatMap((id) => this.res.objects.get(id)?.pts ?? []);
+      // the piece's own edges light up in red: it is clear which lines the message is about
+      this.flashIds = new Set(pc?.edges ?? []);
     } else {
       const st = this.model.steps[ref.step];
       if (!st) return;
@@ -3012,7 +3022,7 @@ export class App {
     this.scale = Math.min(200, Math.max(Math.min(this.scale, fit), fit));
     this.flash = [this.cx, this.cy];
     clearTimeout(this.flashTimer);
-    this.flashTimer = window.setTimeout(() => ((this.flash = null), this.render()), 2500);
+    this.flashTimer = window.setTimeout(() => ((this.flash = null), (this.flashIds = new Set()), this.render()), 2500);
     this.render();
   }
 
@@ -3685,7 +3695,18 @@ export class App {
       this.model.pieces.push({ id, ...t.makePiece(ctx, values) });
       this.changed();
       const err = this.res.pieceErrors.get(id);
-      this.toast(err ? `أُنشئت القطعة لكن فيها خطأ: ${err}` : "أُنشئت القطعة. عدّل حواشي كل حد من صفحة «القطع»");
+      if (err) {
+        // 0.9.187: a piece whose edges do not close is not made (it would stay as an error in the test run)
+        this.model.pieces = this.model.pieces.filter((p) => p.id !== id);
+        this.undoStack.pop();
+        this.changed();
+        this.toast(`لم تُنشأ القطعة: ${err}. انقر كل حدود القطعة حولها بالترتيب ثم Enter`);
+        this.afterPiece = null;
+        this.restartTool();
+        this.render();
+        return;
+      }
+      this.toast("أُنشئت القطعة. عدّل حواشي كل حد من صفحة «القطع»");
       const next = this.afterPiece;
       this.afterPiece = null;
       if (next && !err) {

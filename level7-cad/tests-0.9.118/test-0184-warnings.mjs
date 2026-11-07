@@ -26,5 +26,22 @@ try{
  await load('90','100',9);await f.evaluate(()=>window.level7.runCheck(false,false));
  await f.waitForFunction(()=>/بلا أخطاء ولا تنبيهات/.test(document.querySelector('#toast')?.textContent||''));
  assert.equal(await fr.locator('.check-win').count(),0);pass('with the curve meeting L12 at 90° the test run is clean: no window, «بلا أخطاء ولا تنبيهات»');
+ // 0.9.187: a piece error lights up the piece's own edges in red (no circle that falls on another line)
+ await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();m.pieces.push({id:2,name:'two',quantity:1,fabric:'',edges:[8,9],seam:['10','10'],notches:[],grain:'90'});a.changed();});
+ await f.evaluate(()=>window.level7.runCheck(false,false));const err=fr.locator('.check-win .ck-go:not(.ck-warn)').first();await err.waitFor();
+ const et=await err.textContent();assert(/القطعة «two»: حدودها خطّان فقط/.test(et),et);
+ await err.click();await f.waitForFunction(()=>document.querySelectorAll('#canvas .err-edge').length===2&&!document.querySelector('#canvas .err-flash'));
+ pass(`a piece error names the piece clearly («${et.slice(0,45)}…») and lights up its 2 edges in red`);
+ await fr.locator('.check-win [data-ck="close"]').click();
+ // the piece tool does not make a piece whose edges do not close
+ await f.evaluate(()=>{const a=window.level7;a.snapshot();a.model.pieces=a.model.pieces.filter(p=>p.id!==2);a.changed();a.fit();});
+ const box=await page.locator('#l7-design-frame').boundingBox(),at=async(x,y)=>{const[sx,sy]=await f.evaluate(([x,y])=>window.level7.toScreen([x,y]),[x,y]);return[box.x+sx,box.y+sy];};
+ const pb=page.locator('[data-l7d-tool="piece"]');const pcat=await pb.evaluate(e=>e.closest('[data-l7d-cat-panel]').dataset.l7dCatPanel);await page.locator(`[data-l7d-cat="${pcat}"]`).click({button:'right'});await pb.click();
+ await f.waitForFunction(()=>window.level7.tool?.key==='piece');
+ const c1=await f.evaluate(()=>{const o=window.level7.res.objects.get(8);return o.pts[Math.floor(o.pts.length/2)];});
+ await page.mouse.click(...await at(c1[0],c1[1]));await page.mouse.click(...await at(20,-150));
+ await page.keyboard.press('Enter');const ok=fr.locator('#tool-box [data-ok]');if(await ok.isVisible().catch(()=>false))await ok.click();
+ await f.waitForFunction(()=>/لم تُنشأ القطعة/.test(document.querySelector('#toast')?.textContent||''));
+ assert.equal(await f.evaluate(()=>window.level7.model.pieces.length),1);pass('the piece tool refuses a piece of 2 edges that do not close, and says why');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
