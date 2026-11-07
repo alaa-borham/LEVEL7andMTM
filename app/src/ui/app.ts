@@ -1332,11 +1332,13 @@ export class App {
     pc.seamEnd[h.k] = b;
     if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
     this.changed();
-    // that edge stays chosen: a change in the bar now applies to it at once
-    this.seamSel = h;
-    this.seamSnapped = true;
-    const hint = document.querySelector(".seam-bar .seam-hint");
-    if (hint) hint.textContent = `الحافة ${this.seamSelName()}`;
+    // a click applies the bar's kind and value to that edge (as GRAFIS: kind first, then the edges); it ends a
+    // double-click choice, so that changing the kind afterwards does not change the edge clicked last
+    if (this.seamSel) {
+      this.seamSel = null;
+      const hint = document.querySelector(".seam-bar .seam-hint");
+      if (hint) hint.textContent = "انقر حافة القطعة";
+    }
     this.render();
   }
 
