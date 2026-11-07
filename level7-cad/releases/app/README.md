@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.187
+
+LEVEL7 design: a click on a piece error of the test run lights up the piece's own edges in red; the message says clearly which piece and what to do; the piece tool no longer makes a piece whose edges do not close.
+
 LEVEL7 and MTM 0.9.186
 
 LEVEL7 design: in the mirror bar a notch lights up under the pointer; new «notches only» mode (click a notch or frame several); the frame modes take a notch by its red mark on the cut line too.

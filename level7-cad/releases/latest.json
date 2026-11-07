@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.186",
- "notes": "Mirror bar: notch lights up under the pointer, «notches only» mode, frames take a notch by its mark.",
+ "version": "0.9.187",
+ "notes": "Piece error lights up the piece's edges; clearer message; the piece tool refuses an outline that does not close.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "80b72b82bfe83318f95729047d0e7b5b37839e2b8526a36edebf0b4f30d5f662",
-   "size": 149174
+   "sha256": "8a9b72e63f7c17f14413f46c7853d5c2c7b622014d5aa7523281d35c40ec06e4",
+   "size": 149413
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-C_I68b_u.js",
-   "sha256": "76909152e38a5d3a3b58c7696e148a5e5b2f9c7fcb7ab9415b72fa5a5086ec2e",
-   "size": 325105
+   "path": "assets/l7design/assets/index-Dx6S5ncn.css",
+   "sha256": "d2a124df64424673eba1741de20c02c5a139c89654eb1c32b17844311a83a87b",
+   "size": 44173
   },
   {
-   "path": "assets/l7design/assets/index-D2i_AY2F.css",
-   "sha256": "b01b36f9078ddbefda286d859e09f5a6b9f6c6b7489ef188c9d9ab71e2da4f4c",
-   "size": 44092
+   "path": "assets/l7design/assets/index-MUZiph4b.js",
+   "sha256": "a9946b84620c8db7800625011c23a97fc912fba4981f779372ccf8f00752e287",
+   "size": 325904
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "fe3ca2fb5adbee4f97e0b05fcba89745702b96f3d1090622ed2d94e1f0e7c2c6",
+   "sha256": "2885ecf4767efaa79f6e0365f746fc19e71b39937166132dff579f5ce272cf3f",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "2828cb0761300fb15f4a430e823b38fe9f14f8542ef75c33556f5f9f2b3bb13b",
+   "sha256": "3c8229a2d15561ba5947b6d6fbc0493f4e31409aecfb7f5fe24886ff0c153ad0",
    "size": 301
   },
   {
