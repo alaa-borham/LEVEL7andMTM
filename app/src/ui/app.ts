@@ -2025,14 +2025,14 @@ export class App {
   /** Every point the selected curve passes through can be dragged in any direction:
    * a free point moves itself; a point tied to a line (on a line, intersection, line end …)
    * gets an offset (dx, dy) from where it is tied, so it still follows its line. */
-  private curvePoints(idx = this.selectedStep): { k: number; ref: PointRef; s: Pt }[] {
+  private curvePoints(idx = this.selectedStep): { k: number; ref: PointRef; s: Pt; end: boolean }[] {
     const s = this.model.steps[idx];
     if (!s || s.op !== "curve" || this.blockingForm()) return [];
     const n = s.through.length;
+    // 0.9.194: the start and end points are dragged too (the direction handles sit apart from them)
     return s.through.flatMap((ref, k) => {
-      if (k === 0 || k === n - 1) return []; // the ends have the direction handles
       try {
-        return [{ k, ref, s: this.toScreen(this.pointOf(ref)) }];
+        return [{ k, ref, s: this.toScreen(this.pointOf(ref)), end: k === 0 || k === n - 1 }];
       } catch {
         return [];
       }
@@ -2637,7 +2637,9 @@ export class App {
     // a small dot on each; the square only on the point under the pointer or being dragged (as GRAFIS)
     for (const p of this.curvePoints())
       out.push(
-        p.k === this.cpHover || p.k === this.cpDrag
+        p.end && p.k !== this.cpHover && p.k !== this.cpDrag
+          ? "" // an end keeps its own dot; the square shows under the pointer
+          : p.k === this.cpHover || p.k === this.cpDrag
           ? `<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`
           : `<circle class="curve-dot" cx="${p.s[0]}" cy="${p.s[1]}" r="3" fill="#2fa4dd"/>`,
       );
