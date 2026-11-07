@@ -215,9 +215,11 @@ export function installDesignMode() {
     list.push({ name: 'التصدير والحفظ', items: [['save', 'حفظ التصميم · Ctrl+S', 'folder'], ['aama', 'تصدير AAMA للتعشيق · Ctrl+E', 'manufacturing'], ['dxf', 'تصدير DXF', 'line20'], ['plt', 'تصدير PLT للبلوتر', 'raster']].map(([command, name, glyph]) => ({ command, name, glyph })) });
     return list;
   };
-  const stripIcon = c => { const it = c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0]; return iconOf(it); };
-  // 0.9.176: the strip icon's tip names the tool it shows (and what it does), then how to reach the others
-  const stripTitle = c => (c.items.find(x => x.tool && x.tool === last[c.name]) || c.items[0])?.name || c.name; // 0.9.178: the tool's name only
+  // 0.9.189: each group keeps ONE fixed icon that stands for it (it no longer turns into the last tool
+  // used), so it is always found in the same place by the same picture; its tip is the group's name
+  const GROUP_ICON = { 'النقاط': 'point', 'الخطوط': 'line', 'المنحنيات': 'curve', 'الزوايا': 'cornerRound', 'التحويلات': 'mirrorCopy', 'القطع': 'piece', 'الحذف': 'delAllFrame', 'التعديل': 'setLength', 'الأبعاد': 'dimAligned', 'القياس من الرسم': 'measureLength', 'الغرز': 'stitchLock', 'العلامات': 'grainLine', 'النصوص': 'textCreate', 'الوراثة': 'inheritObjects' };
+  const stripIcon = c => iconOf(c.items.find(x => x.tool && x.tool === GROUP_ICON[c.name]) || c.items[0]);
+  const stripTitle = c => c.name;
   const renderTools = () => {
     toolsBox.replaceChildren();
     cats = categories();

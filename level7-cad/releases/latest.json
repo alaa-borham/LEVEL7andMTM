@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.188",
- "notes": "Cut-line corner square to an edge; «مسافة الخياطة» instead of «الحاشية»; the cut line always keeps the full seam allowance.",
+ "version": "0.9.189",
+ "notes": "Curve direction at any point; curve point slides along its line; dragged point value / X / Z; double-click cut line → seam allowance; fixed group icons; inherit fix.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "8c3466b9d75457ac3c849951d3da2b04fd8997f514618b5c5fd774f9ee2b0958",
-   "size": 149747
+   "sha256": "c8f5115efddcb4fe337c63035e65435b616e220c15620e48ec8c413f3577862a",
+   "size": 150108
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-Dx6S5ncn.css",
-   "sha256": "d2a124df64424673eba1741de20c02c5a139c89654eb1c32b17844311a83a87b",
-   "size": 44173
+   "path": "assets/l7design/assets/index-D3pVVX7Y.css",
+   "sha256": "f1f010f2485b3db4c784cd6be02812b5e0f62522464d6e2d78f9e651ca93d97a",
+   "size": 44299
   },
   {
-   "path": "assets/l7design/assets/index-rePWc4iM.js",
-   "sha256": "e9a659849b3aadbd7968e6bd4d4bf91fd8a4647d267e3af6e1a9613a5b8166f3",
-   "size": 328890
+   "path": "assets/l7design/assets/index-DBBVjUeb.js",
+   "sha256": "9444de41d2547275dfcdc7f5a0cbc95739e84dfe54ddd79f774e122caab38b3d",
+   "size": 334551
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "69753460950a832e3ad6cbf200f918d2def67e8e83bb98546abda72481dec781",
+   "sha256": "f962a90a726d28c92f54726feb931f6362e6dc0c29968ca887d6b287ea01d42a",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "44223b19698bb8e918935a000acdf07c7b43cac4611a9c73a4a223ecc58f4be0",
+   "sha256": "55cad3f29ca5cf4fe4cb1f41bcef7e3181827895e180b6fc24ea62b3b2b2a941",
    "size": 301
   },
   {
@@ -370,8 +370,8 @@
   },
   {
    "path": "src/l7-design-mode.js",
-   "sha256": "1f0f0425493ac891fad41ce58dd8d5ac709cd68586fddf42f44d5884513d9803",
-   "size": 47778
+   "sha256": "8cb50078ce97a60b4223e4e5e38e0eb4db1b12b1c55e599b778b8ae9032928d4",
+   "size": 48208
   },
   {
    "path": "src/l7-icons.js",

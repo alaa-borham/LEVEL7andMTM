@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.189
+
+LEVEL7 design: curve direction set / deleted at any of its points; a curve point on a line slides along it (Alt: free); after a drag the point's own value / X / Z fields; double-click on a piece's cut line opens the seam allowance bar; one fixed icon per tool group; inheriting no longer stops at a line already inherited lying on top.
+
 LEVEL7 and MTM 0.9.188
 
 LEVEL7 design: cut-line corner square to an edge (new tool in the corners group); «مسافة الخياطة» instead of «الحاشية» everywhere; the cut line always keeps the full seam allowance from the sewing line (a broad random check found a case where it did not), with permanent random checks.
