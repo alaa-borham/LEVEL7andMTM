@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.197
+
+LEVEL7 design: the seam allowance is edited in the top bar only: a double-click on a cut line chooses that edge (its value in the bar, ready to type), X / Z lists in the bar, every change applies at once (no window, no OK).
+
 LEVEL7 and MTM 0.9.196
 
 LEVEL7 design: the cut line is taken by the pointer at any zoom (it wins over a farther sewing line within the pick distance); a double-click on an inherited piece edge opens its seam allowance.

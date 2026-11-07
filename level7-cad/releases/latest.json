@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.196",
- "notes": "The cut line is taken by the pointer at any zoom; a double-click on an inherited piece edge opens its seam allowance",
+ "version": "0.9.197",
+ "notes": "Seam allowance in the top bar only: double-click chooses the edge, X / Z lists in the bar, changes apply at once",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "fdfa81245f51a15e0f724b22126001467f1032b50f7f3d719de4aa27621f7510",
-   "size": 152026
+   "sha256": "8b7cd360404379ec7167c690483d8f3525d75c3c33e8ac819d1ebdd35a6fd71f",
+   "size": 152275
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-DWa38Zkp.js",
-   "sha256": "d64f1c905b258047be73aa521a1ef9c94a400c4fd45c6b3144118bbdd6d2fb16",
-   "size": 344593
+   "path": "assets/l7design/assets/index-DX7T-nbL.css",
+   "sha256": "9a4ee41f280dc708cd55aaabc4135fa12f892f9e781a96c5d2707e93865e4f18",
+   "size": 45160
   },
   {
-   "path": "assets/l7design/assets/index-qCJx2Z1_.css",
-   "sha256": "ceac64e8bd8f60b1dc1e9c15b97fe77e27912fb87f10d4fedd01187b2d2fa552",
-   "size": 44905
+   "path": "assets/l7design/assets/index-DzNBNdDz.js",
+   "sha256": "926f2b3129a1a52c8c0ec06fce7e56c9c0ea1e976c7ad8eb631bcfea0e0ab2ed",
+   "size": 346358
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "552095824fada561c7e88c182f91505539bfa6446e1042137630ac4800b88502",
+   "sha256": "eed56b1940a9e1b4f2ca69d1db630672f5095c2825a2443ee5aaf510910cc656",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "df13e237d691e107b63b86cbb99600f6a0cd618398b7b2591fd6cd69a0c1bcc3",
+   "sha256": "e6b33a7f12e54ee96fc7b924bbe294293327d3ba258774d03d7f875806034427",
    "size": 301
   },
   {
