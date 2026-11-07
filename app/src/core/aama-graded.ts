@@ -53,13 +53,17 @@ export function toGradedAama(model: Model, date = new Date()): GradedResult {
   const idx = [-1, ...(model.sizes ?? []).flatMap((s, i) => (s.kind === "customer" ? [] : [i]))].filter((i) => sizeActive(model, i)); // switched-off sizes stay out
   const stepOf = (i: number) => (i < 0 ? 0 : (model.sizes as NonNullable<Model["sizes"]>)[i].step);
   idx.sort((a, b) => stepOf(a) - stepOf(b) || a - b);
+  if (!idx.length) return { dxf: "", rul: "", sizes: [], sample: "", rules: 0, errors: ["لا يوجد مقاس مفعّل في جدول المقاسات"] };
+  // the sample size the rules are measured from: the base size, or when it is switched off in the size
+  // table, the active size nearest to it in the grading order
+  const sampleAt = idx.includes(-1) ? idx.indexOf(-1) : idx.reduce((b, i, k) => (Math.abs(stepOf(i)) < Math.abs(stepOf(idx[b])) ? k : b), 0);
   const names = sizeTokens(
     idx.map((i) => sizeName(model, i)),
-    idx.indexOf(-1),
+    sampleAt,
   );
-  const sample = names[idx.indexOf(-1)];
+  const sample = names[sampleAt];
   const results = idx.map((i) => evaluateModel(withSize(model, i)));
-  const baseRes = results[idx.indexOf(-1)];
+  const baseRes = results[sampleAt];
 
   // rules: deltas per size, deduplicated
   const ruleKey = new Map<string, number>();

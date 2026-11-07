@@ -6119,13 +6119,14 @@ export class App {
       return;
     }
     const r = toGradedAama(this.model);
+    if (!r.dxf) return this.toast(r.errors[0] ?? "لا يوجد ما يُصدَّر");
     const base = safeFileName(this.model.name);
     download(`${base}.dxf`, r.dxf, "application/dxf");
     setTimeout(() => download(`${base}.rul`, r.rul, "text/plain"), 300);
     this.toast(
       r.errors.length
         ? `صُدّر مع أخطاء: ${r.errors[0]}`
-        : `صُدّر ${this.model.pieces.length} قطعة بـ ${r.rules} قاعدة تدرج للمقاسات ${r.sizes.join(" ")} (الأساسي ${r.sample})`,
+        : `صُدّر ${this.model.pieces.length} قطعة بـ ${r.rules} قاعدة تدرج للمقاسات ${r.sizes.join(" ")} (مقاس العيّنة ${r.sample})`,
     );
   }
 
