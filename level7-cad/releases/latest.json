@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.183",
- "notes": "Clean cut-line corner where a curve bends tighter than the seam allowance; delete grain line; mirror notches; GRAFIS-style mirror bar (selection modes, copy/move).",
+ "version": "0.9.184",
+ "notes": "Test run warns where a seam allowance cannot come out clean (curve end hooking towards the cut side, very narrow corner); new X / Z row value selected at once.",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "eec8c2e2f21b21d78e676f8ca71f7df4fc5973974d737ae0e776f5afb98211bf",
-   "size": 148385
+   "sha256": "e580979569ebda6e5453137012fe2b03d42657c6524c6ba7996acc014fd0664f",
+   "size": 148747
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-C1ysGjfQ.js",
-   "sha256": "3bb7bdcbced3f73c71942be4791b8f99fd2fee615d4a1c16355fe7e1abfc163d",
-   "size": 321732
+   "path": "assets/l7design/assets/index-CjTguGSu.css",
+   "sha256": "fc074f59d4db3a588c0906f151d12e2726773a6b46aeb7cf58304f69b554fee3",
+   "size": 44006
   },
   {
-   "path": "assets/l7design/assets/index-CC3uKszp.css",
-   "sha256": "c670ef38359f893f7e4089304fe0a9855402c65343bea6ebc88ea9810c55a192",
-   "size": 43928
+   "path": "assets/l7design/assets/index-D0a2_K1m.js",
+   "sha256": "e15bd825b2a50a2a49acc9e74fdfc2a6d36b1e5b9817fad0d01ef8f9124fa0bd",
+   "size": 324012
   },
   {
    "path": "assets/l7design/index.html",
-   "sha256": "fba19154caa7902ca1116f25e0629270ef53505739313ee1f067504cd48e5897",
+   "sha256": "c9b67666e1302f8f630ac7bb3f5328ae022c292c425b4dfba907059e35511350",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "6474529a67ce261d3a6c0109f399d0e4d04a05009b9c30fe6db3d6aa69d0ce32",
+   "sha256": "09863c91ffa44b26d4be914a1fc007464d3e15e4596ec54d81264ce8e6b977ca",
    "size": 301
   },
   {

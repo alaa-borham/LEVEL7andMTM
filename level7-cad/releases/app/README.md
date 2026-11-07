@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.184
+
+LEVEL7 design: the test run also warns (⚠, not an error) where a piece's seam allowance cannot come out clean — a curve end bending tighter than the allowance towards the cut side, or a very narrow corner — and a click shows the curve; the value of a new X / Z row is selected at once, so keys typed during a redraw replace its 0.
+
 LEVEL7 and MTM 0.9.183
 
 LEVEL7 design: the cut line no longer kinks below a corner where a curve bends tighter than the seam allowance (the folded-back bit is cleaned off before the corner is found); «حذف خط اتجاه القماش» in the delete menu; the mirror tools mirror notches too and show a GRAFIS-style bar (single elements, points and lines / lines / lines through / points in a frame, a whole piece; copy or move).
