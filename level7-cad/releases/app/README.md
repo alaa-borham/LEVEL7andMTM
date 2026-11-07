@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.194
+
+LEVEL7 design: the start and end points of an active curve are dragged too (an end on a line slides along it, one value); development data follows LOCALAPPDATA when given (tests no longer share a restored design).
+
 LEVEL7 and MTM 0.9.193
 
 MTM screens: styles written into the HTML (blocked by the window security policy, with warnings) moved to the stylesheet.

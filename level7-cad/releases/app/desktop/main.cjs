@@ -14,7 +14,8 @@ const INDEX_FILE = path.join(APP_ROOT, 'native.html');
 const INDEX_URL = pathToFileURL(INDEX_FILE).href;
 const DATA_ROOT = app.isPackaged
   ? path.join(process.env.LOCALAPPDATA || path.join(app.getPath('home'), 'AppData', 'Local'), 'LEVEL7 CAD')
-  : path.resolve(APP_ROOT, '../../work/level7-desktop-data');
+  // development: LOCALAPPDATA when given (each test run gets its own data, no design restored from another run)
+  : process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'LEVEL7 CAD') : path.resolve(APP_ROOT, '../../work/level7-desktop-data');
 const OPEN_LIMIT = 20 * 1024 * 1024;
 const SAVE_LIMIT = 30 * 1024 * 1024;
 const FORMATS = Object.freeze({

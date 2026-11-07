@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.193",
- "notes": "MTM screens: styles blocked by the window security policy moved to the stylesheet (no more CSP warnings)",
+ "version": "0.9.194",
+ "notes": "Curve start and end points can be dragged (an end on a line slides along it)",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "373a27f71f070a81f8db421b4d4ea1cad8bd38850e493b6c7081c031a17203f0",
-   "size": 151303
+   "sha256": "9fb4ab52d4d1d6c2ee1b3e3788c8c73d3a96c99a49cf530b146c11670c45ba72",
+   "size": 151542
   },
   {
    "path": "assets/icon.ico",
@@ -34,24 +34,24 @@
    "size": 712
   },
   {
-   "path": "assets/l7design/assets/index-4LBzQK1J.js",
-   "sha256": "5202636b870c1de5d8ad4fca5c6649834e14c5365e1a40f28f5bfdf6bf31a0a7",
-   "size": 342071
-  },
-  {
    "path": "assets/l7design/assets/index-BkdDGHEW.css",
    "sha256": "bfa9279bca263515783d26a0efc0c880cd28f88c1142d87b5b2b154b24791956",
    "size": 44820
   },
   {
+   "path": "assets/l7design/assets/index-nOcD37k5.js",
+   "sha256": "a107bc18a70d964bea6be5cb451163036f0105730f0233d45b1ccff53f0f2617",
+   "size": 342111
+  },
+  {
    "path": "assets/l7design/index.html",
-   "sha256": "98e881e9e5d3b31f808e99e367e9e095d31e4a6deea802c5573a01c2a5d8a662",
+   "sha256": "ffc126bba3cbb8ecbfdb4dc1f5d6b0258dead87974724b6b89dd1f6d453b17ac",
    "size": 3594
   },
   {
    "path": "desktop/main.cjs",
-   "sha256": "53f521c460a3e1f0f62f238485595c27917a3f2bd7fb7428c1df22ddb2582e2a",
-   "size": 29294
+   "sha256": "97ed61b975fd6ee9cc757624e4abb4e5098104c04654a8b4ca9b0d2272d5b31f",
+   "size": 29486
   },
   {
    "path": "desktop/native-save-targets.cjs",
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "c8842c9f71ad041a9d6150d1bff0e69137d4c3fa8f3963817a01530b69dd691c",
+   "sha256": "2699c3d886311c579f899a61ee17d9438389a3383e3bf507b2c67b0034adb767",
    "size": 301
   },
   {
