@@ -8,7 +8,9 @@ await page.locator('#cad-toolbox [data-action="new-template"]').click();
 await page.locator('#cad-toolbox [data-action="x-values"]').click();
 await page.locator('#x-table-add').click().catch(e=>console.log('noadd',e.message));
 await page.waitForTimeout(500);
-page.on('dialog',d=>{console.log('DIALOG',d.message());d.dismiss().catch(()=>{})});
+// the close at the end asks about the unsaved X value (beforeunload): leave without saving, as a user
+// would, or the program's own «save before closing?» box waits for an answer forever
+page.on('dialog',d=>{console.log('DIALOG',d.type(),d.message());(d.type()==='beforeunload'?d.accept():d.dismiss()).catch(()=>{})});
 await page.getByText('Edit X1…').click();await page.waitForTimeout(300);
 console.log(await page.evaluate(()=>[...document.querySelectorAll('#x-values-dialog input')].filter(b=>b.offsetParent).map(b=>b.id+'|'+b.className+'|'+b.value).join('\n')));
 const inp=page.locator('#x-values-dialog tr input, #x-values-dialog .x-entry input').last();
@@ -26,4 +28,7 @@ console.log('OPTIONS',await page.evaluate(()=>[...document.querySelectorAll('#li
 console.log(await page.evaluate(()=>[...document.querySelectorAll('[data-tool-category-panel="points"] button')].filter(b=>b.offsetParent).map(b=>(b.dataset.action||b.dataset.pointsMenuOption||'')+'|'+b.title+'|'+b.disabled).join('\n')));
 const opts=await page.evaluate(()=>[...document.querySelectorAll('#line10-length-source option')].map(o=>o.textContent+(o.disabled?' [disabled]':'')));
 const want=(process.env.X_VALUE||'1500')==='0'?'X1 = 0 · أدخل قيمة أكبر من صفر [disabled]':'X1 = 1500 mm';
-await app.close();if(!opts.includes(want)){console.error('FAIL',opts);process.exit(1);}console.log('PASS Line 10 length list shows',want);process.exit(0); // nothing may keep node waiting after the app closed
+// the X value is unsaved: closing asks «save before closing?» in the program's own box, which nobody
+// answers here. Allow the close without saving, as a user choosing «إغلاق دون حفظ» would.
+await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().forEach(w=>w.webContents.on('will-prevent-unload',e=>e.preventDefault())));
+await app.close();if(!opts.includes(want)){console.error('FAIL',opts);process.exit(1);}console.log('PASS Line 10 length list shows',want);process.exit(0);

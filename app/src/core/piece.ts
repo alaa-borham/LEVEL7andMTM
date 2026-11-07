@@ -209,13 +209,51 @@ function unit2(from: Pt, to: Pt): Pt {
  */
 export function foldFree(src: Pt[], off: Pt[], a: number): Pt[] {
   if (a <= 0 || off.length < 3) return off;
-  const keep = off.filter((q) => closestOnPolyline(src, q).d >= a * 0.97);
-  return unloop(keep.length >= 2 ? keep : off);
+  off = unloop(off, 3 * a); // swallowtails first (the offset crossing itself), then what still lies too near
+  const ok = off.map((q) => closestOnPolyline(src, q).d >= a * 0.97);
+  let idx = off.map((_, i) => i).filter((i) => ok[i]);
+  if (idx.length < 2) return off;
+  // a few good points stranded before / after a folded stretch at an end are dropped too: the cut line
+  // then starts where the offset runs clean, and the corner is found along that clean direction
+  // (they would otherwise pull a straight jump across the fold, a kink below the corner)
+  const L = polyLen(off), along = (i: number) => polyLen(off.slice(0, i + 1));
+  for (let k = idx.length - 1; k > 0; k--)
+    if (idx[k] - idx[k - 1] > 1 && along(idx[k]) <= Math.min(6 * a, L / 2)) {
+      idx = idx.slice(k);
+      break;
+    }
+  for (let k = 0; k + 1 < idx.length; k++)
+    if (idx[k + 1] - idx[k] > 1 && L - along(idx[k]) <= Math.min(6 * a, L / 2)) {
+      idx = idx.slice(0, k + 1);
+      break;
+    }
+  const keep = idx.map((i) => off[i]);
+  return cleanEnds(unloop(keep.length >= 2 ? keep : off, 3 * a), a);
 }
 
-/** Cuts out small loops (the line crossing itself a little further on). */
-function unloop(p: Pt[]): Pt[] {
-  const out = [...p];
+/** Where a fold was cut away, the line can still turn back on itself near an end (a cusp, often only a
+ * millimetre long): that would set a wrong direction for the corner. Everything before the last
+ * turn-back within 3 × the allowance of the end is dropped (and the same at the other end). */
+function cleanEnds(p0: Pt[], a: number): Pt[] {
+  const trim = (p: Pt[]): Pt[] => {
+    const q = dedupe(p, 1e-6);
+    let cut = 0, s = 0;
+    for (let i = 1; i + 1 < q.length; i++) {
+      s += dist(q[i - 1], q[i]);
+      if (s > 3 * a) break;
+      const u: Pt = [q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]], v: Pt = [q[i + 1][0] - q[i][0], q[i + 1][1] - q[i][1]];
+      if (u[0] * v[0] + u[1] * v[1] < -0.3 * Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1])) cut = i; // turns back (over ~107°)
+    }
+    return q.length - cut >= 2 ? q.slice(cut) : q;
+  };
+  return trim(trim(p0).reverse()).reverse();
+}
+
+/** Cuts out small loops (the line crossing itself a little further on). A loop within `endZone` of an
+ * open end is the tail of a swallowtail: the stub before it (or after it) goes too. */
+function unloop(p: Pt[], endZone = 0): Pt[] {
+  let out = [...p];
+  let head = 0; // arc length from the start to out[i]
   for (let i = 0; i + 3 < out.length; i++) {
     let reach = 0;
     for (let j = i + 2; j + 1 < out.length; j++) {
@@ -223,10 +261,17 @@ function unloop(p: Pt[]): Pt[] {
       if (reach > 200) break;
       const x = segCross(out[i], out[i + 1], out[j], out[j + 1]);
       if (x) {
-        out.splice(i + 1, j - i, x);
+        const tail = polyLen(out.slice(j + 1));
+        if (head + dist(out[i], x) <= endZone) {
+          out = [x, ...out.slice(j + 1)]; // swallowtail at the start
+          i = -1;
+          head = 0;
+        } else if (tail + dist(x, out[j + 1]) <= endZone) out = [...out.slice(0, i + 1), x]; // at the end
+        else out.splice(i + 1, j - i, x);
         break;
       }
     }
+    if (i >= 0) head += dist(out[i], out[i + 1] ?? out[i]);
   }
   return out;
 }

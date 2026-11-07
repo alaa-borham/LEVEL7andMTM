@@ -53,7 +53,7 @@ export interface Tool {
   /** A tool that opens a window instead of picking on the drawing (inheritance). */
   action?: boolean;
   /** Delete tools: what they remove, picked one by one or inside a frame (two corners). */
-  remove?: "points" | "lines" | "all" | "texts" | "symbols" | "stitches" | "notches";
+  remove?: "points" | "lines" | "all" | "texts" | "symbols" | "stitches" | "notches" | "grain";
   frame?: boolean;
   /** Each element picked after the first picks is done at once (mirror as GRAFIS); right click ends the tool. */
   instant?: boolean;
@@ -339,6 +339,13 @@ export const TOOLS: Tool[] = [
     group: "الحذف",
     picks: [{ kind: "canvas", prompt: "انقر النص المراد حذفه" }],
     remove: "texts",
+  },
+  {
+    key: "delGrain",
+    name: "حذف خط اتجاه القماش",
+    group: "الحذف",
+    picks: [{ kind: "canvas", prompt: "انقر خط اتجاه القماش (خط النسيج) المراد حذفه" }],
+    remove: "grain",
   },
   {
     key: "delTextFrame",

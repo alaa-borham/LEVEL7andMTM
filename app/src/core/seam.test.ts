@@ -175,3 +175,31 @@ describe("fold (mirrored piece, as GRAFIS)", () => {
     expect(g.centre[0]).toBeCloseTo(100);
   });
 });
+
+describe("seam allowance at a curve bending tight into the corner (as GRAFIS)", () => {
+  it("the cut line turns only at the corner: no kink or turn-back just below it", () => {
+    let bad: string[] = [];
+    for (const dx of [-6, -4, -2, -1, 0, 1]) for (const dy of [3, 5, 8, 12, 18]) for (const ten of ["", "50", "200"]) for (const a of [10, 15, 20]) {
+      const m = emptyModel("t");
+      m.steps = [
+        { op: "point", id: 1, x: "600", y: "20" }, { op: "point", id: 2, x: "853", y: "80" },
+        { op: "point", id: 3, x: String(853 + dx), y: String(80 + dy) }, { op: "point", id: 11, x: "836", y: "140" }, { op: "point", id: 4, x: "808", y: "250" }, { op: "point", id: 10, x: "600", y: "250" },
+        { op: "line", id: 5, p1: { obj: 1 }, p2: { obj: 2 } },
+        { op: "curve", id: 6, through: [{ obj: 4 }, { obj: 11 }, { obj: 3 }, { obj: 2 }], startAngle: "", endAngle: "", endTension: ten },
+        { op: "line", id: 7, p1: { obj: 4 }, p2: { obj: 10 } }, { op: "line", id: 9, p1: { obj: 10 }, p2: { obj: 1 } },
+      ] as Model["steps"];
+      m.pieces = [{ id: 1, name: "p", quantity: 1, fabric: "", edges: [5, 6, 7, 9], seam: [5, 6, 7, 9].map(() => String(a)), notches: [], grain: "90" }];
+      const c = evaluateModel(m).pieces.get(1)!.cut, n = c.length, angs: number[] = [];
+      for (let i = 0; i < n; i++) {
+        const p = c[(i - 1 + n) % n], q = c[i], r = c[(i + 1) % n];
+        if (Math.hypot(q[0] - 853, q[1] - 80) > 5 * a) continue;
+        const u = [q[0] - p[0], q[1] - p[1]], v = [r[0] - q[0], r[1] - q[1]];
+        if (Math.hypot(u[0], u[1]) < 1e-6 || Math.hypot(v[0], v[1]) < 1e-6) continue;
+        angs.push((Math.abs(Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1])) * 180) / Math.PI);
+      }
+      angs.sort((x, y) => y - x);
+      if ((angs[1] ?? 0) > 20) bad.push(`${dx},${dy},${ten},${a}: ${angs[1].toFixed(0)}°`);
+    }
+    expect(bad).toEqual([]); // 270 shapes; 0.9.182 had a kink in 40 of them
+  });
+});

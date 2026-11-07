@@ -345,6 +345,65 @@ export class App {
   /** Round / chamfer tool on a corner of a piece's cut line (outer line). */
   private cutCornerPick: { piece: number; key: string; pt: Pt; pick: Pick } | null = null;
 
+  /** The notch under the pointer (within 10 px of its mark). */
+  private notchNear(sx: number, sy: number): { piece: number; k: number } | null {
+    let best: { piece: number; k: number; d: number } | null = null;
+    for (const pc of this.model.pieces ?? []) {
+      const g = this.res.pieces.get(pc.id);
+      g?.notches.forEach((n, k) => {
+        if (k >= pc.notches.length) return; // the mirrored half of a folded piece follows its own notch
+        const [a, b] = [n.at, n.to].map((p) => this.toScreen(p)), dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1;
+        const t = Math.max(0, Math.min(1, ((sx - a[0]) * dx + (sy - a[1]) * dy) / L2)), d = Math.hypot(sx - a[0] - t * dx, sy - a[1] - t * dy);
+        if (d <= 10 && (!best || d < best.d)) best = { piece: pc.id, k, d };
+      });
+    }
+    const b = best as { piece: number; k: number; d: number } | null;
+    return b && { piece: b.piece, k: b.k };
+  }
+
+  /** Mirror a notch with the mirror tool in use: its point (or line end) is mirrored as a new element and
+   * the piece gets a notch there, with the same shape and length; «move» leaves no notch at the old place. */
+  private mirrorNotch(pieceId: number, k: number): void {
+    const t = this.tool, values = this.instantValues, pc = this.model.pieces?.find((p) => p.id === pieceId);
+    if (!t?.build || !values || !pc) return;
+    const r = pc.notches[k], src = this.res.objects.get(r.obj);
+    if (!src) return;
+    let step: Step;
+    try {
+      step = t.build({ model: this.model, res: this.res, picks: this.picks, extra: [] }, values); // the axis only: no new ids yet
+    } catch (e) {
+      return this.toast((e as Error).message);
+    }
+    if (step.op !== "mirror") return;
+    this.snapshot();
+    // the notch on a line end: a point at that end is mirrored (not the whole line)
+    let srcPt = r.obj;
+    if (src.kind !== "point") {
+      srcPt = newId(this.model, "point");
+      this.model.steps.push({ op: "pointOn", id: srcPt, on: r.obj, dist: "0", unit: "mm", from: r.end === "end" ? "end" : "start" } as Step);
+    }
+    // always a copy of the point: lines that use it stay where they are; only the notch goes across
+    const dst = newId(this.model, "point");
+    step.items = [{ src: srcPt, dst }];
+    this.model.steps.push(step);
+    const move = values.mode === "move" || t.key === "mirrorMove";
+    const type = pc.notchTypes?.[k] ?? "slit", len = pc.notchLen?.[k] ?? "";
+    if (move) {
+      pc.notches[k] = { obj: dst };
+    } else {
+      const n = pc.notches.push({ obj: dst }) - 1;
+      pc.notchTypes ??= [];
+      while (pc.notchTypes.length < pc.notches.length - 1) pc.notchTypes.push("slit");
+      pc.notchTypes[n] = type;
+      pc.notchLen ??= [];
+      while (pc.notchLen.length < pc.notches.length - 1) pc.notchLen.push("");
+      pc.notchLen[n] = len;
+    }
+    this.changed();
+    this.toast(move ? "نُقل النوتش بالانعكاس · انقر التالي أو كليك يمين للإنهاء" : "نُسخ النوتش بالانعكاس · انقر التالي أو كليك يمين للإنهاء");
+    this.render();
+  }
+
   /** The corner of a cut line under the pointer (within 24 px). With a drawing line also under the
    * pointer, only when the pointer is in the seam allowance (outside the sewing line). */
   private cutCornerNear(sx: number, sy: number, lineHit: boolean): { piece: number; key: string; pt: Pt } | null {
@@ -3135,6 +3194,12 @@ export class App {
 
   private finishPicks(): void {
     const t = this.tool as Tool;
+    if (t.remove === "grain") {
+      this.removeGrain(this.picks[0].at);
+      this.restartTool();
+      this.render();
+      return;
+    }
     if (t.remove && ["texts", "symbols", "stitches", "notches"].includes(t.remove)) {
       this.removeAnnotations(t.remove as "texts" | "symbols" | "stitches" | "notches", !!t.frame);
       this.restartTool();
@@ -3860,6 +3925,11 @@ export class App {
         if (made) this.onPick(made);
         return;
       }
+      // 0.9.183: a mirror tool mirrors a notch too: clicked, it is copied (or moved) to the other side
+      if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
+        const nn = this.notchNear(e.clientX - r.left, e.clientY - r.top);
+        if (nn) return void this.mirrorNotch(nn.piece, nn.k);
+      }
       // 0.9.181: round / cut off a corner of the cut line (outer line) too: a click near that corner, in the seam allowance
       if (kind === "line" && (this.tool?.key === "cornerRound" || this.tool?.key === "cornerChamfer") && !this.picks.length) {
         const cc = this.cutCornerNear(e.clientX - r.left, e.clientY - r.top, !!h);
@@ -4440,6 +4510,48 @@ export class App {
 
   /** Texts / symbols / stitches / notches: annotations, not objects. A frame removes those
    * whose anchor lies inside it; a click removes the text under it. */
+  /** Both ends of a grain line drawn with the grain tool (null if it cannot be worked out). */
+  private grainEnds(st: Step): [Pt, Pt] | null {
+    if (st.op !== "mark" || st.kind !== "grain" || !st.a) return null;
+    const A = this.pointOf(st.a);
+    if (st.b) return [A, this.pointOf(st.b)];
+    try {
+      const v = new Vars(withSize(this.model), undefined, this.res.z), deg = (v.eval(st.angle ?? "0") * Math.PI) / 180, len = v.eval(st.size || "0");
+      return [A, [A[0] + Math.cos(deg) * len, A[1] + Math.sin(deg) * len]];
+    } catch {
+      return null;
+    }
+  }
+
+  /** Delete grain line (as GRAFIS): the grain line drawn nearest the click goes. */
+  private removeGrain(at: Pt): void {
+    const [sx, sy] = this.toScreen(at);
+    let best: { i: number; d: number } | null = null;
+    this.model.steps.forEach((st, i) => {
+      const e = this.grainEnds(st);
+      if (!e) return;
+      const [a, b] = e.map((p) => this.toScreen(p)), dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((sx - a[0]) * dx + (sy - a[1]) * dy) / L2)), d = Math.hypot(sx - a[0] - t * dx, sy - a[1] - t * dy);
+      if (d <= 14 && (!best || d < best.d)) best = { i, d };
+    });
+    const b = best as { i: number; d: number } | null;
+    if (!b) {
+      const auto = (this.model.pieces ?? []).some((pc) => {
+        const g = this.res.pieces.get(pc.id);
+        if (!g) return false;
+        const [a, c] = g.grain.map((p) => this.toScreen(p)), dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy || 1;
+        const t = Math.max(0, Math.min(1, ((sx - a[0]) * dx + (sy - a[1]) * dy) / L2));
+        return Math.hypot(sx - a[0] - t * dx, sy - a[1] - t * dy) <= 14;
+      });
+      return this.toast(auto ? "هذا خط النسيج التلقائي للقطعة: اتجاهه من «خط النسيج °» في صفحة القطع، ويختفي إذا رسمت خط نسيج بالأداة" : "لا يوجد خط اتجاه قماش هنا");
+    }
+    this.snapshot();
+    this.model.steps.splice(b.i, 1);
+    this.selectedStep = -1;
+    this.changed();
+    this.toast("حُذف خط اتجاه القماش");
+  }
+
   private removeAnnotations(what: "texts" | "symbols" | "stitches" | "notches", frame: boolean): void {
     let x0 = -Infinity, x1 = Infinity, y0 = -Infinity, y1 = Infinity;
     if (frame) {
