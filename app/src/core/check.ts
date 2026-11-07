@@ -13,7 +13,7 @@ export interface CheckRow {
   /** Not errors: places where the seam allowance cannot come out clean (narrow corner, curve end
    * bending tighter than the allowance), with where they are. */
   warnings: string[];
-  warnRefs: ({ step: number } | { at: Pt })[];
+  warnRefs: ({ at: Pt; step?: number })[];
   k: number; // part index
   sizeIndex: number; // -1 = base
 }
@@ -31,8 +31,8 @@ export interface CheckResult {
  * meeting at a very narrow angle, or a curve end that bends more sharply than the allowance within its
  * last stretch (a small hook into the corner). The drawing is not changed.
  */
-export function pieceWarnings(r: EvalResult, pieces: Piece[], steps: Model["steps"], names: Record<number, string>): { warnings: string[]; refs: ({ step: number } | { at: Pt })[]; where: Pt[] } {
-  const warnings: string[] = [], refs: ({ step: number } | { at: Pt })[] = [], where: Pt[] = [];
+export function pieceWarnings(r: EvalResult, pieces: Piece[], steps: Model["steps"], names: Record<number, string>): { warnings: string[]; refs: { at: Pt; step?: number }[]; where: Pt[] } {
+  const warnings: string[] = [], refs: { at: Pt; step?: number }[] = [], where: Pt[] = [];
   const name = (id: number) => names[id] ?? `#${id}`;
   const stepOf = (id: number) => steps.findIndex((st) => createdIds(st).includes(id));
   const unit = (a: Pt, b: Pt): Pt => {
@@ -71,7 +71,9 @@ export function pieceWarnings(r: EvalResult, pieces: Piece[], steps: Model["step
         if (turn > 24 && towardCut) {
           warnings.push(`قطعة «${pc.name}»: طرف ${name(id)} ينحني ${Math.round(turn)}° في آخر ${Math.round(h)} مم، أحدّ من مسافة الخياطة (${Math.round(a)} مم)، فتظهر الحاشية غير نظيفة عند الزاوية. ارفع شدة طرف الكرف أو اجعل زاويته على الخط المجاور (مثلاً 90°).`);
           const si = stepOf(id);
-          refs.push(si >= 0 ? { step: si } : { at: at(0) });
+          // the place itself (the bending end); the step too when it makes this curve alone (an inherit or
+          // mirror step can bring several elements: its middle may be an empty spot)
+          refs.push(si >= 0 && createdIds(steps[si]).length === 1 ? { at: at(0), step: si } : { at: at(0) });
           where.push(at(0));
         }
       }

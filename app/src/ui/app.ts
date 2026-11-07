@@ -2954,7 +2954,7 @@ export class App {
 
   /** Show where an error of the test run is: its part and size, the step on the drawing (or what it is
    * built on, when it could not be drawn), the piece, or the Z table. */
-  gotoError(k: number, size: number, ref: { step: number } | { z: number } | { piece: number } | { at: Pt } | undefined): void {
+  gotoError(k: number, size: number, ref: { step: number } | { z: number } | { piece: number } | { at: Pt; step?: number } | undefined): void {
     if (this.model.parts?.length && k !== (this.model.activePart ?? 0)) this.switchPart(k);
     if ((this.model.activeSize ?? -1) !== size) this.setSize(size);
     if (!ref) return;
@@ -2964,8 +2964,13 @@ export class App {
     }
     let pts: Pt[] = [];
     if ("at" in ref) {
-      const d = 25; // a small square round the place (a corner of a piece)
+      // the exact place (a warning): the view centres on it; its curve is shown active when known
+      const d = 25;
       pts = [[ref.at[0] - d, ref.at[1] - d], [ref.at[0] + d, ref.at[1] + d]];
+      if (ref.step !== undefined && this.model.steps[ref.step]) {
+        this.selectedStep = ref.step;
+        this.renderSteps();
+      }
     } else if ("piece" in ref) {
       const pc = this.model.pieces?.find((p) => p.id === ref.piece);
       const g = this.res.pieces.get(ref.piece);

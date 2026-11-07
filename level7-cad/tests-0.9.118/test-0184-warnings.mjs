@@ -18,7 +18,10 @@ try{
  const w=win.locator('.ck-warn');assert.equal(await w.count(),1);const txt=await w.textContent();assert(/⚠/.test(txt)&&/طرف C1 ينحني/.test(txt),txt);
  assert((await win.locator('.za-head b').textContent()).includes('بلا أخطاء'));
  pass(`test run: no error, one warning «${txt.slice(0,60)}…»`);
- await w.click();await f.waitForFunction(()=>window.level7.selectedStep===8);pass('a click on the warning shows the curve C1 on the drawing');
+ await w.click();await f.waitForFunction(()=>window.level7.selectedStep===8);
+ // 0.9.185: the circle is on the bending end of the curve (40, -150), not in the middle of what its step made
+ const fl=await f.evaluate(()=>window.level7.flash);assert(fl&&Math.hypot(fl[0]-40,fl[1]+150)<1e-6,JSON.stringify(fl));
+ pass('a click on the warning shows the curve C1 and circles its bending end');
  await win.locator('[data-ck="close"]').click();
  await load('90','100',9);await f.evaluate(()=>window.level7.runCheck(false,false));
  await f.waitForFunction(()=>/بلا أخطاء ولا تنبيهات/.test(document.querySelector('#toast')?.textContent||''));

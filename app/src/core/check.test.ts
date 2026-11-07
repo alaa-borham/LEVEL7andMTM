@@ -61,7 +61,27 @@ describe("test run warnings: where the seam allowance cannot come out clean (0.9
     expect(r.failed).toBe(0);
     expect(r.warned).toBe(1);
     expect(r.rows[0].warnings.some((w) => /طرف C1 ينحني/.test(w))).toBe(true);
-    expect(r.rows[0].warnRefs.some((x) => "step" in x && x.step === 8)).toBe(true);
+    // the warning points at the bending end itself (40, -150), and at the curve's step
+    expect(r.rows[0].warnRefs.some((x) => x.step === 8 && Math.hypot(x.at[0] - 40, x.at[1] + 150) < 1e-6)).toBe(true);
+  });
+  it("an inherited curve (its step brings several elements): the warning points at the bending end, not the step's middle", () => {
+    const base = piece("120", "15");
+    const m = emptyModel("t");
+    const ids = [6, 7, 8, 9, 10];
+    m.parts = [
+      { no: 1, name: "front", steps: base.steps, names: base.names, nextId: base.nextId, pieces: [], amount: 1 },
+      { no: 2, name: "yoke", steps: [{ op: "inherit", part: 1, items: ids.map((src, k) => ({ src, dst: k + 1 })) }] as Model["steps"], names: { 3: "C1" }, nextId: 6, amount: 1,
+        pieces: [{ id: 1, name: "p", quantity: 1, fabric: "", edges: [1, 2, 3, 4, 5], seam: ["10", "10", "10", "10", "10"], notches: [], grain: "90" }] },
+    ];
+    m.activePart = 0;
+    Object.assign(m, { steps: base.steps, names: base.names, nextId: base.nextId, pieces: [] });
+    const r = checkParts(m, { all: true, grade: false });
+    const row = r.rows.find((x) => x.k === 1)!;
+    expect(row.errors).toEqual([]);
+    expect(row.warnings.some((w) => /طرف C1 ينحني/.test(w))).toBe(true);
+    const ref = row.warnRefs.find((_, i) => /طرف C1/.test(row.warnings[i]))!;
+    expect(ref.step).toBeUndefined();
+    expect(Math.hypot(ref.at[0] - 40, ref.at[1] + 150)).toBeLessThan(1e-6);
   });
   it("no warning when the curve meets the line at a proper angle", () => {
     const r = checkParts(piece("90", "100", 9), { all: false, grade: false });
