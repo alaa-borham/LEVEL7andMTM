@@ -37,3 +37,36 @@ describe("test run / grade", () => {
     expect(r.rows.map((x) => [x.part, x.errors.some((e) => /^Z5/.test(e))])).toEqual([["001 front", false], ["002 back", false], ["003 uses", true]]);
   });
 });
+
+describe("test run warnings: where the seam allowance cannot come out clean (0.9.184)", () => {
+  // a shoulder piece corner as in a user's file: the side curve ends with 15 % tension at an angle that
+  // makes it bend sharply in its last millimetres towards the cut side
+  const piece = (endAngle: string, endTension: string, endRel?: number) => {
+    const m = emptyModel("t");
+    m.steps = [
+      { op: "point", id: 1, x: "0", y: "0" }, { op: "point", id: 2, x: "160", y: "0" }, { op: "point", id: 3, x: "160", y: "-40" },
+      { op: "point", id: 4, x: "40", y: "-150" }, { op: "point", id: 5, x: "0", y: "-150" },
+      { op: "line", id: 6, p1: { obj: 1 }, p2: { obj: 2 } }, { op: "line", id: 7, p1: { obj: 2 }, p2: { obj: 3 } },
+      { op: "line", id: 9, p1: { obj: 4 }, p2: { obj: 5 } },
+      { op: "curve", id: 8, through: [{ obj: 3 }, { obj: 4 }], startAngle: "", endAngle, endTension, ...(endRel ? { endRel } : {}) },
+      { op: "line", id: 10, p1: { obj: 5 }, p2: { obj: 1 } },
+    ] as Model["steps"];
+    Object.assign(m.names, { 8: "C1", 9: "L12" });
+    m.nextId = 11;
+    m.pieces = [{ id: 1, name: "p", quantity: 1, fabric: "", edges: [6, 7, 8, 9, 10], seam: ["10", "10", "10", "10", "10"], notches: [], grain: "90" }];
+    return m;
+  };
+  it("warns where a curve end bends tighter than the allowance towards the cut side, and says where", () => {
+    const r = checkParts(piece("120", "15"), { all: false, grade: false });
+    expect(r.failed).toBe(0);
+    expect(r.warned).toBe(1);
+    expect(r.rows[0].warnings.some((w) => /طرف C1 ينحني/.test(w))).toBe(true);
+    expect(r.rows[0].warnRefs.some((x) => "step" in x && x.step === 8)).toBe(true);
+  });
+  it("no warning when the curve meets the line at a proper angle", () => {
+    const r = checkParts(piece("90", "100", 9), { all: false, grade: false });
+    expect(r.failed).toBe(0);
+    expect(r.warned).toBe(0);
+    expect(r.rows[0].warnings).toEqual([]);
+  });
+});

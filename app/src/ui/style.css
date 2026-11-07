@@ -1059,3 +1059,4 @@ body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-lig
 .sel-bar .seg-gap { width: 10px; }
 .sel-bar button[data-sel] { display: inline-flex; align-items: center; gap: 4px; }
 .sel-bar button.on { box-shadow: inset 0 -2px 0 var(--live); }
+.check-win .ck-warn { color: #b26a00; } body.dark .check-win .ck-warn { color: #ffb74d; } /* 0.9.184: warnings of the test run (not errors) */

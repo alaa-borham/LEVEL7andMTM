@@ -51,6 +51,8 @@ export interface PieceGeo {
   fold?: { line: [Pt, Pt]; halfSew: Pt[]; halfCut: Pt[] };
   /** Corners of the cut line between two edges: where they are and their key (see Piece.cutCorners). */
   cutCornerAt?: { pt: Pt; key: string }[];
+  /** Seam allowance of each edge in outline order (the larger end of an unparallel one). */
+  allow?: number[];
   error?: string;
 }
 
@@ -388,7 +390,7 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     [centre[0] + Math.cos(ang) * half, centre[1] + Math.sin(ang) * half],
   ];
   const cutCornerAt = cl.corners.flatMap((pt, i) => (pt ? [{ pt, key: keyAt(i) }] : []));
-  const geo: PieceGeo = { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre, cutCornerAt };
+  const geo: PieceGeo = { id: inp.piece.id, sew, cut, cutEdges: cl.edges, edges: parts, order, notches, grain: g, centre, cutCornerAt, allow: allowance.map(([a, b]) => Math.max(a, b)) };
   return foldK >= 0 ? unfold(geo, order.indexOf(foldK), inp.grainAngle) : geo;
 }
 

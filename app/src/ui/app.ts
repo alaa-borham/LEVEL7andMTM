@@ -2920,13 +2920,19 @@ export class App {
     const r = checkParts(this.model, { all, grade });
     const title = `${grade ? "تدريج" : "تشغيل تجريبي"} ${all ? "كل البارتات" : "البارت الحالي"}`;
     document.querySelector(".check-win")?.remove();
-    if (!r.failed) return this.toast(`✓ ${title}: ${r.parts} بارت × ${r.sizes} مقاس بلا أخطاء`);
+    if (!r.failed && !r.warned) return this.toast(`✓ ${title}: ${r.parts} بارت × ${r.sizes} مقاس بلا أخطاء ولا تنبيهات`);
     const el = document.createElement("section");
     el.className = "z-assistant marker-win check-win";
     el.dir = "rtl";
-    const rows = r.rows.filter((x) => x.errors.length);
-    el.innerHTML = `<div class="za-head"><b>${title}: ${r.failed} من ${r.rows.length} فيها أخطاء</b><button data-ck="close">×</button></div><div class="za-body"><p class="ck-hint">انقر الخطأ لترى مكانه على الرسم</p><ul class="mk-list">${rows
-      .map((x, ri) => `<li><b>${esc(x.part)}</b> · <span dir="ltr">${esc(x.size)}</span><ul>${x.errors.slice(0, 8).map((e, ei) => `<li class="ck-go" data-r="${ri}" data-e="${ei}" title="إظهار مكانه على الرسم">${esc(e)}</li>`).join("")}${x.errors.length > 8 ? `<li>… و${x.errors.length - 8} غيرها</li>` : ""}</ul></li>`)
+    // errors first; then the warnings (0.9.184): places where the seam allowance cannot come out clean
+    const rows = r.rows.filter((x) => x.errors.length || x.warnings.length);
+    const head = [r.failed ? `${r.failed} من ${r.rows.length} فيها أخطاء` : "بلا أخطاء", r.warned ? `${r.rows.reduce((n, x) => n + x.warnings.length, 0)} تنبيه` : ""].filter(Boolean).join(" · ");
+    const list = (x: (typeof rows)[number], ri: number, kind: "e" | "w") => {
+      const items = kind === "e" ? x.errors : x.warnings;
+      return items.slice(0, 8).map((e, ei) => `<li class="ck-go${kind === "w" ? " ck-warn" : ""}" data-r="${ri}" data-${kind}="${ei}" title="إظهار مكانه على الرسم">${kind === "w" ? "⚠ " : ""}${esc(e)}</li>`).join("") + (items.length > 8 ? `<li>… و${items.length - 8} غيرها</li>` : "");
+    };
+    el.innerHTML = `<div class="za-head"><b>${title}: ${head}</b><button data-ck="close">×</button></div><div class="za-body"><p class="ck-hint">انقر الخطأ أو التنبيه لترى مكانه على الرسم</p><ul class="mk-list">${rows
+      .map((x, ri) => `<li><b>${esc(x.part)}</b> · <span dir="ltr">${esc(x.size)}</span><ul>${list(x, ri, "e")}${list(x, ri, "w")}</ul></li>`)
       .join("")}</ul></div>`;
     document.body.append(el);
     el.addEventListener("click", (e) => {
@@ -2937,7 +2943,7 @@ export class App {
       el.querySelectorAll(".ck-go.on").forEach((x) => x.classList.remove("on"));
       go.classList.add("on");
       const row = rows[Number(go.dataset.r)];
-      this.gotoError(row.k, row.sizeIndex, row.refs[Number(go.dataset.e)]);
+      this.gotoError(row.k, row.sizeIndex, go.dataset.w !== undefined ? row.warnRefs[Number(go.dataset.w)] : row.refs[Number(go.dataset.e)]);
     });
   }
 
@@ -2948,7 +2954,7 @@ export class App {
 
   /** Show where an error of the test run is: its part and size, the step on the drawing (or what it is
    * built on, when it could not be drawn), the piece, or the Z table. */
-  gotoError(k: number, size: number, ref: { step: number } | { z: number } | { piece: number } | undefined): void {
+  gotoError(k: number, size: number, ref: { step: number } | { z: number } | { piece: number } | { at: Pt } | undefined): void {
     if (this.model.parts?.length && k !== (this.model.activePart ?? 0)) this.switchPart(k);
     if ((this.model.activeSize ?? -1) !== size) this.setSize(size);
     if (!ref) return;
@@ -2957,7 +2963,10 @@ export class App {
       return this.toast(`Z${ref.z}: في جدول Z`);
     }
     let pts: Pt[] = [];
-    if ("piece" in ref) {
+    if ("at" in ref) {
+      const d = 25; // a small square round the place (a corner of a piece)
+      pts = [[ref.at[0] - d, ref.at[1] - d], [ref.at[0] + d, ref.at[1] + d]];
+    } else if ("piece" in ref) {
       const pc = this.model.pieces?.find((p) => p.id === ref.piece);
       const g = this.res.pieces.get(ref.piece);
       pts = g ? g.sew : (pc?.edges ?? []).flatMap((id) => this.res.objects.get(id)?.pts ?? []);
