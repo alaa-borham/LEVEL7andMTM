@@ -41,5 +41,31 @@ try{
  const st=await f.evaluate(()=>({d:window.level7.model.steps[3].dist,p:window.level7.res.objects.get(4).pts[0],through:window.level7.model.steps[6].through[1].obj}));
  assert(Math.abs(Number(st.d)-220)<1.5&&Math.abs(st.p[1]-100)<1e-6&&st.through===4,JSON.stringify(st));
  pass(`a curve point on a line slides along it: dragged to x 220 (and off the line) → on L1 at ${st.d} mm, still the same point`);
+ // after letting go of the curve point: the curve's values window shows that point's own field (value or X / Z)
+ const tb=fr.locator('#tool-box');const fld=tb.locator('input[data-key="p1:dist"]');await fld.waitFor();
+ assert((await tb.textContent()).includes('(المسحوبة)'));
+ await f.evaluate(()=>{const a=window.level7;a.model.measurements.push({id:1,name:'w',value:90});});
+ await fld.fill('X1');await tb.locator('[data-ok]').click();
+ await f.waitForFunction(()=>window.level7.model.steps[3].dist==='X1'&&Math.abs(window.level7.res.objects.get(4).pts[0][0]-90)<1e-6);
+ pass('after the drag the values window shows the dragged point («(المسحوبة)»): typed X1 → the point sits at X1 = 90 mm on L1');
+ // a double-click on a piece's outer (cut) line opens the seam allowance bar
+ await page.mouse.click(...await at(-200,-200),{button:'right'});
+ await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();a.selectedStep=-1;
+   m.steps.push({op:'point',id:20,x:'0',y:'-300'},{op:'point',id:21,x:'200',y:'-300'},{op:'point',id:22,x:'200',y:'-150'},{op:'point',id:23,x:'0',y:'-150'},
+   {op:'line',id:24,p1:{obj:20},p2:{obj:21}},{op:'line',id:25,p1:{obj:21},p2:{obj:22}},{op:'line',id:26,p1:{obj:22},p2:{obj:23}},{op:'line',id:27,p1:{obj:23},p2:{obj:20}});m.nextId=28;
+   m.pieces=[{id:1,name:'p',quantity:1,fabric:'',edges:[24,25,26,27],seam:['10','10','10','10'],notches:[],grain:'90'}];a.changed();a.fit();});
+ await page.mouse.dblclick(...await at(100,-310));
+ await fr.locator('.seam-bar').waitFor();pass('a double-click on the outer (cut) line of a piece opens the seam allowance bar');
+ // inherit: a line already inherited does not take the pointer from a line right under it still to be taken
+ await page.mouse.click(...await at(-200,-200),{button:'right'});await page.keyboard.press('Escape');
+ await f.evaluate(()=>{const a=window.level7,m=a.model;a.snapshot();
+   const p1={no:1,name:'a',steps:[{op:'point',id:1,x:'0',y:'0'},{op:'point',id:2,x:'200',y:'0'},{op:'line',id:3,p1:{obj:1},p2:{obj:2}},{op:'line',id:4,p1:{obj:1},p2:{obj:2}}],names:{3:'LA',4:'LB'},nextId:5,pieces:[],amount:1};
+   const p2={no:2,name:'b',steps:[{op:'inherit',part:1,items:[{src:3,dst:1}]}],names:{1:'LA'},nextId:2,pieces:[],amount:1};
+   m.parts=[p1,p2];m.activePart=1;Object.assign(m,{steps:p2.steps,names:p2.names,nextId:p2.nextId,pieces:[]});a.selectedStep=-1;a.changed();a.fit();});
+ {const b=page.locator('[data-l7d-tool="inheritObjects"]');const cat=await b.evaluate(e=>e.closest('[data-l7d-cat-panel]').dataset.l7dCatPanel);await page.locator(`[data-l7d-cat="${cat}"]`).click({button:'right'});await b.click();}
+ await fr.locator('.inherit-bar').waitFor();await page.mouse.move(...await at(100,0),{steps:3});await f.waitForFunction(()=>window.level7.ihHover?.id===4);
+ await page.mouse.click(...await at(100,0));
+ await f.waitForFunction(()=>window.level7.model.steps.filter(s=>s.op==='inherit').flatMap(s=>s.items.map(i=>i.src)).includes(4));
+ pass('inherit: with LA already taken, the pointer finds LB lying right under it, and a click brings LB in (no «already inherited»)');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

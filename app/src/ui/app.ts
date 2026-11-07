@@ -1221,9 +1221,13 @@ export class App {
   private inheritAt(sx: number, sy: number): { k: number; id: number } | null {
     let best: { k: number; id: number; d: number } | null = null;
     const w = this.toWorld(sx, sy);
+    // 0.9.189: what is already inherited does not take the pointer (it often lies right on top of a line
+    // still to be taken, which then could not be reached: «already inherited» every time)
+    const taken = new Set<string>();
+    for (const st of this.model.steps) if (st.op === "inherit") for (const it of st.items) taken.add(`${st.part}:${it.src}`);
     for (const pr of this.inheritPick ?? [])
       for (const o of pr.res.objects.values()) {
-        if (pr.res.stepErrors.has(o.step)) continue;
+        if (pr.res.stepErrors.has(o.step) || taken.has(`${pr.no}:${o.id}`)) continue;
         const d = o.kind === "point" ? dist(this.toScreen(o.pts[0]), [sx, sy]) : closestOnPolyline(o.pts, w).d * this.scale;
         if (d <= (o.kind === "point" ? 10 : PICK_PX / 2) && (!best || d < best.d - (o.kind === "point" ? 4 : 0))) best = { k: pr.k, id: o.id, d };
       }
@@ -1940,6 +1944,8 @@ export class App {
   }
 
   private dragPoint: { step: number; mode: "xy" | "offset" | "on"; base: Pt } | null = null;
+  /** The curve point last dragged (curve id, index): its own fields show in the curve's values window. */
+  private cpEdit: { ci: number | undefined; k: number } | null = null;
   private dragDim: number | null = null;
 
   /** The dimension whose line is under the pointer (screen px). */
@@ -1972,8 +1978,9 @@ export class App {
   private cpHover: number | null = null;
   private cpDrag: number | null = null;
 
-  private grabCurvePoint(ci: number, k: number): void {
+  private grabCurvePoint(ci: number, k: number, free = false): void {
     this.cpDrag = k;
+    this.cpEdit = { ci: this.model.steps[ci] && (this.model.steps[ci] as { id?: number }).id, k };
     const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
     const ref = curve.through[k];
     const plain = (v: string) => /^-?\d+(\.\d+)?$/.test(v.trim());
@@ -1985,7 +1992,8 @@ export class App {
     // 0.9.189 (as GRAFIS): a point that sits on a line slides along that line; its distance follows
     const so = ref.end ? -1 : this.model.steps.findIndex((t) => t.op === "pointOn" && t.id === ref.obj);
     const sOn = this.model.steps[so];
-    if (sOn?.op === "pointOn" && plain(sOn.dist)) return void (this.dragPoint = { step: so, mode: "on", base: [0, 0] });
+    // (Alt: moved freely off the line, as before: an offset point tied to it)
+    if (!free && sOn?.op === "pointOn" && plain(sOn.dist)) return void (this.dragPoint = { step: so, mode: "on", base: [0, 0] });
     // tied point: put an offset point between it and the curve, just before the curve
     const id = newId(this.model, "point");
     this.model.steps.splice(ci, 0, { op: "pointOffset", id, from: { ...ref }, dx: "0", dy: "0" });
@@ -2159,12 +2167,14 @@ export class App {
       dir: this.dirPick ? "حرّك الماوس: الخط المتقطع اتجاه المنحنى عند النقطة · انقر لتثبيته (Shift: بلا تقريب)" : "انقر نقطة على المنحنى (طرفاً أو داخله) لتحديد اتجاهه عندها",
       undir: "انقر نقطة على المنحنى لحذف الاتجاه المحدد عندها (يعود حراً)",
     };
+    bar.title = "اسحب المقابض أو النقاط (نقطة على خط تنزلق عليه؛ Alt: حرة) · رايت كليك للخروج";
     bar.innerHTML = BAR_CHROME + `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
       b("add", CB_ICON.add, "إضافة نقطة على المنحنى") + b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
       b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") +
       b("dir", CB_ICON.dir, "تحديد اتجاه المنحنى عند نقطة · Set direction") + b("undir", CB_ICON.undir, "حذف الاتجاه · Delete direction") +
       `<button data-cedit="1" title="كتابة قيم المنحنى: الاتجاهات والشدة">✎</button>` + styleCtl +
-      `<span>${this.curveMode ? say[this.curveMode] : "اسحب المقابض أو النقاط · رايت كليك للخروج"}</span>`;
+      // the hint only while an option is on: a shorter bar keeps clear of the values window
+      (this.curveMode ? `<span>${say[this.curveMode]}</span>` : "");
   }
 
   /** Index of the step that makes object id, or -1. */
@@ -4071,6 +4081,17 @@ export class App {
         this.toast("اتجاه طرف المنحنى صار حراً");
         return;
       }
+      // 0.9.189 (as GRAFIS): a double-click on a piece's outer (cut) line opens the seam allowance bar
+      if (!this.tool && !this.seamTool) {
+        const w = this.toWorld(e.clientX - r.left, e.clientY - r.top);
+        const onCut = [...this.res.pieces.values()].some((g) => closestOnPolyline([...g.cut, g.cut[0]], w).d * this.scale <= 8);
+        const nl = this.nearest(e.clientX - r.left, e.clientY - r.top);
+        const lineD = nl ? dist(nl.at, w) * this.scale : Infinity;
+        if (onCut && lineD > 4) {
+          this.startSeamTool();
+          return this.toast("مسافة الخياطة: اختر النوع والقيمة من الشريط ثم انقر حدود القطعة · كليك يمين للإنهاء");
+        }
+      }
       if (this.tool && !this.form && this.picks.length) this.backStep(); // undo the first click's pick
       // what glows under the pointer (the near mark) is what opens: a point beside the curve does not
       // take the double-click from the curve
@@ -4175,7 +4196,7 @@ export class App {
         const cp = this.curvePoints().find((p) => Math.abs(p.s[0] - sx) <= 9 && Math.abs(p.s[1] - sy) <= 9);
         if (cp && (!this.tool || (!this.picks.length && !this.extra.length && !this.form))) {
           this.selectedStep = cpStep;
-          this.grabCurvePoint(cpStep, cp.k);
+          this.grabCurvePoint(cpStep, cp.k, e.altKey);
           e.preventDefault();
           return;
         }
@@ -4259,7 +4280,11 @@ export class App {
       if (this.dragDim !== null && !this.dimMoved) this.selectedStep = this.dragDim;
       if (this.dragHandle || this.dragPoint !== null || this.dragDim !== null) {
         const refresh = (this.dragHandle || this.dragPoint !== null) && this.form?.editOf === this.selectedStep;
-        if (refresh) queueMicrotask(() => this.form?.editOf === this.selectedStep && this.editStep(this.selectedStep, true));
+        // 0.9.189: a curve point let go: the curve's values window opens with that point's own fields
+        // (a value, or X / Z), whether or not it was open
+        const cpLetGo = this.cpDrag !== null && this.dragPoint !== null && this.model.steps[this.selectedStep]?.op === "curve";
+        if (cpLetGo) queueMicrotask(() => this.editStep(this.selectedStep, !!this.form));
+        else if (refresh) queueMicrotask(() => this.form?.editOf === this.selectedStep && this.editStep(this.selectedStep, true));
         this.dragHandle = null;
         this.dragPoint = null;
         this.cpDrag = null;
@@ -4782,6 +4807,7 @@ export class App {
       const j = pointStep(r);
       if (j >= 0) ends.push([tag, label + (this.model.steps[j].op === "pointOn" ? " على الخط" : ""), j]);
     }
+    const dragged = s.op === "curve" && this.cpEdit && this.cpEdit.ci === s.id ? `p${this.cpEdit.k}` : "";
     // a curve end measured from a line says which line
     const own = stepFields(s).map((f) => {
       if (s.op !== "curve") return f;
@@ -4797,8 +4823,9 @@ export class App {
         ...own,
         ...ends.flatMap(([tag, label, j]) =>
           stepFields(this.model.steps[j])
-            .filter((f) => s.op !== "curve" || (!f.options && !/^-?\d+(\.\d+)?$/.test(f.value.trim())))
-            .map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${s.op === "curve" ? label.replace(" على الخط", "") : label}: ${f.label}` })),
+            // the point last dragged shows all its fields (type a value, or X / Z, instead of the drag)
+            .filter((f) => s.op !== "curve" || tag === dragged || (!f.options && !/^-?\d+(\.\d+)?$/.test(f.value.trim())))
+            .map((f) => ({ ...f, key: `${tag}:${f.key}`, label: `${s.op === "curve" ? label.replace(" على الخط", "") : label}${tag === dragged ? " (المسحوبة)" : ""}: ${f.label}` })),
         ),
       ],
       onOk: (v) => {

@@ -1,5 +1,5 @@
 // 0.9.176: Ctrl+Z works with an Arabic keyboard (key «ئ», place KeyZ); the dimension bar keeps its
-// unit / ×2 buttons when vertical; the strip icon's tip names its tool; seam allowance and notch with no
+// unit / ×2 buttons when vertical; each group keeps one fixed icon; seam allowance and notch with no
 // piece start the piece tool and come back; grain line as GRAFIS (start, direction in 90° steps, length).
 // Usage: L7_SRC=<app dir> xvfb-run -a node test-0177-batch.mjs
 import path from'node:path';import fs from'node:fs/promises';import os from'node:os';import assert from'node:assert/strict';import{_electron}from'file:///opt/node-tools/node_modules/playwright/index.mjs';
@@ -25,10 +25,11 @@ try{
  const bar=fr.locator('.curve-bar.dim-bar');await bar.waitFor();
  assert(await bar.locator('[data-du="in"]').isVisible()&&await bar.locator('[data-dm="4"]').isVisible());pass('vertical dimension bar still shows مم / سم / بوصة and ×1 / ×2 / ×4');
  await f.evaluate(()=>{localStorage.removeItem('level7.barPos');window.level7.selectedStep=-1;window.level7.render();});
- // 3) the strip icon's tip names its tool
- const tip=await page.locator('[data-l7d-cat="الأبعاد"]').getAttribute('title');const shown=await page.locator('[data-l7d-cat="الأبعاد"] svg').getAttribute('data-l7-icon');
- const first=await page.locator(`[data-l7d-cat-panel="الأبعاد"] [data-l7d-tool="${shown}"] span`).textContent();
- assert(tip===first,tip);pass(`0.9.178: the strip icon's tip is the tool's name only: «${tip.split('\n')[0]}»`);
+ // 3) 0.9.189: each group keeps one fixed icon (it no longer turns into the last tool used); its tip is the group's name
+ const tip=await page.locator('[data-l7d-cat="الأبعاد"]').getAttribute('title'),icon0=await page.locator('[data-l7d-cat="الأبعاد"] svg').getAttribute('data-l7-icon');
+ assert.equal(tip,'الأبعاد');assert.equal(icon0,'dimAligned');
+ {const b=page.locator('[data-l7d-tool="dimH"]');await page.locator('[data-l7d-cat="الأبعاد"]').click({button:'right'});await b.click();await page.keyboard.press('Escape');}
+ assert.equal(await page.locator('[data-l7d-cat="الأبعاد"] svg').getAttribute('data-l7-icon'),'dimAligned');pass('0.9.189: the group icon stays the same after another tool of the group was used; its tip is the group name «الأبعاد»');
  // 4) seam allowance with no piece: the piece tool starts, and the seam bar comes after the piece
  await open('seamAllowance');
  await f.waitForFunction(()=>window.level7.tool?.key==='piece',null,{timeout:5000});
