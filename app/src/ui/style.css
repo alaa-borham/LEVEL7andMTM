@@ -1054,3 +1054,8 @@ body.canvas-dark .curve-bar svg { color: var(--bar-fg); }
 #canvas .img-handle { fill: #fff; stroke: #2fa4dd; stroke-width: 1.5; cursor: nwse-resize; }
 
 body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-light { --piece-sew: #2b2f36; --piece-cut: #1e88e5; }
+/* 0.9.183: mirror bar (as GRAFIS): selection mode + copy / move */
+#canvas .sel-frame { fill: rgba(47, 164, 221, 0.08); stroke: #2fa4dd; stroke-width: 1.2; stroke-dasharray: 6 4; }
+.sel-bar .seg-gap { width: 10px; }
+.sel-bar button[data-sel] { display: inline-flex; align-items: center; gap: 4px; }
+.sel-bar button.on { box-shadow: inset 0 -2px 0 var(--live); }

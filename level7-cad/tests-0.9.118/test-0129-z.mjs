@@ -6,8 +6,13 @@ const src=process.env.L7_SRC;const env={...process.env,LOCALAPPDATA:await fs.mkd
 const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);await page.waitForSelector('#tool-guide');
- await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();await page.waitForSelector('.l7-design-cat');
- const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');
+ await page.waitForSelector('.l7-design-cat');
+ const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
+ // «new design» reaches the drawing by a message: wait until the new (empty) model is there before filling
+ // it, or a late «new» wipes the test data (the old model is marked, the new one is not)
+ await f.evaluate(()=>{window.level7.model.__old=1;});
+ await page.locator('.menubar summary',{hasText:'File'}).click();await page.locator('#menu-l7-design-new').click();
+ await f.waitForFunction(()=>!window.level7.model.__old);
  await f.evaluate(()=>{const a=window.level7,m=a.model;m.measurements.push({id:1,name:'front length',value:1500},{id:2,name:'',value:480});m.variables.push({id:1,name:'X2/2',expr:'0'});a.changed();});
  await page.locator('[data-l7d-command="tab-z"]').click();await fr.locator('.ztable').waitFor();
  await f.waitForFunction(()=>window.level7.res.z.get(1)===240);assert.equal(await f.evaluate(()=>window.level7.model.variables[0].expr),'X2/2');

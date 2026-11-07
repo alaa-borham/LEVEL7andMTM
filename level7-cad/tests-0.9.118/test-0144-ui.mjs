@@ -32,7 +32,8 @@ try{
  await fr.locator('.panel.open .float-max').first().click();const b2=await win.boundingBox();assert(b2.width>cb.width-30&&b2.height>cb.height-30,JSON.stringify([b2,cb]));
  await fr.locator('.panel.open .float-max').first().click();const b3=await win.boundingBox();assert(Math.abs(b3.width-b1.width)<2,JSON.stringify([b1,b3]));
  pass(`the X window resizes from its edge (150 px) and ▢ fills the screen and restores`);
- await page.locator('[data-l7d-command="tab-z"]').click();const zt=await fr.locator('.zwin .z-actions').boundingBox(),tt=await fr.locator('.zwin .ztable').boundingBox();
+ await page.locator('[data-l7d-command="tab-z"]').click();await f.waitForFunction(()=>document.querySelector('.zwin')?.classList.contains('open')); // the button reaches the drawing by a message
+ const zt=await fr.locator('.zwin .z-actions').boundingBox(),tt=await fr.locator('.zwin .ztable').boundingBox();
  assert(zt.y<tt.y,JSON.stringify([zt,tt]));pass('«إضافة معادلة» and «مساعد المعادلات» are above the Z table');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);

@@ -17,7 +17,9 @@ try{
    m.names={2:'L1',4:'L2',6:'L3'};m.nextId=7;a.selectedStep=-1;a.changed();a.fit();});
  // 1) mirror point to point: axis, choose «نقل», then two clicks = two mirrors, right click ends
  await open('mirrorPts');await page.mouse.click(...await at(0,0));await page.mouse.click(...await at(0,300));
- const tb=fr.locator('#tool-box');await tb.locator('select[data-key="mode"]').waitFor();await tb.locator('select[data-key="mode"]').selectOption('move');await tb.locator('[data-ok]').click();
+ const tb=fr.locator('#tool-box');await f.waitForFunction(()=>window.level7.collecting);
+ // 0.9.183: «نقل» is chosen in the mirror bar (as GRAFIS: the options show with the tool)
+ const sb=fr.locator('.sel-bar');await sb.waitFor();await sb.locator('[data-sel="copy"]').click();await f.waitForFunction(()=>document.querySelector('.sel-bar [data-sel="copy"]')?.textContent.includes('نقل'));
  await page.mouse.click(...await at(100,50));
  let r=await f.evaluate(()=>({n:window.level7.model.steps.filter(s=>s.op==='mirror').length,x:window.level7.res.objects.get(4).pts.map(p=>Math.round(p[0]))}));
  assert(r.n===1&&r.x.every(x=>x<=0),JSON.stringify(r));

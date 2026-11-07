@@ -485,7 +485,6 @@ export const TOOLS: Tool[] = [
     ],
     multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
     instant: true,
-    fields: () => [MODE_FIELD],
     build: (c, v) => ({ op: "mirror", axisPts: [point(c, 0).ref, point(c, 1).ref], items: transformItems(c, v.mode) }),
   },
   {
@@ -495,7 +494,7 @@ export const TOOLS: Tool[] = [
     picks: [{ kind: "point", prompt: "انقر نقطة على محور الانعكاس" }],
     multi: { kind: "object", prompt: "انقر كل عنصر يُعكس فوراً · كليك يمين للإنهاء", min: 1 },
     instant: true,
-    fields: () => [{ key: "angle", label: "اتجاه المحور °", value: "90" }, MODE_FIELD],
+    fields: () => [{ key: "angle", label: "اتجاه المحور °", value: "90" }], // copy / move: in the mirror bar
     build: (c, v) => ({ op: "mirror", axisAt: point(c, 0).ref, axisAngle: v.angle, items: transformItems(c, v.mode) }),
   },
   {

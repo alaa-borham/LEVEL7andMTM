@@ -363,7 +363,7 @@ export class App {
 
   /** Mirror a notch with the mirror tool in use: its point (or line end) is mirrored as a new element and
    * the piece gets a notch there, with the same shape and length; «move» leaves no notch at the old place. */
-  private mirrorNotch(pieceId: number, k: number): void {
+  private mirrorNotch(pieceId: number, k: number, batch = false): void {
     const t = this.tool, values = this.instantValues, pc = this.model.pieces?.find((p) => p.id === pieceId);
     if (!t?.build || !values || !pc) return;
     const r = pc.notches[k], src = this.res.objects.get(r.obj);
@@ -375,7 +375,7 @@ export class App {
       return this.toast((e as Error).message);
     }
     if (step.op !== "mirror") return;
-    this.snapshot();
+    if (!batch) this.snapshot();
     // the notch on a line end: a point at that end is mirrored (not the whole line)
     let srcPt = r.obj;
     if (src.kind !== "point") {
@@ -386,7 +386,7 @@ export class App {
     const dst = newId(this.model, "point");
     step.items = [{ src: srcPt, dst }];
     this.model.steps.push(step);
-    const move = values.mode === "move" || t.key === "mirrorMove";
+    const move = !this.selCopy;
     const type = pc.notchTypes?.[k] ?? "slit", len = pc.notchLen?.[k] ?? "";
     if (move) {
       pc.notches[k] = { obj: dst };
@@ -399,9 +399,132 @@ export class App {
       while (pc.notchLen.length < pc.notches.length - 1) pc.notchLen.push("");
       pc.notchLen[n] = len;
     }
+    if (batch) return;
     this.changed();
     this.toast(move ? "نُقل النوتش بالانعكاس · انقر التالي أو كليك يمين للإنهاء" : "نُسخ النوتش بالانعكاس · انقر التالي أو كليك يمين للإنهاء");
     this.render();
+  }
+
+  // ---- mirror bar (as GRAFIS): selection mode and copy / move, shown as soon as a mirror tool is chosen
+  private selMode: "single" | "frameAll" | "frameLines" | "frameCross" | "framePoints" | "piece" = "single";
+  private selCopy = true;
+  private selFrame: Pt | null = null;
+
+  private mirrorClick(sx: number, sy: number, h: Pick | null): void {
+    const w = this.toWorld(sx, sy), mode = this.selMode;
+    if (mode === "single") {
+      const nn = this.notchNear(sx, sy);
+      if (nn) return this.mirrorNotch(nn.piece, nn.k);
+      const id = h ? pickedId(h) : null;
+      if (id === null || (h?.kind === "point" && h.ref.end)) return this.toast("انقر عنصراً أو نوتشاً، أو اختر طريقة تحديد أخرى من الشريط");
+      return this.mirrorBatch([id], []);
+    }
+    if (mode === "piece") {
+      const pc = (this.model.pieces ?? []).find((p) => {
+        const g = this.res.pieces.get(p.id);
+        return g && insidePoly(w, g.cut);
+      });
+      if (!pc) return this.toast("انقر داخل قطعة");
+      return this.mirrorBatch([...pc.edges], pc.notches.map((_, k) => ({ piece: pc.id, k })));
+    }
+    if (!this.selFrame) {
+      this.selFrame = w;
+      this.toast("انقر الركن المقابل للإطار");
+      return this.render();
+    }
+    const a = this.selFrame;
+    this.selFrame = null;
+    const x0 = Math.min(a[0], w[0]), x1 = Math.max(a[0], w[0]), y0 = Math.min(a[1], w[1]), y1 = Math.max(a[1], w[1]);
+    const inside = (p: Pt) => p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1;
+    const ids: number[] = [];
+    for (const o of this.res.objects.values()) {
+      if (this.res.stepErrors.has(o.step)) continue;
+      const all = o.pts.every(inside), some = o.pts.some(inside);
+      if (o.kind === "point" ? (mode === "frameAll" || mode === "framePoints") && all : mode === "frameAll" || mode === "frameLines" ? all : mode === "frameCross" && some) ids.push(o.id);
+    }
+    const notches: { piece: number; k: number }[] = [];
+    if (mode !== "frameLines" && mode !== "frameCross")
+      for (const pc of this.model.pieces ?? []) pc.notches.forEach((r, k) => inside(this.pointOf(r)) && notches.push({ piece: pc.id, k }));
+    if (!ids.length && !notches.length) {
+      this.toast("لا يوجد ما يُعكس داخل الإطار");
+      return this.render();
+    }
+    this.mirrorBatch(ids, notches);
+  }
+
+  /** One mirror step for all the chosen elements (copies get new names), then the notches. */
+  private mirrorBatch(ids: number[], notches: { piece: number; k: number }[]): void {
+    const t = this.tool, values = this.instantValues;
+    if (!t?.build || !values) return;
+    let step: Step;
+    try {
+      step = t.build({ model: this.model, res: this.res, picks: this.picks, extra: [] }, values); // the axis only
+    } catch (e) {
+      return this.toast((e as Error).message);
+    }
+    if (step.op !== "mirror") return;
+    this.snapshot();
+    if (ids.length) {
+      step.items = ids.map((src) => {
+        if (!this.selCopy) return { src };
+        const o = this.res.objects.get(src), nm = this.model.names[src];
+        return { src, dst: newId(this.model, o?.kind === "point" ? "point" : nm?.startsWith("C") ? "curve" : "line") };
+      });
+      this.model.steps.push(step);
+    }
+    for (const n of notches) this.mirrorNotch(n.piece, n.k, true);
+    this.changed();
+    const what = [ids.length ? `${ids.length} عنصر` : "", notches.length ? `${notches.length} نوتش` : ""].filter(Boolean).join(" و");
+    this.toast(`${this.selCopy ? "نُسخ" : "نُقل"} بالانعكاس: ${what} · انقر التالي أو كليك يمين للإنهاء`);
+    this.render();
+  }
+
+  private readonly selModes: [string, string, string][] = [
+    ["single", "عناصر مفردة: كل نقرة تعكس خطاً أو نقطة أو نوتشاً", '<path d="M10 3v14" stroke-dasharray="2 2"/><path d="M5 6v8M15 6v8"/>'],
+    ["frameAll", "تحديد النقاط والخطوط داخل إطار", '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 2"/><path d="M7 6v8"/><circle cx="12" cy="8" r="1.3"/><circle cx="12" cy="12" r="1.3"/>'],
+    ["frameLines", "تحديد الخطوط داخل إطار", '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 2"/><path d="M7 6v8M13 6v8"/>'],
+    ["frameCross", "تحديد الخطوط التي تمر بالإطار", '<rect x="5" y="5" width="10" height="10" stroke-dasharray="2 2"/><path d="M2 16L18 4"/>'],
+    ["framePoints", "تحديد النقاط داخل إطار", '<rect x="3" y="3" width="14" height="14" stroke-dasharray="2 2"/><circle cx="7" cy="8" r="1.3"/><circle cx="12" cy="6" r="1.3"/><circle cx="10" cy="13" r="1.3"/>'],
+    ["piece", "قطعة كاملة: حدودها ونوتشاتها", '<path d="M5 3h7l3 4v10H5z"/>'],
+  ];
+
+  private renderSelBar(): void {
+    const on = !!this.tool && /^mirror/.test(this.tool.key);
+    let bar = document.querySelector(".sel-bar") as HTMLElement | null;
+    if (!on) {
+      bar?.remove();
+      this.selFrame = null;
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.className = "curve-bar sel-bar";
+      setupBar(bar);
+      (document.querySelector(".canvas-wrap") as HTMLElement).append(bar);
+      bar.addEventListener("mousedown", (e) => e.stopPropagation());
+      bar.addEventListener("click", (e) => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>("[data-sel]");
+        if (!b) return;
+        const v = b.dataset.sel as string;
+        if (v === "copy") this.selCopy = !this.selCopy;
+        else this.selMode = v as typeof this.selMode;
+        this.selFrame = null;
+        this.render();
+      });
+    }
+    const ic = (d: string) => `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">${d}</svg>`;
+    const html =
+      BAR_CHROME +
+      this.selModes.map(([k, tip, d]) => `<button data-sel="${k}" class="${this.selMode === k ? "on" : ""}" title="${tip}">${ic(d)}</button>`).join("") +
+      `<span class="seg-gap"></span><button data-sel="copy" class="${this.selCopy ? "on" : ""}" title="${this.selCopy ? "نسخ العناصر (الأصل يبقى) · انقر للنقل" : "نقل العناصر (بلا نسخة) · انقر للنسخ"}">${ic('<rect x="3" y="7" width="9" height="10"/><rect x="8" y="3" width="9" height="10"/>')}<span>${this.selCopy ? "نسخ" : "نقل"}</span></button>`;
+    if (bar.innerHTML !== html) bar.innerHTML = html;
+  }
+
+  /** The frame being drawn with the mirror bar. */
+  private selFrameSvg(): string {
+    if (!this.selFrame) return "";
+    const [x0, y0] = this.toScreen(this.selFrame), [x1, y1] = this.toScreen(this.mouse);
+    return `<rect class="sel-frame" x="${Math.min(x0, x1)}" y="${Math.min(y0, y1)}" width="${Math.abs(x1 - x0)}" height="${Math.abs(y1 - y0)}"/>`;
   }
 
   /** The corner of a cut line under the pointer (within 24 px). With a drawing line also under the
@@ -1429,6 +1552,8 @@ export class App {
     parts.push(this.inheritSvg());
     parts.push(this.seamLabelsSvg());
     parts.push(this.imgEditSvg());
+    parts.push(this.selFrameSvg());
+    this.renderSelBar();
     this.renderCurveBar();
     this.renderDimBar();
     // no letters on the drawing: the name of the element under the pointer only
@@ -2479,6 +2604,11 @@ export class App {
   }
 
   selectTool(t: Tool): void {
+    if (/^mirror/.test(t.key)) {
+      // the mirror bar starts in copy mode for «نسخة» tools, move for «نقل»
+      this.selCopy = t.key !== "mirrorMove";
+      this.selFrame = null;
+    }
     if (t.action) {
       this.cancelTool();
       if (t.key === "inheritBlock") this.openLibrary();
@@ -2517,6 +2647,7 @@ export class App {
   cancelTool(): void {
     this.imgEdit = null;
     this.imgDrag = null;
+    this.selFrame = null;
     this.cutCornerPick = null;
     this.afterPiece = null;
     this.endInheritPick();
@@ -3172,6 +3303,7 @@ export class App {
       const fields = t.fields?.({ model: this.model, res: this.res, picks: this.picks, extra: [] }) ?? [];
       const start = (v: Record<string, string>) => {
         this.instantValues = v;
+        this.selFrame = null;
         this.collecting = true;
         this.updatePrompt();
         this.render();
@@ -3925,10 +4057,10 @@ export class App {
         if (made) this.onPick(made);
         return;
       }
-      // 0.9.183: a mirror tool mirrors a notch too: clicked, it is copied (or moved) to the other side
+      // 0.9.183: mirror tools as GRAFIS: after the axis, the mirror bar's selection mode decides what a
+      // click takes (single element / notch, a frame of points and lines…, a whole piece); copy or move
       if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
-        const nn = this.notchNear(e.clientX - r.left, e.clientY - r.top);
-        if (nn) return void this.mirrorNotch(nn.piece, nn.k);
+        return void this.mirrorClick(e.clientX - r.left, e.clientY - r.top, h);
       }
       // 0.9.181: round / cut off a corner of the cut line (outer line) too: a click near that corner, in the seam allowance
       if (kind === "line" && (this.tool?.key === "cornerRound" || this.tool?.key === "cornerChamfer") && !this.picks.length) {
@@ -4008,6 +4140,7 @@ export class App {
       }
       this.mouse = this.toWorld(sx, sy);
       if (this.imgDrag) return void this.imgEditMove(this.mouse);
+      if (this.selFrame) return void this.render(); // the mirror bar's frame follows the pointer
       if (this.seamTool) {
         const h = this.seamEdgeAt(sx, sy);
         if (JSON.stringify(h) !== JSON.stringify(this.seamHover)) {

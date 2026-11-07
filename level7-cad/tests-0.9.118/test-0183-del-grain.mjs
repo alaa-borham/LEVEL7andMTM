@@ -8,7 +8,7 @@ const pass=t=>console.log('PASS '+t);let failed=0,app;
 try{
  app=await _electron.launch({executablePath:src+'/node_modules/electron/dist/electron',args:['--no-sandbox',src],env});const page=await app.firstWindow();page.setDefaultTimeout(15000);
  page.on('dialog',d=>d.dismiss());await page.waitForSelector('.l7-design-cat');
- const f=page.frames().find(x=>x.url().includes('l7design'));await f.waitForFunction(()=>!!window.level7);
+ const f=page.frames().find(x=>x.url().includes('l7design')),fr=page.frameLocator('#l7-design-frame');await f.waitForFunction(()=>!!window.level7);
  const box=await page.locator('#l7-design-frame').boundingBox(),at=async(x,y)=>{const[sx,sy]=await f.evaluate(([x,y])=>window.level7.toScreen([x,y]),[x,y]);return[box.x+sx,box.y+sy];};
  await f.evaluate(()=>{localStorage.removeItem('level7.barPos');localStorage.removeItem('level7.formMini');const a=window.level7,m=a.model;a.snapshot();delete m.parts;delete m.activePart;delete m.lineStyles;m.images=[];
    m.steps=[{op:'point',id:1,x:'0',y:'0'},{op:'point',id:2,x:'200',y:'0'},{op:'point',id:3,x:'200',y:'300'},{op:'point',id:4,x:'0',y:'300'},
@@ -43,5 +43,20 @@ try{
  const nn=await f.evaluate(()=>({pc:window.level7.model.pieces[0],g:window.level7.res.pieces.get(1).notches[1],lines:window.level7.model.steps.filter(s=>s.op==='line').length}));
  assert(Math.abs(nn.g.at[0]+10)<1e-6&&Math.abs(nn.g.at[1]-100)<1e-6&&nn.g.type==='t'&&nn.pc.notchLen[1]==='8'&&nn.lines===5,JSON.stringify(nn));
  pass('mirror (copy) about the middle line: a click on the notch puts a T notch, 8 mm, at the same place on the other side; no line is copied');
+ // the mirror bar (as GRAFIS): shown with the tool; frame of lines; a whole piece; copy / move
+ const sb=fr.locator('.sel-bar');await sb.waitFor();assert.equal(await sb.locator('button[data-sel]').count(),7);
+ await sb.locator('[data-sel="frameLines"]').click();
+ await page.mouse.click(...await at(-5,-5));await page.mouse.click(...await at(5,305));
+ await f.waitForFunction(()=>{const s=window.level7.model.steps.at(-1);return s.op==='mirror'&&s.items.length===1&&s.items[0].src===8&&!!s.items[0].dst;});
+ pass('mirror bar «الخطوط داخل إطار»: a frame round the left edge copies only that line to the other side');
+ await sb.locator('[data-sel="piece"]').click();const nBefore=await f.evaluate(()=>window.level7.model.pieces[0].notches.length);
+ await page.mouse.click(...await at(50,60));
+ await f.waitForFunction(n=>{const s=window.level7.model.steps.filter(x=>x.op==='mirror'&&x.items.length===4);return s.length===1&&window.level7.model.pieces[0].notches.length===2*n;},nBefore);
+ pass(`mirror bar «قطعة كاملة»: a click in the piece copies its 4 edges and its ${nBefore} notches`);
+ await sb.locator('[data-sel="copy"]').click();assert((await sb.locator('[data-sel="copy"]').textContent()).includes('نقل'));
+ await sb.locator('[data-sel="single"]').click();const before=await f.evaluate(()=>window.level7.model.steps.length);
+ await page.mouse.click(...await at(200,150));
+ await f.waitForFunction(b=>{const s=window.level7.model.steps.at(-1);return window.level7.model.steps.length===b+1&&s.op==='mirror'&&s.items.length===1&&s.items[0].src===6&&!s.items[0].dst;},before);
+ pass('mirror bar «نقل» + «عناصر مفردة»: a click moves that line (no copy)');
 }catch(e){failed=1;console.error(e);}
 await app?.close().catch(()=>{});process.exit(failed);
