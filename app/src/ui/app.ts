@@ -5835,12 +5835,7 @@ export class App {
     );
     box.querySelectorAll<HTMLElement>("[data-sdel]").forEach((b) =>
       b.addEventListener("click", () => {
-        const i = Number(b.dataset.sdel);
-        if (!confirm(`حذف المقاس «${sizes[i].name}»؟`)) return;
-        this.snapshot();
-        sizes.splice(i, 1);
-        this.model.activeSize = -1;
-        this.changed();
+        this.deleteSize(Number(b.dataset.sdel));
       }),
     );
     box.querySelector("[data-sadd]")?.addEventListener("click", () => {
@@ -5923,6 +5918,20 @@ export class App {
   private xSel = -1;
   private xFilter = "";
 
+  /** delete a size / customer column (asks first); the drawing stays on the same size if another one goes */
+  deleteSize(i: number): void {
+    const sizes = this.model.sizes ?? [], sz = sizes[i];
+    // X / Z tables are not in the drawing's undo history, so it asks first
+    if (!sz || !confirm(`حذف ${sz.kind === "customer" ? "الزبون" : "المقاس"} «${sz.name}» وكل قيمه؟ (لا يمكن التراجع عنه بـ Ctrl+Z)`)) return;
+    sizes.splice(i, 1);
+    const a = this.model.activeSize ?? -1;
+    if (a === i) this.model.activeSize = -1;
+    else if (a > i) this.model.activeSize = a - 1;
+    this.changed();
+    this.renderSizeSelect();
+    this.toast(`حُذف «${sz.name}»`);
+  }
+
   private renderX(): void {
     const box = $("#tab-x");
     const sizes = this.model.sizes ?? [];
@@ -5943,7 +5952,7 @@ export class App {
       .join("");
     // a tick above every size: switched-off sizes stay out of the marker and the all-size exports
     const tick = (i: number) => `<label class="sz-on" title="مفعّل: يدخل في التعشيق والتصدير لكل المقاسات"><input type="checkbox" data-son="${i}"${sizeActive(this.model, i) ? " checked" : ""}/></label>`;
-    const head = sizes.map((sz, i) => `<th class="sz${sz.off ? " sz-off" : ""}" title="${sz.kind === "customer" ? "زبون" : "مقاس"}">${tick(i)}${esc(sz.name)}</th>`).join("");
+    const head = sizes.map((sz, i) => `<th class="sz${sz.off ? " sz-off" : ""}" title="${sz.kind === "customer" ? "زبون" : "مقاس"}"><button class="sz-del" data-sdel-x="${i}" title="حذف هذا العمود (${esc(sz.name)})">✕</button>${tick(i)}${esc(sz.name)}</th>`).join("");
     box.innerHTML = `<div class="xgrid">
       <div class="xg-bar"><button data-add class="xg-add" title="إضافة قياس X">⊕</button><button data-xa="del" class="xg-del" title="حذف القياس المحدد"${this.xSel < 0 ? " disabled" : ""}>✕</button>
         <button data-xa="mlib" class="xg-lib" title="مكتبة القياسات: اختر جدول قياسات محفوظ لموديل، أو احفظ هذا الجدول فيها">📚 مكتبة القياسات</button>
@@ -5991,6 +6000,7 @@ export class App {
         else inp.blur();
       });
     });
+    box.querySelectorAll<HTMLElement>("[data-sdel-x]").forEach((b) => b.addEventListener("click", () => this.deleteSize(Number(b.dataset.sdelX))));
     box.querySelector(".xg-bar")?.addEventListener("click", (e) => {
       const a = (e.target as HTMLElement).closest<HTMLElement>("[data-xa]")?.dataset.xa;
       if (a === "del" && this.xSel >= 0 && this.model.measurements[this.xSel]) {
