@@ -1102,6 +1102,11 @@ export class App {
   // ---- seam allowance tool (as GRAFIS): pick the kind and value, then click the edges of the pieces
   seamTool: { mode: "std" | "v0" | "v1" | "v2" | "unpar" | "none" } | null = null;
   private seamHover: { pc: number; k: number } | null = null;
+  /** 0.9.197 (as GRAFIS): the edge chosen in the seam allowance bar (double-click on its cut line, or a
+   * click): its value is in the bar, and a change in the bar applies to it at once (no window, no OK). */
+  private seamSel: { pc: number; k: number } | null = null;
+  /** One undo step for a run of changes to the chosen edge. */
+  private seamSnapped = false;
   private seamVals = (() => {
     const d = { std: "10", v0: "20", v1: "30", v2: "40", ua: "10", ub: "20" };
     try {
@@ -1123,6 +1128,7 @@ export class App {
     if (!this.seamTool) return;
     this.seamTool = null;
     this.seamHover = null;
+    this.seamSel = null;
     document.querySelector(".seam-bar")?.remove();
     this.render();
   }
@@ -1142,6 +1148,7 @@ export class App {
         if (m && this.seamTool && !t.matches("input")) {
           this.seamTool.mode = m as NonNullable<typeof this.seamTool>["mode"];
           this.renderSeamBar();
+          this.applySeamSel();
         }
       });
       bar.addEventListener("input", (e) => {
@@ -1151,12 +1158,17 @@ export class App {
         try {
           localStorage.setItem("level7.seamVals", JSON.stringify(this.seamVals));
         } catch {}
+        this.seamInput = t;
+        t.classList.toggle("bad", !this.seamValid(t.value.trim() || "0"));
+        this.applySeamSel();
       });
       bar.addEventListener("focusin", (e) => {
         const m = (e.target as HTMLElement).closest<HTMLElement>("[data-sm]")?.dataset.sm;
+        if ((e.target as HTMLElement).matches("input[data-sv]")) this.seamInput = e.target as HTMLInputElement;
         if (m && this.seamTool && this.seamTool.mode !== m) {
           this.seamTool.mode = m as NonNullable<typeof this.seamTool>["mode"];
           bar!.querySelectorAll("[data-sm]").forEach((x) => x.classList.toggle("on", (x as HTMLElement).dataset.sm === m));
+          this.applySeamSel();
         }
       });
     }
@@ -1168,7 +1180,80 @@ export class App {
       box("v0", SEAM_ICON.dist, "مسافة · Assign distance", inp("v0")) + box("v1", SEAM_ICON.dist, "مسافة · Assign distance", inp("v1")) + box("v2", SEAM_ICON.dist, "مسافة · Assign distance", inp("v2")) +
       box("unpar", SEAM_ICON.unpar, "غير متوازية: القيمة الأولى عند الطرف الأقرب للنقرة · Assign unparallel", inp("ua") + inp("ub")) +
       box("none", SEAM_ICON.none, "بدون مسافة خياطة · No allowance", "") +
-      `<button data-sall="1" title="القيمة القياسية على كل حواف كل القطع">⬚ الكل</button><span>انقر حافة القطعة · كليك يمين للإنهاء</span><button data-send="1">إنهاء</button>`;
+      `<span class="seam-xz"></span>` +
+      `<button data-sall="1" title="القيمة القياسية على كل حواف كل القطع">⬚ الكل</button><span class="seam-hint" title="${this.seamSelName() ? "التغيير في الشريط يُطبَّق فوراً على هذه الحافة" : "انقر حافة القطعة · كليك يمين للإنهاء"}">${this.seamSelName() ? `الحافة ${esc(this.seamSelName())}` : "انقر حافة القطعة"}</span><button data-send="1">إنهاء</button>`;
+    // X / Z in the bar itself (as GRAFIS: all the options in one place): into the value being edited
+    bar.querySelector(".seam-xz")?.append(this.refPicks((ref) => {
+      const cur = this.seamInput && bar!.contains(this.seamInput) ? this.seamInput : this.seamModeInput();
+      if (!cur) return;
+      cur.value = ref;
+      cur.dispatchEvent(new Event("input", { bubbles: true }));
+      cur.focus();
+    }, true));
+  }
+
+  /** The value field the X / Z lists write into: the one last edited, else the first of the chosen kind. */
+  private seamInput: HTMLInputElement | null = null;
+  private seamModeInput(): HTMLInputElement | null {
+    const m = this.seamTool?.mode;
+    return m ? (document.querySelector(`.seam-bar [data-sm="${m}"] input`) as HTMLInputElement | null) : null;
+  }
+  private seamSelName(): string {
+    const sel = this.seamSel, pc = sel && (this.model.pieces ?? [])[sel.pc];
+    return pc ? this.model.names[pc.edges[sel.k]] ?? `الحافة ${sel.k + 1}` : "";
+  }
+  private seamValid(src: string): boolean {
+    try {
+      new Vars(withSize(this.model), undefined, this.res.z).eval(src);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Choose an edge in the seam allowance bar: its value goes into the bar (in the kind it has), the field
+   * is ready to type; every change then applies to it at once. */
+  private selectSeamEdge(pi: number, k: number): void {
+    const pc = (this.model.pieces ?? [])[pi];
+    if (!pc || !this.seamTool) return;
+    this.seamSel = { pc: pi, k };
+    this.seamSnapped = false;
+    const a = (pc.seam[k] ?? "0").trim() || "0", b = pc.seamEnd?.[k]?.trim() ?? "", v = this.seamVals;
+    let field: keyof typeof v;
+    if (b) (this.seamTool.mode = "unpar"), (v.ua = a), (v.ub = b), (field = "ua");
+    else if (a === "0") (this.seamTool.mode = "none"), (field = "std");
+    else if (a === v.std) (this.seamTool.mode = "std"), (field = "std");
+    else (this.seamTool.mode = "v0"), (v.v0 = a), (field = "v0");
+    this.renderSeamBar();
+    this.render();
+    const inp = document.querySelector(`.seam-bar input[data-sv="${field}"]`) as HTMLInputElement | null;
+    if (inp && this.seamTool.mode !== "none") {
+      this.seamInput = inp;
+      inp.focus();
+      inp.select();
+    }
+    this.toast(`الحافة ${this.seamSelName()}: غيّر القيمة أو النوع في الشريط فيُطبَّق فوراً · X / Z من الشريط`);
+  }
+
+  /** The bar's kind and value on the chosen edge (no window, no OK); a wrong formula waits. */
+  private applySeamSel(): void {
+    const sel = this.seamSel, t = this.seamTool, pc = sel && (this.model.pieces ?? [])[sel.pc];
+    if (!sel || !t || !pc) return;
+    const v = this.seamVals;
+    let a = "0", b = "";
+    if (t.mode === "unpar") (a = v.ua || "0"), (b = v.ub || "0");
+    else if (t.mode !== "none") a = (t.mode === "std" ? v.std : v[t.mode]) || "0";
+    if (!this.seamValid(a) || (b && !this.seamValid(b))) return;
+    if (pc.seam[sel.k] === a && (pc.seamEnd?.[sel.k] ?? "") === b) return;
+    if (!this.seamSnapped) (this.snapshot(), (this.seamSnapped = true));
+    pc.seam[sel.k] = a;
+    if (b || pc.seamEnd) {
+      pc.seamEnd ??= [];
+      while (pc.seamEnd.length < pc.edges.length) pc.seamEnd.push("");
+      pc.seamEnd[sel.k] = b;
+      if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
+    }
+    this.changed();
   }
 
   /** The piece edge whose cut line (with the seam allowance) is under the pointer: piece index and edge
@@ -1199,35 +1284,6 @@ export class App {
   }
   /** The edge whose cut line is under the pointer (0.9.195: it glows, as the drawn lines do; a double-click edits it). */
   private cutHover: { pc: number; k: number } | null = null;
-
-  /** The values window of one edge's seam allowance (opened by a double-click on its cut line): its value,
-   * or start / end values when unparallel; X / Z and formulas as everywhere. */
-  private editEdgeSeam(pi: number, k: number): void {
-    const pc = (this.model.pieces ?? [])[pi];
-    if (!pc) return;
-    const name = this.model.names[pc.edges[k]] ?? `الحافة ${k + 1}`, end = pc.seamEnd?.[k]?.trim() ?? "";
-    this.seamHover = { pc: pi, k };
-    this.render();
-    this.openForm({
-      title: `مسافة خياطة ${name} (قطعة «${pc.name}»)`,
-      fields: end
-        ? [{ key: "a", label: "عند بداية الحافة", value: pc.seam[k] ?? "0" }, { key: "b", label: "عند نهايتها", value: end }]
-        : [{ key: "a", label: "مسافة الخياطة مم", value: pc.seam[k] ?? "0" }],
-      onOk: (v) => {
-        const a = this.seamValue(v.a?.trim() || "0"), b = end ? this.seamValue(v.b?.trim() || "0") : "";
-        if (a === null || b === null) return;
-        this.snapshot();
-        pc.seam[k] = a;
-        if (pc.seamEnd) {
-          while (pc.seamEnd.length < pc.edges.length) pc.seamEnd.push("");
-          pc.seamEnd[k] = b;
-          if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
-        }
-        this.changed();
-        this.toast(`مسافة خياطة ${name}: ${end ? `${a} / ${b}` : a} · دابل كليك على حافة أخرى، أو انقر الحواف بالشريط`);
-      },
-    });
-  }
 
   /** The piece edge under the pointer: piece index and edge index in Piece.edges. */
   private seamEdgeAt(sx: number, sy: number): { pc: number; k: number } | null {
@@ -1276,6 +1332,12 @@ export class App {
     pc.seamEnd[h.k] = b;
     if (!pc.seamEnd.some((x) => x.trim())) delete pc.seamEnd;
     this.changed();
+    // that edge stays chosen: a change in the bar now applies to it at once
+    this.seamSel = h;
+    this.seamSnapped = true;
+    const hint = document.querySelector(".seam-bar .seam-hint");
+    if (hint) hint.textContent = `الحافة ${this.seamSelName()}`;
+    this.render();
   }
 
   private seamAll(): void {
@@ -1297,7 +1359,7 @@ export class App {
     (this.model.pieces ?? []).forEach((pc, pi) => {
       const g = this.res.pieces.get(pc.id);
       g?.edges.forEach((e, i) => {
-        const k = g.order[i], hv = this.seamHover?.pc === pi && this.seamHover.k === k;
+        const k = g.order[i], hv = (this.seamHover?.pc === pi && this.seamHover.k === k) || (this.seamSel?.pc === pi && this.seamSel.k === k);
         const val = (src: string) => this.formulaText(src || "0");
         const end = pc.seamEnd?.[k]?.trim();
         const txt = end ? `${val(pc.seam[k])} / ${val(end)}` : val(pc.seam[k]);
@@ -4347,7 +4409,7 @@ export class App {
           if (!this.seamTool) this.startSeamTool();
           // 0.9.195 (as GRAFIS): the edge double-clicked opens its own value at once
           const ed = this.cutEdgeAt(e.clientX - r.left, e.clientY - r.top);
-          if (ed) return this.editEdgeSeam(ed.pc, ed.k);
+          if (ed) return this.selectSeamEdge(ed.pc, ed.k);
           return this.toast("مسافة الخياطة: اختر النوع والقيمة من الشريط ثم انقر حدود القطعة · كليك يمين للإنهاء");
         }
       }
@@ -4371,7 +4433,7 @@ export class App {
         const pi = (this.model.pieces ?? []).findIndex((pc) => pc.edges.includes(id));
         if (pi >= 0) {
           if (!this.seamTool) this.startSeamTool();
-          return this.editEdgeSeam(pi, this.model.pieces![pi].edges.indexOf(id));
+          return this.selectSeamEdge(pi, this.model.pieces![pi].edges.indexOf(id));
         }
         this.selectedStep = i;
         this.render();

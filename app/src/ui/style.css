@@ -1074,3 +1074,9 @@ body.canvas-dark { --piece-sew: #ffffff; --piece-cut: #2fa4dd; } body.canvas-lig
 
 /* 0.9.195: the cut line of the edge under the pointer (a double-click edits its seam allowance) */
 #canvas .cut-hover { stroke: var(--near); stroke-width: 5; opacity: .55; pointer-events: none; }
+
+/* 0.9.197: a value the seam allowance bar cannot read yet (not applied) */
+.seam-bar input.bad { outline: 2px solid #e53935; }
+.seam-bar .seam-xz { display: inline-flex; align-items: center; }
+
+.seam-bar .seam-hint { max-width: none !important; overflow: visible !important; text-overflow: clip !important; white-space: nowrap; color: #ffa600; font-weight: 600; }

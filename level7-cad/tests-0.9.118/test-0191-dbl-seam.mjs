@@ -20,10 +20,10 @@ try{
   const n0=await f.evaluate(()=>window.level7.model.steps.length);
   await tool(cat,key);await page.mouse.dblclick(...await at(...where));await fr.locator('.seam-bar').waitFor();
   // 0.9.195: the window that opens is the edge's own seam allowance (not the tool's values window)
-  const r=await f.evaluate(()=>({tool:window.level7.tool?.key??null,form:/مسافة خياطة/.test(document.querySelector('#tool-box h4')?.textContent||''),n:window.level7.model.steps.length}));
-  assert.deepEqual(r,{tool:null,form:true,n:n0},key+' '+JSON.stringify(r));
-  await f.evaluate(()=>window.level7.closeForm());
-  pass(`with the «${key}» tool active, a double-click on the cut line opens the seam allowance bar and that edge's value (tool ended, no tool window, no new step)`);
+  // 0.9.197: the edge is chosen in the bar (no window)
+  const r=await f.evaluate(()=>({tool:window.level7.tool?.key??null,form:!!window.level7.form,chosen:/الحافة/.test(document.querySelector('.seam-bar .seam-hint')?.textContent||''),n:window.level7.model.steps.length}));
+  assert.deepEqual(r,{tool:null,form:false,chosen:true,n:n0},key+' '+JSON.stringify(r));
+  pass(`with the «${key}» tool active, a double-click on the cut line opens the seam allowance bar with that edge chosen (tool ended, no window, no new step)`);
   await off();
  }
  // a piece tool keeps its clicks: the notch tool on the cut line does not jump to the seam bar
