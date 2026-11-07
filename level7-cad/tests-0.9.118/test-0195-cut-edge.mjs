@@ -31,6 +31,14 @@ try{
  assert(/L2/.test(t.title)&&t.v==='10'&&t.bar,JSON.stringify(t));pass(`a double-click on it opens «${t.title.trim()}» with its value 10 (the seam allowance bar too)`);
  await fr.locator('#tool-box input[data-key="a"]').fill('15');await fr.locator('#tool-box [data-ok]').click();
  await f.waitForFunction(()=>window.level7.model.pieces[0].seam.join()==='10,15,10,10');pass('typed 15, OK: only L2 has 15');
+ // a small zoom: the 10 mm allowance is 24 px (15 mm) on screen, inside the 30 px pick distance of the sewing line;
+ // the pointer on the cut line (L2 now 15: x = 215) still takes the cut line (it is nearer), not the sewing line beside it
+ await f.evaluate(()=>{const a=window.level7;a.closeForm();a.endSeamTool();a.zoomBy(1.6/a.scale);});await page.waitForTimeout(200);
+ await move(215,75);await f.waitForFunction(()=>!!document.querySelector('#canvas .cut-hover'));
+ assert.equal(await f.evaluate(()=>window.level7.near),null);
+ await dbl(215,75);await fr.locator('#tool-box input[data-key="a"]').waitFor();assert(/L2/.test(await f.evaluate(()=>document.querySelector('#tool-box h4').textContent)));
+ await f.evaluate(()=>{const a=window.level7;a.closeForm();a.fit();});await page.waitForTimeout(200);
+ pass('small zoom (allowance 24 px, the sewing line within the pick distance): the cut line still glows (not the sewing line) and the double-click opens L2');
  // with a tool that does not use the cut line (delete lines): the double-click still opens the edge (L3, bottom, y = 160)
  await f.evaluate(()=>{const a=window.level7;a.cancelTool();});
  await page.evaluate(()=>document.querySelector('#l7-design-frame').contentWindow.postMessage({type:'l7:tool',key:'delLines'},'*'));await f.waitForFunction(()=>window.level7.tool?.key==='delLines');

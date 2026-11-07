@@ -4366,6 +4366,13 @@ export class App {
       this.cancelTool();
       const st = this.model.steps[i];
       if (st.op === "inherit") {
+        // an inherited line that is an edge of a piece here (it cannot be changed in this part): its seam
+        // allowance opens (0.9.195; with no allowance its cut line is the line itself)
+        const pi = (this.model.pieces ?? []).findIndex((pc) => pc.edges.includes(id));
+        if (pi >= 0) {
+          if (!this.seamTool) this.startSeamTool();
+          return this.editEdgeSeam(pi, this.model.pieces![pi].edges.indexOf(id));
+        }
         this.selectedStep = i;
         this.render();
         return this.toast(`${this.model.names[id] ?? "هذا العنصر"} موروث من البارت ${String(st.part).padStart(3, "0")} ويتبعه: عدّله في ذلك البارت`);
@@ -4720,12 +4727,19 @@ export class App {
         // the object near the pointer is marked (glow) with a dot on its nearest point
         // a dimension under the pointer (no tool open) glows itself and takes the press, not the line beside it
         const dh = !this.tool && !this.form ? this.dimAt(sx, sy) : null;
-        const near = dh === null ? this.nearest(sx, sy) : null;
+        let near = dh === null ? this.nearest(sx, sy) : null;
+        // the cut line of a piece glows under the pointer (a double-click edits it): it wins over a drawn line
+        // that is farther from the pointer (at a small zoom the sewing line lies within the pick distance)
+        const cutOk = dh === null && !this.seamTool && (!this.tool || !CUT_LINE_GROUPS.includes(this.tool.group));
+        let ch = cutOk ? this.cutEdgeAt(sx, sy, 8) : null;
+        if (ch && near) {
+          const pts = this.cutEdgePts(ch.pc, ch.k), dCut = pts.length > 1 ? closestOnPolyline(pts, this.mouse).d : Infinity, dNear = dist(near.at, this.mouse);
+          if (dCut < dNear) near = null;
+          else ch = null;
+        }
         const moved = !!near !== !!this.near || (near && this.near && (near.id !== this.near.id || dist(near.at, this.near.at) * this.scale > 0.5)) || dh !== this.dimHover;
         this.near = near;
         this.dimHover = dh;
-        // the cut line of a piece glows under the pointer when nothing drawn is there (a double-click edits it)
-        const ch = !near && dh === null && !this.seamTool && (!this.tool || !CUT_LINE_GROUPS.includes(this.tool.group)) ? this.cutEdgeAt(sx, sy, 8) : null;
         if (JSON.stringify(ch) !== JSON.stringify(this.cutHover)) {
           this.cutHover = ch;
           this.render();
