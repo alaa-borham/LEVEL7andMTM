@@ -1,3 +1,7 @@
+LEVEL7 and MTM 0.9.192
+
+LEVEL7 design: graded AAMA export works when the base size is switched off (the sample is the nearest active size); full review of all tools on a real design.
+
 LEVEL7 and MTM 0.9.191
 
 LEVEL7 design: a size column is deleted from the X table itself (✕ on its header, asks first); a curve point tied to a line slides along that line (and its extension) when dragged, one value «مقدار الإزاحة على الخط» instead of X / Y offsets (Alt: free); the curve direction can be set at any point lying on the curve or any place on it; the double-click on a piece cut line opens the seam allowance bar also while a drawing tool is active; the mirror tools see a piece cut line (it lights up, a click mirrors the whole piece; a copy is a new piece with its seam allowance, notches and mirrored grain).

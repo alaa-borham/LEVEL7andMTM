@@ -1,7 +1,7 @@
 {
  "product": "LEVEL7 and MTM",
- "version": "0.9.191",
- "notes": "Delete a size column in the X table; a dragged curve point slides along its line (one value); curve direction at any point on the curve; double-click on a cut line opens the seam allowance bar with a tool on; mirror tools see a piece cut line and mirror the whole piece",
+ "version": "0.9.192",
+ "notes": "Graded AAMA export works with the base size switched off; full review of all tools on a real design",
  "files": [
   {
    "path": "README-ar.md",
@@ -15,8 +15,8 @@
   },
   {
    "path": "README.md",
-   "sha256": "97303197d78b1dadfbc40591ff4f2ad90e18b01c476217dae613e8e4ff26557b",
-   "size": 150972
+   "sha256": "8d8836521f5a8f67d1e498a4913e67eda8c4c4020e7699b8147a767a755a76ee",
+   "size": 151156
   },
   {
    "path": "assets/icon.ico",
@@ -34,18 +34,18 @@
    "size": 712
   },
   {
+   "path": "assets/l7design/assets/index-4LBzQK1J.js",
+   "sha256": "5202636b870c1de5d8ad4fca5c6649834e14c5365e1a40f28f5bfdf6bf31a0a7",
+   "size": 342071
+  },
+  {
    "path": "assets/l7design/assets/index-BkdDGHEW.css",
    "sha256": "bfa9279bca263515783d26a0efc0c880cd28f88c1142d87b5b2b154b24791956",
    "size": 44820
   },
   {
-   "path": "assets/l7design/assets/index-DsFr_23B.js",
-   "sha256": "dc8e03f7a950d412f201b3ab218bcabc2c2ded4c0636ae927f17b79e696d8df5",
-   "size": 341768
-  },
-  {
    "path": "assets/l7design/index.html",
-   "sha256": "eacfde1d1d8898237d97322603dee74fa5718b5bb31df0bfea50c564adc1f635",
+   "sha256": "98e881e9e5d3b31f808e99e367e9e095d31e4a6deea802c5573a01c2a5d8a662",
    "size": 3594
   },
   {
@@ -125,7 +125,7 @@
   },
   {
    "path": "package.json",
-   "sha256": "188989669488a79d34801ba2875884585c639f964f6fb2e3c3ae182dad3c9734",
+   "sha256": "339fe1f896f8a2a6a700dfe3b8fc4825dd8e9626f8be00bd147ba96b8027492f",
    "size": 301
   },
   {
