@@ -1070,11 +1070,11 @@ export class App {
     const m = this.seamTool?.mode, v = this.seamVals;
     const box = (mode: string, icon: string, tip: string, inputs: string) => `<label data-sm="${mode}" class="sm${m === mode ? " on" : ""}" title="${tip}">${icon}${inputs}</label>`;
     const inp = (k: keyof typeof v) => `<input data-sv="${k}" class="expr" dir="ltr" value="${esc(v[k])}"/>`;
-    bar.innerHTML = BAR_CHROME + `<b>حواشي الخياطة</b>` +
+    bar.innerHTML = BAR_CHROME + `<b>مسافة الخياطة</b>` +
       box("std", SEAM_ICON.std, "مسافة قياسية · Assign standard distance", inp("std")) +
       box("v0", SEAM_ICON.dist, "مسافة · Assign distance", inp("v0")) + box("v1", SEAM_ICON.dist, "مسافة · Assign distance", inp("v1")) + box("v2", SEAM_ICON.dist, "مسافة · Assign distance", inp("v2")) +
       box("unpar", SEAM_ICON.unpar, "غير متوازية: القيمة الأولى عند الطرف الأقرب للنقرة · Assign unparallel", inp("ua") + inp("ub")) +
-      box("none", SEAM_ICON.none, "بدون حاشية · No allowance", "") +
+      box("none", SEAM_ICON.none, "بدون مسافة خياطة · No allowance", "") +
       `<button data-sall="1" title="القيمة القياسية على كل حواف كل القطع">⬚ الكل</button><span>انقر حافة القطعة · كليك يمين للإنهاء</span><button data-send="1">إنهاء</button>`;
   }
 
@@ -1135,7 +1135,7 @@ export class App {
       delete pc.seamEnd;
     }
     this.changed();
-    this.toast(`حاشية ${a} على كل حواف القطع`);
+    this.toast(`مسافة خياطة ${a} على كل حواف القطع`);
   }
 
   /** While the tool is on: the allowance of each edge written on it ("9/11" when unparallel). */
@@ -2663,7 +2663,7 @@ export class App {
     if (!piece) return;
     this.selectTool(piece);
     this.afterPiece = next;
-    this.toast(`${next === "seam" ? "حواشي الخياطة" : "النوتش"} تكون على قطعة، وهذا البارت لا قطعة فيه بعد: انقر حدود القطعة بالترتيب حولها ثم Enter، وبعدها ${next === "seam" ? "تُفتح الحواشي" : "تعود أداة النوتش"}`);
+    this.toast(`${next === "seam" ? "مسافة الخياطة" : "النوتش"} تكون على قطعة، وهذا البارت لا قطعة فيه بعد: انقر حدود القطعة بالترتيب حولها ثم Enter، وبعدها ${next === "seam" ? "يُفتح شريط مسافة الخياطة" : "تعود أداة النوتش"}`);
   }
 
   cancelTool(): void {
@@ -3645,10 +3645,16 @@ export class App {
 
   private commit(values: Record<string, string>): void {
     const t = this.tool as Tool;
-    if ((t.key === "cornerRound" || t.key === "cornerChamfer") && this.cutCornerPick && this.picks[0] === this.cutCornerPick.pick) {
+    if ((t.key === "cornerRound" || t.key === "cornerChamfer" || t.key === "cornerSquare") && this.cutCornerPick && this.picks[0] === this.cutCornerPick.pick) {
       const cc = this.cutCornerPick, pc = this.model.pieces?.find((p) => p.id === cc.piece);
       this.cutCornerPick = null;
-      if (pc) {
+      if (pc && t.key === "cornerSquare") {
+        this.snapshot();
+        pc.cutCorners ??= {};
+        pc.cutCorners[cc.key] = { kind: "square", size: "", on: Number(values.on) };
+        this.changed();
+        this.toast(`تنتهي زاوية خط القص بخط قائم على ${this.model.names[Number(values.on)] ?? "الحد"}`);
+      } else if (pc) {
         this.snapshot();
         const size = (values.size ?? "").trim();
         pc.cutCorners ??= {};
@@ -3706,7 +3712,7 @@ export class App {
         this.render();
         return;
       }
-      this.toast("أُنشئت القطعة. عدّل حواشي كل حد من صفحة «القطع»");
+      this.toast("أُنشئت القطعة. عدّل مسافة الخياطة لكل حد من صفحة «القطع»");
       const next = this.afterPiece;
       this.afterPiece = null;
       if (next && !err) {
@@ -4115,7 +4121,7 @@ export class App {
         return void this.mirrorClick(e.clientX - r.left, e.clientY - r.top, h);
       }
       // 0.9.181: round / cut off a corner of the cut line (outer line) too: a click near that corner, in the seam allowance
-      if (kind === "line" && (this.tool?.key === "cornerRound" || this.tool?.key === "cornerChamfer") && !this.picks.length) {
+      if (kind === "line" && (this.tool?.key === "cornerRound" || this.tool?.key === "cornerChamfer" || this.tool?.key === "cornerSquare") && !this.picks.length) {
         const cc = this.cutCornerNear(e.clientX - r.left, e.clientY - r.top, !!h);
         if (cc) {
           const [a, b] = cc.key.split(",").map(Number);
@@ -5232,7 +5238,7 @@ export class App {
     const el = document.createElement("section");
     el.className = "z-assistant vis-win";
     el.dir = "rtl";
-    const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع وحواشي الخياطة"], ["lengths", "أطوال الخطوط (F8)"], ["images", "صور الخلفية (F9)"]];
+    const items: [keyof App["vis"] | "pieces", string][] = [["points", "النقاط"], ["dims", "الأبعاد (F7)"], ["marks", "الغرز والعلامات"], ["texts", "النصوص"], ["ghosts", "البارتات الباهتة"], ["pieces", "القطع ومسافة الخياطة"], ["lengths", "أطوال الخطوط (F8)"], ["images", "صور الخلفية (F9)"]];
     el.innerHTML = `<div class="za-head"><b>Visibility · الرؤية</b><button data-v="close">×</button></div><div class="za-body">${items
       .map(([k, l]) => `<label class="za-r"><input type="checkbox" data-vk="${k}" ${(k === "pieces" ? this.showPieces : this.vis[k]) ? "checked" : ""}/> ${l}</label>`)
       .join("")}<label class="za-r"><input type="checkbox" data-vk="dup" ${this.showDup ? "checked" : ""}/> إبراز العناصر المكررة (F4)</label>
@@ -5394,9 +5400,9 @@ export class App {
               <label>العدد <input data-pf="quantity" type="number" lang="en" dir="ltr" min="1" value="${pc.quantity}"/></label>
               <label>القماش <input data-pf="fabric" value="${esc(pc.fabric)}"/></label>
               <label>خط النسيج ° <input class="expr" data-pf="grain" value="${esc(pc.grain)}"/></label>
-              <label title="القطعة نصف تُفتح حول هذا الحد (بلا حاشية عليه)، وتُقص وتُصدَّر كاملة">خط الطي <select data-pfold><option value="">— بدون —</option>${pc.edges.map((id) => `<option value="${id}" ${pc.fold === id ? "selected" : ""}>${nm(id)}</option>`).join("")}</select></label>
+              <label title="القطعة نصف تُفتح حول هذا الحد (بلا مسافة خياطة عليه)، وتُقص وتُصدَّر كاملة">خط الطي <select data-pfold><option value="">— بدون —</option>${pc.edges.map((id) => `<option value="${id}" ${pc.fold === id ? "selected" : ""}>${nm(id)}</option>`).join("")}</select></label>
             </div>
-            <table class="grid"><thead><tr><th>الحد</th><th>حاشية الخياطة مم</th><th title="غير متوازية: القيمة عند نهاية الحد (فارغ = متوازية)">عند النهاية</th></tr></thead><tbody>
+            <table class="grid"><thead><tr><th>الحد</th><th>مسافة الخياطة مم</th><th title="غير متوازية: القيمة عند نهاية الحد (فارغ = متوازية)">عند النهاية</th></tr></thead><tbody>
               ${pc.edges.map((id, k) => `<tr><td class="id">${nm(id)}</td><td><input class="expr" data-seam="${k}" value="${esc(pc.seam[k] ?? "0")}"/></td><td><input class="expr" data-seam-end="${k}" placeholder="—" value="${esc(pc.seamEnd?.[k] ?? "")}"/></td></tr>`).join("")}
             </tbody></table>
             <div class="notches">النوتشات: ${

@@ -630,7 +630,7 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
           }),
           notchDepth: pc.notches.map((_, k) => (pc.notchLen?.[k]?.trim() ? vars.eval(pc.notchLen[k]) : undefined)),
           notchDir: pc.notches.map((r) => notchLineDir(r, pc.edges)),
-          cutCorners: Object.fromEntries(Object.entries(pc.cutCorners ?? {}).map(([k, c]) => [k, { kind: c.kind, size: vars.eval(c.size || "0") }])),
+          cutCorners: Object.fromEntries(Object.entries(pc.cutCorners ?? {}).map(([k, c]) => [k, { kind: c.kind, size: c.kind === "square" ? 0 : vars.eval(c.size || "0"), on: c.on }])),
           grainAngle: vars.eval(pc.grain || "90"),
         }),
       );

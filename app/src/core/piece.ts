@@ -23,7 +23,7 @@ export interface Piece {
    * allowance on it, and the piece is cut / exported unfolded (both halves). */
   fold?: number;
   /** Cut line corners (as GRAFIS): key "a,b" = the two edge ids (smaller first) meeting there. */
-  cutCorners?: Record<string, { kind: "round" | "chamfer"; size: string }>;
+  cutCorners?: Record<string, { kind: "round" | "chamfer" | "square"; size: string; /** square: the edge it is square to */ on?: number }>;
   grain: string; // grain line angle in degrees (90 = vertical)
 }
 
@@ -135,18 +135,57 @@ export function outline(edges: Pt[][], order?: number[]): { sew: Pt[]; parts: Pt
 /** Cutting line: every edge moved outward by its allowance, corners mitred. */
 /** Corner treatment of the cut line at the end of a part (as GRAFIS): rounded (radius) or cut off (distance from the corner). */
 export interface CutCorner {
-  kind: "round" | "chamfer";
+  kind: "round" | "chamfer" | "square";
   size: number;
+  /** square: the edge id it is square to (from the piece) … */
+  on?: number;
+  /** … worked out per corner: square to the edge after the corner (else the one before it) */
+  onNext?: boolean;
 }
 
 export function cutLine(parts: Pt[][], allowance: (number | [number, number])[], treat: (CutCorner | undefined)[] = []): { pts: Pt[]; edges: Pt[][]; corners: (Pt | null)[] } {
+  // Bits of a folded offset left at an edge's end are usually junk (a swallowtail into a corner) and are
+  // dropped; but where an edge really starts with a small drop, that bit is part of the cut line. Both are
+  // worked out when needed, and the one that keeps the full allowance from the sewing line is taken.
+  const a = cutLineWith(parts, allowance, treat, true);
+  const depth = (pts: Pt[]) => {
+    let worst = 0;
+    parts.forEach((p, k) => {
+      const al = allowance[k], lim = 0.97 * (typeof al === "number" ? al : Math.min(al[0], al[1]));
+      if (!(lim > 0)) return;
+      for (let i = 0; i < pts.length; i++) {
+        const q = pts[i], r = pts[(i + 1) % pts.length];
+        for (const x of [q, [(q[0] + r[0]) / 2, (q[1] + r[1]) / 2] as Pt]) worst = Math.max(worst, lim - closestOnPolyline(p, x).d);
+      }
+    });
+    return worst;
+  };
+  const minA = Math.min(...allowance.map((al) => (typeof al === "number" ? al : Math.min(al[0], al[1]))).filter((x) => x > 0), Infinity);
+  const da = depth(a.pts);
+  if (!(da > 0.02 * minA)) return a; // a real shortfall only (not a rounding difference)
+  const b = cutLineWith(parts, allowance, treat, false), db = depth(b.pts);
+  return db < da && !selfCrossing(b.pts) ? b : a;
+}
+
+/** Whether a closed polyline crosses itself. */
+function selfCrossing(p: Pt[]): boolean {
+  const n = p.length;
+  for (let i = 0; i < n; i++)
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;
+      if (segCross(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n])) return true;
+    }
+  return false;
+}
+
+function cutLineWith(parts: Pt[][], allowance: (number | [number, number])[], treat: (CutCorner | undefined)[], dropStubs: boolean): { pts: Pt[]; edges: Pt[][]; corners: (Pt | null)[] } {
   const n = parts.length;
   const pair = (a: number | [number, number]): [number, number] => (typeof a === "number" ? [a, a] : a);
   // counter-clockwise outline: outward = right of travel = negative offset
   const off = parts.map((p, i) => {
     const [a0, a1] = pair(allowance[i]);
     const o = a0 === a1 ? (a0 > 0 ? offsetPolyline(p, -a0) : [...p]) : offsetVarying(p, -a0, -a1);
-    return foldFree(p, o, Math.min(a0, a1));
+    return foldFree(p, o, Math.min(a0, a1), dropStubs);
   });
   const maxA = Math.max(...allowance.flatMap(pair), 1);
   const startAt = off.map(() => 0);
@@ -173,6 +212,24 @@ export function cutLine(parts: Pt[][], allowance: (number | [number, number])[],
   // rounded / cut-off corners: both edges are shortened and the gap is closed by an arc or a straight cut
   for (let i = 0; i < n; i++) {
     const t = treat[i], c = corner[i], j = (i + 1) % n;
+    if (t?.kind === "square" && c && n >= 2) {
+      // square to an edge (as GRAFIS): the allowance ends with a short line square to that edge, standing a
+      // full allowance beyond the sewing corner (it never comes nearer the sewing line than the allowance)
+      const aA = pair(allowance[i])[1], aB = pair(allowance[j])[0];
+      // only a corner that points out (the outline turns left there, counter-clockwise); an inward corner
+      // keeps its ordinary shape
+      const PA = parts[i], PB = parts[j], S = PA[PA.length - 1];
+      const tA = unit2(pointAlong(PA, Math.min(2, polyLen(PA) / 3), true), S), tB = unit2(S, pointAlong(PB, Math.min(2, polyLen(PB) / 3)));
+      if (tA[0] * tB[1] - tA[1] * tB[0] <= 1e-9) continue;
+      const sq = t.onNext
+        ? squareEnd([...parts[j]].reverse(), [...parts[i]].reverse(), [...edges[j]].reverse(), [...edges[i]].reverse(), aB, Math.min(aA, aB), -1)
+        : squareEnd(parts[i], parts[j], edges[i], edges[j], aA, Math.min(aA, aB), 1);
+      if (sq) {
+        edges[i] = t.onNext ? sq[1].reverse() : sq[0];
+        edges[j] = t.onNext ? sq[0].reverse() : sq[1];
+      }
+      continue;
+    }
     if (!t || !c || !(t.size > 0) || n < 2) continue;
     const A = edges[i], B = edges[j], La = polyLen(A), Lb = polyLen(B);
     if (La < 1e-6 || Lb < 1e-6) continue;
@@ -199,6 +256,32 @@ export function cutLine(parts: Pt[][], allowance: (number | [number, number])[],
   return { pts: out, edges, corners: corner };
 }
 
+/**
+ * The cut line of edge A ends square to A: it runs on to a point an allowance beyond the sewing corner,
+ * then straight (square to A) to the cut line of the next edge B. side: 1 = the cut side is on the right of
+ * A's travel (the outline runs counter-clockwise), -1 = on the left (A walked backwards). Null when it does
+ * not fit (an open corner: the ordinary mitre is right there).
+ */
+function squareEnd(sewA: Pt[], sewB: Pt[], cutA: Pt[], cutB: Pt[], a: number, keep: number, side: 1 | -1): [Pt[], Pt[]] | null {
+  if (!(a > 0) || sewA.length < 2 || cutA.length < 2 || cutB.length < 2) return null;
+  const S = sewA[sewA.length - 1], t = unit2(pointAlong(sewA, Math.min(2, polyLen(sewA) / 3), true), S);
+  const nrm: Pt = side === 1 ? [t[1], -t[0]] : [-t[1], t[0]]; // towards the cut side
+  const Q1: Pt = [S[0] + t[0] * a + nrm[0] * a, S[1] + t[1] * a + nrm[1] * a];
+  const LA = polyLen(cutA), sQ1 = closestOnPolyline(cutA, Q1);
+  if (sQ1.d > 0.05 * a || sQ1.s >= LA - 1e-6) return null; // the cut line of A does not reach so far: an open corner
+  const ray: Pt[] = [Q1, [Q1[0] - nrm[0] * 1000 * a, Q1[1] - nrm[1] * 1000 * a]];
+  const hits = crossings(cutB, ray, true).filter((h) => h.s > 1e-6 && h.s < polyLen(cutB) - 1e-6);
+  const onRay = hits.filter((h) => (h.pt[0] - Q1[0]) * -nrm[0] + (h.pt[1] - Q1[1]) * -nrm[1] > 1e-6);
+  if (!onRay.length) return null;
+  const h = onRay.reduce((p, q) => (dist(q.pt, Q1) < dist(p.pt, Q1) ? q : p));
+  // the short square line keeps the full allowance from both edges, or the ordinary corner stays
+  for (let k = 0; k <= 20; k++) {
+    const q: Pt = [Q1[0] + ((h.pt[0] - Q1[0]) * k) / 20, Q1[1] + ((h.pt[1] - Q1[1]) * k) / 20];
+    if (Math.min(closestOnPolyline(sewA, q).d, closestOnPolyline(sewB, q).d) < keep * 0.97) return null;
+  }
+  return [[...subPolyline(cutA, 0, sQ1.s), h.pt], subPolyline(cutB, h.s, polyLen(cutB))];
+}
+
 function unit2(from: Pt, to: Pt): Pt {
   const L = dist(from, to) || 1;
   return [(to[0] - from[0]) / L, (to[1] - from[1]) / L];
@@ -209,9 +292,10 @@ function unit2(from: Pt, to: Pt): Pt {
  * corner), its offset folds back on itself: those points lie nearer the sewing
  * line than the allowance. They are dropped so the cut line stays clean.
  */
-export function foldFree(src: Pt[], off: Pt[], a: number): Pt[] {
+export function foldFree(src: Pt[], off: Pt[], a: number, dropStubs = true): Pt[] {
   if (a <= 0 || off.length < 3) return off;
-  off = unloop(off, 3 * a); // swallowtails first (the offset crossing itself), then what still lies too near
+  const zone = dropStubs ? 3 * a : 0;
+  off = unloop(off, zone); // swallowtails first (the offset crossing itself), then what still lies too near
   const ok = off.map((q) => closestOnPolyline(src, q).d >= a * 0.97);
   let idx = off.map((_, i) => i).filter((i) => ok[i]);
   if (idx.length < 2) return off;
@@ -230,7 +314,8 @@ export function foldFree(src: Pt[], off: Pt[], a: number): Pt[] {
       break;
     }
   const keep = idx.map((i) => off[i]);
-  return cleanEnds(unloop(keep.length >= 2 ? keep : off, 3 * a), a);
+  const clean = unloop(keep.length >= 2 ? keep : off, zone);
+  return dropStubs ? cleanEnds(clean, a) : clean;
 }
 
 /** Where a fold was cut away, the line can still turn back on itself near an end (a cusp, often only a
@@ -350,7 +435,10 @@ export function buildPiece(inp: PieceInput): PieceGeo {
     const a = ids[order[i]], b = ids[order[(i + 1) % n]];
     return a < b ? `${a},${b}` : `${b},${a}`;
   };
-  const treat = order.map((_, i) => inp.cutCorners?.[keyAt(i)]);
+  const treat = order.map((_, i) => {
+    const c = inp.cutCorners?.[keyAt(i)];
+    return c && c.kind === "square" ? { ...c, onNext: c.on === ids[order[(i + 1) % n]] } : c;
+  });
   const cl = cutLine(parts, allowance, treat);
   const cut = cl.pts;
   const notches = inp.notchPoints.map((x, idx) => {

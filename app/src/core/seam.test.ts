@@ -177,8 +177,12 @@ describe("fold (mirrored piece, as GRAFIS)", () => {
 });
 
 describe("seam allowance at a curve bending tight into the corner (as GRAFIS)", () => {
-  it("the cut line turns only at the corner: no kink or turn-back just below it", () => {
-    let bad: string[] = [];
+  // 0.9.183 checked "no kink below the corner" here; a broad check later showed that some of those kink-free
+  // lines cut up to 4 mm into the allowance. The rule that matters for cutting: the cut line keeps the full
+  // allowance from the sewing line and does not cross itself (a hooked curve end is then flagged by the
+  // test run's warning instead).
+  it("the cut line keeps the full allowance and does not cross itself, however the curve hooks into the corner", () => {
+    const bad: string[] = [];
     for (const dx of [-6, -4, -2, -1, 0, 1]) for (const dy of [3, 5, 8, 12, 18]) for (const ten of ["", "50", "200"]) for (const a of [10, 15, 20]) {
       const m = emptyModel("t");
       m.steps = [
@@ -189,17 +193,66 @@ describe("seam allowance at a curve bending tight into the corner (as GRAFIS)", 
         { op: "line", id: 7, p1: { obj: 4 }, p2: { obj: 10 } }, { op: "line", id: 9, p1: { obj: 10 }, p2: { obj: 1 } },
       ] as Model["steps"];
       m.pieces = [{ id: 1, name: "p", quantity: 1, fabric: "", edges: [5, 6, 7, 9], seam: [5, 6, 7, 9].map(() => String(a)), notches: [], grain: "90" }];
-      const c = evaluateModel(m).pieces.get(1)!.cut, n = c.length, angs: number[] = [];
-      for (let i = 0; i < n; i++) {
-        const p = c[(i - 1 + n) % n], q = c[i], r = c[(i + 1) % n];
-        if (Math.hypot(q[0] - 853, q[1] - 80) > 5 * a) continue;
-        const u = [q[0] - p[0], q[1] - p[1]], v = [r[0] - q[0], r[1] - q[1]];
-        if (Math.hypot(u[0], u[1]) < 1e-6 || Math.hypot(v[0], v[1]) < 1e-6) continue;
-        angs.push((Math.abs(Math.atan2(u[0] * v[1] - u[1] * v[0], u[0] * v[0] + u[1] * v[1])) * 180) / Math.PI);
+      const g = evaluateModel(m).pieces.get(1)!, c = g.cut, S = g.sew, n = c.length;
+      let near = Infinity;
+      for (const q of c) for (let i = 0; i < S.length; i++) {
+        const p = S[i], r = S[(i + 1) % S.length], ex = r[0] - p[0], ey = r[1] - p[1], L = ex * ex + ey * ey || 1;
+        const t = Math.max(0, Math.min(1, ((q[0] - p[0]) * ex + (q[1] - p[1]) * ey) / L));
+        near = Math.min(near, Math.hypot(q[0] - p[0] - t * ex, q[1] - p[1] - t * ey));
       }
-      angs.sort((x, y) => y - x);
-      if ((angs[1] ?? 0) > 20) bad.push(`${dx},${dy},${ten},${a}: ${angs[1].toFixed(0)}°`);
+      let cross = false;
+      const X = (p: number[], q: number[], u: number[], v: number[]) => {
+        const d = (q[0] - p[0]) * (v[1] - u[1]) - (q[1] - p[1]) * (v[0] - u[0]);
+        if (Math.abs(d) < 1e-12) return false;
+        const t = ((u[0] - p[0]) * (v[1] - u[1]) - (u[1] - p[1]) * (v[0] - u[0])) / d, w = ((u[0] - p[0]) * (q[1] - p[1]) - (u[1] - p[1]) * (q[0] - p[0])) / d;
+        return t > 1e-6 && t < 1 - 1e-6 && w > 1e-6 && w < 1 - 1e-6;
+      };
+      for (let i = 0; i < n && !cross; i++) for (let j = i + 2; j < n; j++) if (!(i === 0 && j === n - 1) && X(c[i], c[(i + 1) % n], c[j], c[(j + 1) % n])) { cross = true; break; }
+      if (near < a * 0.97 || cross) bad.push(`${dx},${dy},${ten},${a}: near ${near.toFixed(2)}${cross ? " crosses" : ""}`);
     }
-    expect(bad).toEqual([]); // 270 shapes; 0.9.182 had a kink in 40 of them
+    expect(bad).toEqual([]); // 270 shapes
+  });
+});
+
+describe("cut line corner square to an edge (as GRAFIS)", () => {
+  // a narrow corner at (200,0): the bottom edge 4 runs to it, edge 5 leaves it at about 34°
+  const tri = (on: number) => {
+    const m = emptyModel("t");
+    m.steps = [
+      { op: "point", id: 1, x: "0", y: "0" }, { op: "point", id: 2, x: "200", y: "0" }, { op: "point", id: 3, x: "40", y: "110" },
+      { op: "line", id: 4, p1: { obj: 1 }, p2: { obj: 2 } }, { op: "line", id: 5, p1: { obj: 2 }, p2: { obj: 3 } }, { op: "line", id: 6, p1: { obj: 3 }, p2: { obj: 1 } },
+    ] as Model["steps"];
+    m.nextId = 7;
+    m.pieces = [{ id: 1, name: "p", quantity: 1, fabric: "", edges: [4, 5, 6], seam: ["10", "10", "10"], notches: [], grain: "90", cutCorners: { "4,5": { kind: "square", size: "", on } } }];
+    return evaluateModel(m).pieces.get(1)!;
+  };
+  const nearest = (g: ReturnType<typeof tri>) => {
+    let d = Infinity;
+    const S = g.sew;
+    for (const q of g.cut) for (let i = 0; i < S.length; i++) {
+      const a = S[i], b = S[(i + 1) % S.length], dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / L));
+      d = Math.min(d, Math.hypot(q[0] - a[0] - t * dx, q[1] - a[1] - t * dy));
+    }
+    return d;
+  };
+  it("square to the bottom edge: the cut line ends 10 beyond the corner and goes straight up to the next one", () => {
+    const g = tri(4);
+    expect(g.cut.some((p) => Math.hypot(p[0] - 210, p[1] + 10) < 1e-6)).toBe(true);
+    const up = g.cut.filter((p) => Math.abs(p[0] - 210) < 1e-6 && p[1] > 0);
+    expect(up.length).toBe(1);
+    // nowhere nearer the sewing line than the allowance (it does not touch the drawing)
+    expect(nearest(g)).toBeGreaterThan(10 - 1e-6);
+    // no long spike: nothing beyond x = 210
+    expect(Math.max(...g.cut.map((p) => p[0]))).toBeLessThan(210 + 1e-6);
+  });
+  it("square to the other edge: the short line is square to edge 5 instead", () => {
+    const g = tri(5);
+    expect(nearest(g)).toBeGreaterThan(10 - 1e-6);
+    // the point an allowance beyond the corner along edge 5 (going backwards past (200,0)) and out by 10
+    const t = [160 / Math.hypot(160, 110), -110 / Math.hypot(160, 110)]; // edge 5 walked back towards and past the corner
+    const n = [-t[1], t[0]]; // the cut side when walked backwards (counter-clockwise outline)
+    const q = [200 + t[0] * 10 + n[0] * 10, 0 + t[1] * 10 + n[1] * 10];
+    expect(g.cut.some((p) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-6)).toBe(true);
   });
 });

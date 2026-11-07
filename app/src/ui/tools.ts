@@ -442,7 +442,7 @@ export const TOOLS: Tool[] = [
   },
   {
     key: "seamAllowance",
-    name: "حواشي الخياطة (قياسي / مسافة / غير متوازي / بدون)",
+    name: "مسافة الخياطة (قياسي / مسافة / غير متوازي / بدون)",
     group: "القطع",
     picks: [],
     action: true,
@@ -567,6 +567,23 @@ export const TOOLS: Tool[] = [
     build: (c, v) => cornerStep(c, "chamfer", v.size),
   },
   {
+    key: "cornerSquare",
+    name: "زاوية قائمة على الحد (خط القص)",
+    group: "الزوايا",
+    picks: [
+      { kind: "line", prompt: "انقر قرب زاوية خط القص الخارجي (في منطقة مسافة الخياطة)" },
+      { kind: "line", prompt: "انقر قرب زاوية خط القص الخارجي" },
+    ],
+    // which of the two edges the short end line is square to
+    fields: (c) => {
+      const ids = c.picks.filter((p) => p.kind === "line").map((p) => (p as { obj: number }).obj);
+      return [{ key: "on", label: "قائمة على الحد", value: String(ids[0] ?? ""), options: ids.map((id) => [String(id), c.model.names[id] ?? `#${id}`] as [string, string]) }];
+    },
+    build: () => {
+      throw new Error("هذه الأداة لزوايا خط القص: انقر قرب زاوية خط القص الخارجي، في منطقة مسافة الخياطة");
+    },
+  },
+  {
     key: "piece",
     name: "قطعة من الحدود",
     group: "القطع",
@@ -575,7 +592,7 @@ export const TOOLS: Tool[] = [
     multi: { kind: "line", prompt: "انقر حدود القطعة بالترتيب حولها (خطوط ومنحنيات)، ثم Enter", min: 2 },
     fields: (c) => [
       { key: "name", label: "اسم القطعة", value: `قطعة ${(c.model.pieces?.length ?? 0) + 1}`, text: true },
-      { key: "seam", label: "حاشية الخياطة", value: "10" },
+      { key: "seam", label: "مسافة الخياطة", value: "10" },
       { key: "quantity", label: "العدد", value: "1", text: true },
       { key: "fabric", label: "القماش", value: "قماش الوجه", text: true },
       { key: "grain", label: "خط النسيج °", value: "90" },

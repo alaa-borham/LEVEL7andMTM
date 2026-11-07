@@ -51,6 +51,12 @@ try{
  assert(!cut.some(p=>Math.hypot(p[0]-210,p[1]+10)<1e-6)&&cut.some(p=>Math.hypot(p[0]-204,p[1]+10)<1e-6),JSON.stringify(cut.slice(0,8)));
  assert.equal(await f.evaluate(()=>window.level7.model.steps.filter(s=>s.op==='corner').length),0);
  pass('round corner on the cut line (outer line): radius 6 at the corner of edges 5 / 6, the drawing lines untouched');
+ // 0.9.188: «زاوية قائمة على الحد»: the same click near a corner of the cut line, then the edge it is square to
+ await page.keyboard.press('Escape');await open('cornerSquare');await f.waitForFunction(()=>window.level7.tool?.key==='cornerSquare');
+ await page.mouse.click(...await at(208,308));const onSel=tb.locator('select[data-key="on"]');await onSel.waitFor();
+ assert.equal(await onSel.locator('option').count(),2);await onSel.selectOption('6');await tb.locator('[data-ok]').click();
+ await f.waitForFunction(()=>{const c=window.level7.model.pieces[0].cutCorners?.['6,7'];return c&&c.kind==='square'&&c.on===6;});
+ pass('square corner on the cut line: click near the corner, choose the edge (2 choices) → stored square to edge 6');
  await page.keyboard.press('Escape');
  // 6) background picture: move and resize by hand, then fixed as the whole-screen background
  await f.evaluate(()=>{const a=window.level7;a.snapshot();const c=document.createElement('canvas');c.width=40;c.height=20;c.getContext('2d').fillRect(0,0,40,20);
