@@ -155,11 +155,18 @@ const unit = (v: Pt): Pt => {
  */
 /** startScale / endScale: strength of the tangent at the first / last point (1 = normal),
  * as the handle length in GRAFIS. */
-export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null, perSpan = 24, startScale = 1, endScale = 1): Pt[] {
+export function smoothCurve(pts: Pt[], startDir?: Pt | null, endDir?: Pt | null, perSpan = 24, startScale = 1, endScale = 1, inner?: (Pt | null | undefined)[]): Pt[] {
   const n = pts.length;
   if (n < 2) return [...pts];
   const tan: Pt[] = pts.map((p, i) => {
     if (i > 0 && i < n - 1) {
+      // 0.9.189: a direction set at this point (as GRAFIS «Set direction»): its tangent line, taken the
+      // way the curve runs through it
+      const d = inner?.[i];
+      if (d) {
+        const u = unit(d), run = unit([pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]]);
+        return u[0] * run[0] + u[1] * run[1] < 0 ? [-u[0], -u[1]] : u;
+      }
       const a = unit([p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]]);
       const b = unit([pts[i + 1][0] - p[0], pts[i + 1][1] - p[1]]);
       return unit([a[0] + b[0], a[1] + b[1]]);

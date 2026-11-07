@@ -78,6 +78,8 @@ export type Step =
   | { op: "scale"; center: PointRef; factor: string; angle?: string; items: { src: number; dst?: number }[] }
   | {
       op: "curve"; id: number; through: PointRef[]; startAngle: string; endAngle: string; startTension?: string; endTension?: string;
+      /** 0.9.189: direction (°) set at an inner point, same order as through ("" or missing = free) */
+      pointAngles?: string[];
       /** The end's angle is measured from this line, where the curve meets it (e.g. 90 = square to the line). */
       startRel?: number; endRel?: number;
     }
@@ -461,7 +463,8 @@ export function evaluateModel(model: Model, depth = 0): EvalResult {
             if (!(v > 0 && v <= 10)) throw new Error("شدة طرف المنحنى بين 1% و 1000%");
             return v;
           };
-          put(s.id, "line", smoothCurve(pts, dir(s.startAngle, s.startRel, pts[0]), dir(s.endAngle, s.endRel, pts[pts.length - 1]), 24, ten(s.startTension), ten(s.endTension)), i);
+          const inner = pts.map((at, k) => (k > 0 && k < pts.length - 1 && s.pointAngles?.[k]?.trim() ? dir(s.pointAngles[k], undefined, at) : null));
+          put(s.id, "line", smoothCurve(pts, dir(s.startAngle, s.startRel, pts[0]), dir(s.endAngle, s.endRel, pts[pts.length - 1]), 24, ten(s.startTension), ten(s.endTension), inner), i);
           break;
         }
         case "trim": {

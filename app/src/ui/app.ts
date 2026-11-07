@@ -171,6 +171,8 @@ const CB_ICON = {
   unbind: cbSvg('<path d="M3 19C8 18 13 14 16 6" stroke="#2fa4dd"/><path d="M14 4l6 6M17 3.5l3.5 3.5" stroke="currentColor"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/><circle cx="11.5" cy="12.5" r="2" fill="currentColor" stroke="none"/>'),
   del: cbSvg('<path d="M3 19C8 18 13 14 18 5" stroke="#2fa4dd"/><circle cx="10" cy="14.5" r="2.4" fill="currentColor" stroke="none"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
   rel: cbSvg('<path d="M5 3v18" stroke="currentColor"/><path d="M5 14C11 14 16 10 20 4" stroke="#2fa4dd"/><path d="M5 10h4v4" stroke="#f08c00"/>'),
+  dir: cbSvg('<path d="M3 19C8 18 12 13 15 6" stroke="#2fa4dd"/><path d="M4 16L21 9" stroke="currentColor" stroke-dasharray="3 2"/><circle cx="11.5" cy="12.6" r="2.2" fill="#f08c00" stroke="none"/>'),
+  undir: cbSvg('<path d="M3 19C8 18 12 13 15 6" stroke="#2fa4dd"/><path d="M4 16L14 12" stroke="currentColor" stroke-dasharray="3 2"/><path d="M15 15l5 5M20 15l-5 5" stroke="#e53935"/>'),
 };
 
 interface FormState {
@@ -1557,6 +1559,7 @@ export class App {
     if (this.showDup) parts.push(this.duplicatesSvg());
     parts.push(this.liveSvg());
     parts.push(this.curveHandlesSvg());
+    parts.push(this.curveDirSvg());
     parts.push(this.formulaLabelsSvg());
     for (const id of this.flashIds) {
       const o = this.res.objects.get(id);
@@ -1936,7 +1939,7 @@ export class App {
     });
   }
 
-  private dragPoint: { step: number; mode: "xy" | "offset"; base: Pt } | null = null;
+  private dragPoint: { step: number; mode: "xy" | "offset" | "on"; base: Pt } | null = null;
   private dragDim: number | null = null;
 
   /** The dimension whose line is under the pointer (screen px). */
@@ -1979,6 +1982,10 @@ export class App {
     this.snapshot();
     if (st?.op === "point" && plain(st.x) && plain(st.y)) return void (this.dragPoint = { step: si, mode: "xy", base: [0, 0] });
     if (st?.op === "pointOffset" && plain(st.dx) && plain(st.dy)) return void (this.dragPoint = { step: si, mode: "offset", base: this.pointOf(st.from) });
+    // 0.9.189 (as GRAFIS): a point that sits on a line slides along that line; its distance follows
+    const so = ref.end ? -1 : this.model.steps.findIndex((t) => t.op === "pointOn" && t.id === ref.obj);
+    const sOn = this.model.steps[so];
+    if (sOn?.op === "pointOn" && plain(sOn.dist)) return void (this.dragPoint = { step: so, mode: "on", base: [0, 0] });
     // tied point: put an offset point between it and the curve, just before the curve
     const id = newId(this.model, "point");
     this.model.steps.splice(ci, 0, { op: "pointOffset", id, from: { ...ref }, dx: "0", dy: "0" });
@@ -2060,7 +2067,9 @@ export class App {
   }
 
   // ---- curve bar (as GRAFIS, shown while a curve is selected): bind / unbind / delete a point, angle on a line
-  curveMode: "add" | "bind" | "unbind" | "del" | "rel" | null = null;
+  curveMode: "add" | "bind" | "unbind" | "del" | "rel" | "dir" | "undir" | null = null;
+  /** «Set direction»: the curve point picked; the next click gives its direction (as GRAFIS). */
+  private dirPick: { k: number } | null = null;
 
   private selectedCurve(): Extract<Step, { op: "curve" }> | null {
     const s = this.model.steps[this.selectedStep];
@@ -2103,6 +2112,7 @@ export class App {
     if (!ls) {
       bar?.remove();
       this.curveMode = null;
+      this.dirPick = null;
       return;
     }
     if (!bar) {
@@ -2115,6 +2125,7 @@ export class App {
         const m = (e.target as HTMLElement).closest<HTMLElement>("[data-cm]")?.dataset.cm as typeof this.curveMode | "off";
         if (!m) return;
         this.curveMode = m === "off" || m === this.curveMode ? null : m;
+        this.dirPick = null;
         this.render();
       });
       bar.addEventListener("change", (e) => {
@@ -2145,10 +2156,13 @@ export class App {
       unbind: "انقر نقطة مثبتة على المنحنى: تصير نقطة حرة في مكانها",
       del: "انقر نقطة داخل المنحنى لحذفها منه",
       rel: "انقر الخط الذي تُقاس منه زاوية طرف المنحنى (مثلاً 90° عمودي عليه)",
+      dir: this.dirPick ? "حرّك الماوس: الخط المتقطع اتجاه المنحنى عند النقطة · انقر لتثبيته (Shift: بلا تقريب)" : "انقر نقطة على المنحنى (طرفاً أو داخله) لتحديد اتجاهه عندها",
+      undir: "انقر نقطة على المنحنى لحذف الاتجاه المحدد عندها (يعود حراً)",
     };
     bar.innerHTML = BAR_CHROME + `<b>${esc(this.model.names[c.id] ?? "منحنى")}</b>` +
       b("add", CB_ICON.add, "إضافة نقطة على المنحنى") + b("bind", CB_ICON.bind, "تثبيت نقطة على المنحنى · Bind point") + b("unbind", CB_ICON.unbind, "فك تثبيت نقطة · Unbind point") +
       b("del", CB_ICON.del, "حذف نقطة من المنحنى · Delete point") + b("rel", CB_ICON.rel, "زاوية الطرف على خط (90° أو 45° …)") +
+      b("dir", CB_ICON.dir, "تحديد اتجاه المنحنى عند نقطة · Set direction") + b("undir", CB_ICON.undir, "حذف الاتجاه · Delete direction") +
       `<button data-cedit="1" title="كتابة قيم المنحنى: الاتجاهات والشدة">✎</button>` + styleCtl +
       `<span>${this.curveMode ? say[this.curveMode] : "اسحب المقابض أو النقاط · رايت كليك للخروج"}</span>`;
   }
@@ -2229,6 +2243,7 @@ export class App {
       this.evaluate();
       const slot = this.throughSlot(c, this.pointOf(ref!));
       c.through.splice(slot, 0, ref!);
+      if (c.pointAngles) c.pointAngles.splice(slot, 0, "");
       this.selectedStep = ci;
       this.changed();
       this.toast("ثُبّتت النقطة: المنحنى يمر بها ويتبعها");
@@ -2249,8 +2264,33 @@ export class App {
       if (k <= 0 || k >= c.through.length - 1) return this.toast(k < 0 ? "انقر نقطة داخل المنحنى" : "طرفا المنحنى لا يُحذفان");
       this.snapshot();
       c.through.splice(k, 1);
+      c.pointAngles?.splice(k, 1);
       this.changed();
       this.toast("حُذفت النقطة من المنحنى");
+    } else if (this.curveMode === "dir") {
+      if (!this.dirPick) {
+        const k = throughAt();
+        if (k < 0) return this.toast("انقر نقطة على المنحنى");
+        this.dirPick = { k };
+        return this.render();
+      }
+      const k = this.dirPick.k, at = this.pointOf(c.through[k]), w = this.toWorld(sx, sy);
+      if (dist(at, w) * this.scale < 8) return this.toast("حرّك الماوس بعيداً عن النقطة لتحديد الاتجاه");
+      const ang = this.dirAngle(at, w);
+      this.snapshot();
+      this.setCurveDir(c, k, String(ang));
+      this.dirPick = null;
+      this.changed();
+      this.toast(`اتجاه المنحنى عند النقطة ${ang}° · انقر نقطة أخرى أو كليك يمين للخروج`);
+    } else if (this.curveMode === "undir") {
+      const k = throughAt();
+      if (k < 0) return this.toast("انقر نقطة على المنحنى");
+      const n = c.through.length, had = k === 0 ? c.startAngle.trim() : k === n - 1 ? c.endAngle.trim() : c.pointAngles?.[k]?.trim();
+      if (!had) return this.toast("لا اتجاه محدد عند هذه النقطة");
+      this.snapshot();
+      this.setCurveDir(c, k, "");
+      this.changed();
+      this.toast("حُذف الاتجاه: المنحنى حر عند هذه النقطة");
     } else if (this.curveMode === "rel") {
       const nr = this.nearest(sx, sy), o = nr && nr.id !== c.id ? this.res.objects.get(nr.id) : undefined;
       if (o?.kind !== "line") return this.toast("انقر خطاً");
@@ -2329,6 +2369,7 @@ export class App {
     const r = (v: number) => String(Math.round(v * 10) / 10);
     this.model.steps.splice(ci, 0, { op: "point", id, x: r(at[0]), y: r(at[1]) });
     curve.through.splice(k, 0, { obj: id });
+    if (curve.pointAngles) curve.pointAngles.splice(k, 0, "");
     this.selectedStep = ci + 1;
     this.evaluate();
     this.dragPoint = { step: ci, mode: "xy", base: [0, 0] };
@@ -2338,6 +2379,54 @@ export class App {
 
   private handleAt(sx: number, sy: number) {
     return this.curveHandles().find((h) => Math.hypot(h.hs[0] - sx, h.hs[1] - sy) <= 9) ?? null;
+  }
+
+  /** Direction from a curve point towards the pointer, in whole degrees (Shift: tenths). */
+  private dirAngle(at: Pt, w: Pt): number {
+    const a = (Math.atan2(w[1] - at[1], w[0] - at[0]) * 180) / Math.PI;
+    return this.shift ? Math.round(a * 10) / 10 : Math.round(a);
+  }
+
+  /** Set (or with "" free) the direction of a curve at its k-th point: the ends use the end angles. */
+  private setCurveDir(c: Extract<Step, { op: "curve" }>, k: number, ang: string): void {
+    const n = c.through.length;
+    if (k === 0) (c.startAngle = ang), delete c.startRel;
+    else if (k === n - 1) (c.endAngle = ang), delete c.endRel;
+    else {
+      c.pointAngles ??= c.through.map(() => "");
+      while (c.pointAngles.length < n) c.pointAngles.push("");
+      c.pointAngles[k] = ang;
+      if (c.pointAngles.every((x) => !x.trim())) delete c.pointAngles;
+    }
+  }
+
+  /** The direction being set (dashed tangent line through the point, with its angle) and the directions
+   * already set at inner points of the selected curve (short dashed lines). */
+  private curveDirSvg(): string {
+    const c = this.selectedCurve();
+    if (!c) return "";
+    const out: string[] = [];
+    const line = (at: Pt, deg: number, len: number, cls: string) => {
+      const r = (deg * Math.PI) / 180, [x, y] = this.toScreen(at), dx = Math.cos(r), dy = Math.sin(r);
+      const [x2, y2] = this.toScreen([at[0] + dx, at[1] + dy]), L = Math.hypot(x2 - x, y2 - y) || 1, ux = (x2 - x) / L, uy = (y2 - y) / L;
+      return `<line class="${cls}" x1="${x - ux * len}" y1="${y - uy * len}" x2="${x + ux * len}" y2="${y + uy * len}"/>`;
+    };
+    c.pointAngles?.forEach((a, k) => {
+      if (!a?.trim() || k === 0 || k === c.through.length - 1) return;
+      try {
+        const v = new Vars(withSize(this.model), undefined, this.res.z).eval(a);
+        out.push(line(this.pointOf(c.through[k]), v, 28, "curve-dir"));
+      } catch {
+        /* a formula that does not work out: nothing drawn */
+      }
+    });
+    if (this.dirPick && this.curveMode === "dir") {
+      const at = this.pointOf(c.through[this.dirPick.k]), deg = this.dirAngle(at, this.mouse);
+      out.push(line(at, deg, 2000, "curve-dir live"));
+      const [x, y] = this.toScreen(this.mouse);
+      out.push(`<text class="live-label" x="${x + 10}" y="${y - 10}" direction="ltr">\u2066${deg}°\u2069</text>`);
+    }
+    return out.join("");
   }
 
   private curveHandlesSvg(): string {
@@ -2367,6 +2456,15 @@ export class App {
           ? `<rect class="curve-pt" x="${p.s[0] - 5}" y="${p.s[1] - 5}" width="10" height="10" fill="var(--bg)" stroke="#2fa4dd" stroke-width="2"/>`
           : `<circle class="curve-dot" cx="${p.s[0]}" cy="${p.s[1]}" r="3" fill="#2fa4dd"/>`,
       );
+    // a point sliding along its line shows its distance on that line (as GRAFIS)
+    const dp = this.dragPoint, ts = dp?.mode === "on" ? this.model.steps[dp.step] : undefined;
+    if (ts?.op === "pointOn") {
+      const o = this.res.objects.get(ts.id);
+      if (o) {
+        const [x, y] = this.toScreen(o.pts[0]);
+        out.push(`<text class="live-label" x="${x + 10}" y="${y - 10}" direction="ltr">\u2066${ts.dist}${ts.unit === "%" ? "%" : " mm"}\u2069</text>`);
+      }
+    }
     // no standing length label on the curve (the length is in Info / the dimension tools)
     return out.join("");
   }
@@ -2669,6 +2767,7 @@ export class App {
   cancelTool(): void {
     this.imgEdit = null;
     this.imgDrag = null;
+    this.dirPick = null;
     this.selFrame = null;
     this.cutCornerPick = null;
     this.afterPiece = null;
@@ -4199,6 +4298,7 @@ export class App {
       this.mouse = this.toWorld(sx, sy);
       if (this.imgDrag) return void this.imgEditMove(this.mouse);
       if (this.selFrame) return void this.render(); // the mirror bar's frame follows the pointer
+      if (this.dirPick) return void this.render(); // the direction being set follows the pointer
       if (this.collecting && this.instantValues && this.tool && /^mirror/.test(this.tool.key)) {
         const nh = this.selMode === "single" || this.selMode === "notches" ? this.notchNear(sx, sy) : null;
         if (JSON.stringify(nh) !== JSON.stringify(this.notchHover)) {
@@ -4238,6 +4338,15 @@ export class App {
         const r = (v: number) => String(Math.round(Math.round(v / q) * q * 10) / 10);
         const t = this.model.steps[this.dragPoint.step];
         if (t.op === "point") (t.x = r(this.mouse[0])), (t.y = r(this.mouse[1]));
+        else if (t.op === "pointOn") {
+          const L = this.res.objects.get(t.on);
+          if (L) {
+            const len = polyLen(L.pts) || 1;
+            let d = closestOnPolyline(L.pts, this.mouse).s;
+            if (t.from === "end") d = len - d;
+            t.dist = t.unit === "%" ? String(Math.round((d / len) * 1000) / 10) : r(d);
+          }
+        }
         else if (t.op === "pointOffset") (t.dx = r(this.mouse[0] - this.dragPoint.base[0])), (t.dy = r(this.mouse[1] - this.dragPoint.base[1]));
         this.evaluate();
         this.render();
