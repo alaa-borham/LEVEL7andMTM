@@ -2195,7 +2195,7 @@ export class App {
       unbind: "انقر نقطة مثبتة على المنحنى: تصير نقطة حرة في مكانها",
       del: "انقر نقطة داخل المنحنى لحذفها منه",
       rel: "انقر الخط الذي تُقاس منه زاوية طرف المنحنى (مثلاً 90° عمودي عليه)",
-      dir: this.dirPick ? "حرّك الماوس: الخط المتقطع اتجاه المنحنى عند النقطة · انقر لتثبيته (Shift: بلا تقريب)" : "انقر نقطة على المنحنى (طرفاً أو داخله) لتحديد اتجاهه عندها",
+      dir: this.dirPick ? "حرّك الماوس: الخط المتقطع اتجاه المنحنى عند النقطة · انقر لتثبيته (Shift: بلا تقريب)" : "انقر أي نقطة على المنحنى أو أي مكان عليه لتحديد اتجاهه عندها",
       undir: "انقر نقطة على المنحنى لحذف الاتجاه المحدد عندها (يعود حراً)",
     };
     bar.title = "اسحب المقابض أو النقاط (نقطة على خط تنزلق عليه؛ Alt: حرة) · رايت كليك للخروج";
@@ -2310,8 +2310,11 @@ export class App {
       this.toast("حُذفت النقطة من المنحنى");
     } else if (this.curveMode === "dir") {
       if (!this.dirPick) {
-        const k = throughAt();
-        if (k < 0) return this.toast("انقر نقطة على المنحنى");
+        let k = throughAt();
+        // 0.9.191 (as GRAFIS): any point lying on the curve, or any place on the curve itself, not only the
+        // points the curve was drawn through: such a point becomes one of them (the curve keeps its shape there)
+        if (k < 0) k = this.curvePointFor(ci, c, sx, sy);
+        if (k < 0) return this.toast("انقر نقطة على المنحنى أو أي مكان عليه");
         this.dirPick = { k };
         return this.render();
       }
@@ -2392,6 +2395,53 @@ export class App {
   }
 
   /** Add a free point at `at` to the curve at step ci, in its place along the curve, and drag it. */
+  /** For «set direction» at a place that is not yet one of the curve's points: a drawn point lying on the
+   * curve is bound into it, else a point is put on the curve where it was clicked. Its index, or -1. */
+  private curvePointFor(ci: number, c: Extract<Step, { op: "curve" }>, sx: number, sy: number): number {
+    const co = this.res.objects.get(c.id);
+    if (!co) return -1;
+    const hp = this.hit("point", sx, sy);
+    let ref: PointRef | null = null, spot = this.toWorld(sx, sy);
+    if (hp?.kind === "point" && hp.ref.obj !== c.id) {
+      try {
+        const q = this.pointOf(hp.ref);
+        if (closestOnPolyline(co.pts, q).d * this.scale <= 4) (ref = hp.ref), (spot = q);
+      } catch {
+        /* not resolvable: not taken */
+      }
+    }
+    if (!ref && this.curveAtScreen(sx, sy) !== ci) return -1;
+    this.snapshot();
+    if (ref) {
+      const kq = this.creatorOf(ref.obj), st = this.model.steps[kq];
+      if (kq > ci && st && usedIds(st).every((id) => this.creatorOf(id) < ci)) {
+        // a point made after the curve from what is before it (e.g. a free point): it moves before the curve
+        this.model.steps.splice(kq, 1);
+        this.model.steps.splice(ci, 0, st);
+        ci++;
+      } else {
+        const k = this.curveAfter(ci, kq);
+        // a point made from the curve itself (e.g. where a line crosses it) cannot hold it: a point at its place
+        if (k < 0) ref = null;
+        else ci = k;
+      }
+    }
+    if (!ref) {
+      const at = closestOnPolyline(co.pts, spot).pt, id = newId(this.model, "point");
+      const r = (v: number) => String(Math.round(v * 10) / 10);
+      this.model.steps.splice(ci, 0, { op: "point", id, x: r(at[0]), y: r(at[1]) });
+      ci++;
+      ref = { obj: id };
+    }
+    this.evaluate();
+    const slot = this.throughSlot(c, this.pointOf(ref));
+    c.through.splice(slot, 0, ref);
+    if (c.pointAngles) c.pointAngles.splice(slot, 0, "");
+    this.selectedStep = ci;
+    this.evaluate();
+    return slot;
+  }
+
   private insertCurvePoint(ci: number, at: Pt): void {
     const curve = this.model.steps[ci] as Extract<Step, { op: "curve" }>;
     const o = this.res.objects.get(curve.id);
